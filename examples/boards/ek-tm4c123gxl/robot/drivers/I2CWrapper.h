@@ -6,6 +6,13 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "inc/hw_i2c.h"
+#include "inc/hw_memmap.h"
+#include "inc/hw_types.h"
+#include "driverlib/gpio.h"
+#include "driverlib/i2c.h"
+#include "driverlib/pin_map.h"
+#include "driverlib/sysctl.h"
 
 #define I2C_SPEED_400	1
 #define I2C_SPEED_100 	0

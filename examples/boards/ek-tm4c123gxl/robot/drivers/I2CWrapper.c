@@ -2,13 +2,7 @@
  * 	autor: Marcin Gozdziewski
  */
 #include "I2CWrapper.h"
-#include "inc/hw_i2c.h"
-#include "inc/hw_memmap.h"
-#include "inc/hw_types.h"
-#include "driverlib/gpio.h"
-#include "driverlib/i2c.h"
-#include "driverlib/pin_map.h"
-#include "driverlib/sysctl.h"
+
 
 bool I2CComIsOk(I2CComInstance* i2cComInst);
 
@@ -19,7 +13,7 @@ void I2CComInit(I2CComInstance* i2cComInst)
 
 	SysCtlPeripheralEnable(i2cComInst->i2cPeripheral);
 	SysCtlPeripheralEnable(i2cComInst->gpioPeripheral);
-    GPIOPinConfigure(i2cComInst->sclPin);
+    GPIOPinConfigure(i2cComInst->sclPinConfig);
     GPIOPinConfigure(i2cComInst->sdaPinConfig);
     GPIOPinTypeI2CSCL(i2cComInst->gpioPortBase, i2cComInst->sclPin);
     GPIOPinTypeI2C(i2cComInst->gpioPortBase, i2cComInst->sdaPin);
