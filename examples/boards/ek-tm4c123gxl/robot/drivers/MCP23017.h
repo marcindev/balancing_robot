@@ -35,8 +35,10 @@ typedef struct
 	I2CComInstance* i2cInstance;
 	uint8_t hwAddress;
 	// Don't modify below fields
-	uint8_t	outPins,
-			outPinsState;
+	uint8_t	outPinsA,
+			outPinsB,
+			outPinsStateA,
+			outPinsStateB;
 } GpioExpander;
 
 void GpioExpInit(GpioExpander* gpioExp);
