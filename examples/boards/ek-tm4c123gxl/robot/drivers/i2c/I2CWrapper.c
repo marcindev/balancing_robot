@@ -24,7 +24,7 @@ void I2CComInit(I2CComInstance* i2cComInst)
 
 bool I2CComInitiated(I2CComInstance* i2cComInst)
 {
-	return i2cComInst;
+	return i2cComInst->initiated;
 }
 
 bool I2CComSend(I2CComInstance* i2cComInst, uint8_t slaveAddress, const uint8_t* data, uint32_t length)
