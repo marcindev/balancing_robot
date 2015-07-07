@@ -46,7 +46,7 @@ bool initI2cManager(I2cManager* i2cMng)
 	return true;
 }
 
-bool send(I2cManager* i2cMng, uint8_t slaveAddress, const uint8_t* data, uint32_t length)
+bool i2cSend(I2cManager* i2cMng, uint8_t slaveAddress, const uint8_t* data, uint32_t length)
 {
 	size_t queueInd = i2cMng->taskId;
 
@@ -72,7 +72,7 @@ bool send(I2cManager* i2cMng, uint8_t slaveAddress, const uint8_t* data, uint32_
 	return true;
 }
 
-bool receive(I2cManager* i2cMng, uint8_t slaveAddress, uint8_t* data, uint32_t length)
+bool i2cReceive(I2cManager* i2cMng, uint8_t slaveAddress, uint8_t* data, uint32_t length)
 {
 	size_t queueInd = i2cMng->taskId;
 
@@ -99,7 +99,7 @@ bool receive(I2cManager* i2cMng, uint8_t slaveAddress, uint8_t* data, uint32_t l
 	return true;
 }
 
-bool sendAndReceive(I2cManager* i2cMng, uint8_t slaveAddress, uint8_t* sentData,
+bool i2cSendAndReceive(I2cManager* i2cMng, uint8_t slaveAddress, uint8_t* sentData,
 					uint32_t sentLength, uint8_t* recvData, uint32_t recvLength)
 {
 	size_t queueInd = i2cMng->taskId;

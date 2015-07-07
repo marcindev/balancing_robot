@@ -9,7 +9,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <I2CWrapper.h>
+#include "i2c/i2cManager.h"
 
 //******************************
 // API declarations
@@ -32,13 +32,14 @@
 
 typedef struct
 {
-	I2CComInstance* i2cInstance;
+	I2cManager* i2cManager;
 	uint8_t hwAddress;
 	// Don't modify below fields
 	uint8_t	outPinsA,
 			outPinsB,
 			outPinsStateA,
 			outPinsStateB;
+	bool initiated;
 } GpioExpander;
 
 void GpioExpInit(GpioExpander* gpioExp);

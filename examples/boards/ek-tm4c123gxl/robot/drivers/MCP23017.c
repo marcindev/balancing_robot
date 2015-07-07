@@ -63,9 +63,13 @@ bool GpioExpGetCurrRegVal(GpioExpander* gpioExp, uint8_t regAddr, uint8_t* regVa
 
 void GpioExpInit(GpioExpander* gpioExp)
 {
-	if(!I2CComInitiated(gpioExp->i2cInstance))
-		I2CComInit(gpioExp->i2cInstance);
+	if(!initI2cManager(gpioExp->i2cManager))
+	{
+		gpioExp->initiated = false;
+		return;
+	}
 
+	gpioExp->initiated = true;
 	gpioExp->outPinsA = 0;
 	gpioExp->outPinsB = 0;
 	gpioExp->outPinsStateA = 0;
@@ -74,6 +78,9 @@ void GpioExpInit(GpioExpander* gpioExp)
 
 bool GpioExpSetPinDirIn(GpioExpander* gpioExp, uint8_t port, uint8_t pins)
 {
+	if(!gpioExp->initiated)
+		return false;
+
 	uint8_t msg[WRITE_MSG_SIZE];
 	uint8_t regAddr = 0;
 	uint8_t* outPinsPtr = 0;
@@ -100,7 +107,7 @@ bool GpioExpSetPinDirIn(GpioExpander* gpioExp, uint8_t port, uint8_t pins)
 	msg[0] = regAddr;
 	msg[1] = currRegVal | pins;
 
-	if(!I2CComSend(gpioExp->i2cInstance, gpioExp->hwAddress, msg, WRITE_MSG_SIZE))
+	if(!i2cSend(gpioExp->i2cManager, gpioExp->hwAddress, msg, WRITE_MSG_SIZE))
 		return false;
 
 	*outPinsPtr &= (~pins);
@@ -110,6 +117,9 @@ bool GpioExpSetPinDirIn(GpioExpander* gpioExp, uint8_t port, uint8_t pins)
 
 bool GpioExpSetPinDirOut(GpioExpander* gpioExp, uint8_t port, uint8_t pins)
 {
+	if(!gpioExp->initiated)
+		return false;
+
 	uint8_t msg[WRITE_MSG_SIZE];
 	uint8_t regAddr = 0;
 	uint8_t* outPinsPtr = 0;
@@ -136,7 +146,7 @@ bool GpioExpSetPinDirOut(GpioExpander* gpioExp, uint8_t port, uint8_t pins)
 	msg[0] = regAddr;
 	msg[1] = currRegVal & (~pins);
 
-	if(!I2CComSend(gpioExp->i2cInstance, gpioExp->hwAddress, msg, WRITE_MSG_SIZE))
+	if(!i2cSend(gpioExp->i2cManager, gpioExp->hwAddress, msg, WRITE_MSG_SIZE))
 		return false;
 
 	*outPinsPtr |= pins;
@@ -146,6 +156,9 @@ bool GpioExpSetPinDirOut(GpioExpander* gpioExp, uint8_t port, uint8_t pins)
 
 bool GpioExpIntOnChangePrevValEnable(GpioExpander* gpioExp, uint8_t port, uint8_t pins)
 {
+	if(!gpioExp->initiated)
+		return false;
+
 	uint8_t msg[WRITE_MSG_SIZE];
 	uint8_t intEnAddr = 0,
 			confIntAddr = 0;
@@ -172,7 +185,7 @@ bool GpioExpIntOnChangePrevValEnable(GpioExpander* gpioExp, uint8_t port, uint8_
 	msg[0] = confIntAddr;
 	msg[1] = currRegVal & (~pins);
 
-	if(!I2CComSend(gpioExp->i2cInstance, gpioExp->hwAddress, msg, WRITE_MSG_SIZE))
+	if(!i2cSend(gpioExp->i2cManager, gpioExp->hwAddress, msg, WRITE_MSG_SIZE))
 		return false;
 
 	if(!GpioExpGetCurrRegVal(gpioExp, intEnAddr, &currRegVal))
@@ -181,7 +194,7 @@ bool GpioExpIntOnChangePrevValEnable(GpioExpander* gpioExp, uint8_t port, uint8_
 	msg[0] = intEnAddr;
 	msg[1] = currRegVal | pins;
 
-	if(!I2CComSend(gpioExp->i2cInstance, gpioExp->hwAddress, msg, WRITE_MSG_SIZE))
+	if(!i2cSend(gpioExp->i2cManager, gpioExp->hwAddress, msg, WRITE_MSG_SIZE))
 		return false;
 
 	return true;
@@ -189,6 +202,9 @@ bool GpioExpIntOnChangePrevValEnable(GpioExpander* gpioExp, uint8_t port, uint8_
 
 bool GpioExpIntOnChangeDefValEnable(GpioExpander* gpioExp, uint8_t port, uint8_t pins, uint8_t pinsDefVals)
 {
+	if(!gpioExp->initiated)
+		return false;
+
 	uint8_t msg[WRITE_MSG_SIZE];
 	uint8_t intEnAddr = 0,
 			defValAddr = 0,
@@ -218,7 +234,7 @@ bool GpioExpIntOnChangeDefValEnable(GpioExpander* gpioExp, uint8_t port, uint8_t
 	msg[0] = defValAddr;
 	msg[1] = pinsDefVals;
 
-	if(!I2CComSend(gpioExp->i2cInstance, gpioExp->hwAddress, msg, WRITE_MSG_SIZE))
+	if(!i2cSend(gpioExp->i2cManager, gpioExp->hwAddress, msg, WRITE_MSG_SIZE))
 		return false;
 
 
@@ -228,7 +244,7 @@ bool GpioExpIntOnChangeDefValEnable(GpioExpander* gpioExp, uint8_t port, uint8_t
 	msg[0] = confIntAddr;
 	msg[1] = currRegVal | pins;
 
-	if(!I2CComSend(gpioExp->i2cInstance, gpioExp->hwAddress, msg, WRITE_MSG_SIZE))
+	if(!i2cSend(gpioExp->i2cManager, gpioExp->hwAddress, msg, WRITE_MSG_SIZE))
 		return false;
 
 	if(!GpioExpGetCurrRegVal(gpioExp, intEnAddr, &currRegVal))
@@ -237,7 +253,7 @@ bool GpioExpIntOnChangeDefValEnable(GpioExpander* gpioExp, uint8_t port, uint8_t
 	msg[0] = intEnAddr;
 	msg[1] = currRegVal | pins;
 
-	if(!I2CComSend(gpioExp->i2cInstance, gpioExp->hwAddress, msg, WRITE_MSG_SIZE))
+	if(!i2cSend(gpioExp->i2cManager, gpioExp->hwAddress, msg, WRITE_MSG_SIZE))
 		return false;
 
 	return true;
@@ -245,6 +261,9 @@ bool GpioExpIntOnChangeDefValEnable(GpioExpander* gpioExp, uint8_t port, uint8_t
 
 bool GpioExpIntOnChangeDisable(GpioExpander* gpioExp, uint8_t port, uint8_t pins)
 {
+	if(!gpioExp->initiated)
+		return false;
+
 	uint8_t msg[WRITE_MSG_SIZE];
 	uint8_t intEnAddr = 0;
 
@@ -268,7 +287,7 @@ bool GpioExpIntOnChangeDisable(GpioExpander* gpioExp, uint8_t port, uint8_t pins
 	msg[0] = intEnAddr;
 	msg[1] = currRegVal & (~pins);
 
-	if(!I2CComSend(gpioExp->i2cInstance, gpioExp->hwAddress, msg, WRITE_MSG_SIZE))
+	if(!i2cSend(gpioExp->i2cManager, gpioExp->hwAddress, msg, WRITE_MSG_SIZE))
 		return false;
 
 	return true;
@@ -276,6 +295,9 @@ bool GpioExpIntOnChangeDisable(GpioExpander* gpioExp, uint8_t port, uint8_t pins
 
 bool GpioExpPullupEnable(GpioExpander* gpioExp, uint8_t port, uint8_t pins)
 {
+	if(!gpioExp->initiated)
+		return false;
+
 	uint8_t msg[WRITE_MSG_SIZE];
 	uint8_t regAddr = 0;
 
@@ -299,7 +321,7 @@ bool GpioExpPullupEnable(GpioExpander* gpioExp, uint8_t port, uint8_t pins)
 	msg[0] = regAddr;
 	msg[1] = currRegVal | pins;
 
-	if(!I2CComSend(gpioExp->i2cInstance, gpioExp->hwAddress, msg, WRITE_MSG_SIZE))
+	if(!i2cSend(gpioExp->i2cManager, gpioExp->hwAddress, msg, WRITE_MSG_SIZE))
 		return false;
 
 	return true;
@@ -307,6 +329,9 @@ bool GpioExpPullupEnable(GpioExpander* gpioExp, uint8_t port, uint8_t pins)
 
 bool GpioExpPullupDisable(GpioExpander* gpioExp, uint8_t port, uint8_t pins)
 {
+	if(!gpioExp->initiated)
+		return false;
+
 	uint8_t msg[WRITE_MSG_SIZE];
 	uint8_t regAddr = 0;
 
@@ -330,7 +355,7 @@ bool GpioExpPullupDisable(GpioExpander* gpioExp, uint8_t port, uint8_t pins)
 	msg[0] = regAddr;
 	msg[1] = currRegVal & (~pins);
 
-	if(!I2CComSend(gpioExp->i2cInstance, gpioExp->hwAddress, msg, WRITE_MSG_SIZE))
+	if(!i2cSend(gpioExp->i2cManager, gpioExp->hwAddress, msg, WRITE_MSG_SIZE))
 		return false;
 
 	return true;
@@ -338,6 +363,9 @@ bool GpioExpPullupDisable(GpioExpander* gpioExp, uint8_t port, uint8_t pins)
 
 bool GpioExpGetIntFlag(GpioExpander* gpioExp, uint8_t port, uint8_t* flagVal)
 {
+	if(!gpioExp->initiated)
+		return false;
+
 	uint8_t regAddr = 0;
 
 	switch(port)
@@ -361,6 +389,9 @@ bool GpioExpGetIntFlag(GpioExpander* gpioExp, uint8_t port, uint8_t* flagVal)
 
 bool GpioExpIntReadPort(GpioExpander* gpioExp, uint8_t port, uint8_t* portVal)
 {
+	if(!gpioExp->initiated)
+		return false;
+
 	uint8_t regAddr = 0;
 
 	switch(port)
@@ -383,6 +414,9 @@ bool GpioExpIntReadPort(GpioExpander* gpioExp, uint8_t port, uint8_t* portVal)
 
 bool GpioExpReadPort(GpioExpander* gpioExp, uint8_t port, uint8_t* portVal)
 {
+	if(!gpioExp->initiated)
+		return false;
+
 	uint8_t regAddr = 0;
 
 	switch(port)
@@ -405,6 +439,9 @@ bool GpioExpReadPort(GpioExpander* gpioExp, uint8_t port, uint8_t* portVal)
 
 bool GpioExpSetPin(GpioExpander* gpioExp, uint8_t port, uint8_t pins)
 {
+	if(!gpioExp->initiated)
+		return false;
+
 	uint8_t msg[WRITE_MSG_SIZE];
 	uint8_t regAddr = 0;
 	uint8_t* outPinsPtr = 0, *outPinsStatePtr;
@@ -430,7 +467,7 @@ bool GpioExpSetPin(GpioExpander* gpioExp, uint8_t port, uint8_t pins)
 	msg[0] = regAddr;
 	msg[1] = *outPinsStatePtr | pins;
 
-	if(!I2CComSend(gpioExp->i2cInstance, gpioExp->hwAddress, msg, WRITE_MSG_SIZE))
+	if(!i2cSend(gpioExp->i2cManager, gpioExp->hwAddress, msg, WRITE_MSG_SIZE))
 		return false;
 
 	*outPinsStatePtr = msg[1];
@@ -440,6 +477,9 @@ bool GpioExpSetPin(GpioExpander* gpioExp, uint8_t port, uint8_t pins)
 
 bool GpioExpClearPin(GpioExpander* gpioExp, uint8_t port, uint8_t pins)
 {
+	if(!gpioExp->initiated)
+		return false;
+
 	uint8_t msg[WRITE_MSG_SIZE];
 	uint8_t regAddr = 0;
 	uint8_t* outPinsPtr = 0, *outPinsStatePtr;
@@ -465,7 +505,7 @@ bool GpioExpClearPin(GpioExpander* gpioExp, uint8_t port, uint8_t pins)
 	msg[0] = regAddr;
 	msg[1] = *outPinsStatePtr & (~pins);
 
-	if(!I2CComSend(gpioExp->i2cInstance, gpioExp->hwAddress, msg, WRITE_MSG_SIZE))
+	if(!i2cSend(gpioExp->i2cManager, gpioExp->hwAddress, msg, WRITE_MSG_SIZE))
 		return false;
 
 	*outPinsStatePtr = msg[1];
@@ -475,13 +515,14 @@ bool GpioExpClearPin(GpioExpander* gpioExp, uint8_t port, uint8_t pins)
 
 bool GpioExpGetCurrRegVal(GpioExpander* gpioExp, uint8_t regAddr, uint8_t* regVal)
 {
-	if(!I2CComSend(gpioExp->i2cInstance, gpioExp->hwAddress, &regAddr, READ_MSG_SIZE))
-		return false;
+	bool result = i2cSendAndReceive(gpioExp->i2cManager,
+									gpioExp->hwAddress,
+									&regAddr,
+									READ_MSG_SIZE,
+									regVal,
+									READ_MSG_SIZE);
 
-	if(!I2CComReceive(gpioExp->i2cInstance, gpioExp->hwAddress, regVal, READ_MSG_SIZE))
-		return false;
-
-	return true;
+	return result;
 }
 
 

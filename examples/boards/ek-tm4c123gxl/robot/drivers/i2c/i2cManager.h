@@ -13,9 +13,9 @@ typedef struct
 }I2cManager;
 
 bool initI2cManager(I2cManager* i2cMng);
-bool send(I2cManager* i2cMng, uint8_t slaveAddress, const uint8_t* data, uint32_t length);
-bool receive(I2cManager* i2cMng, uint8_t slaveAddress, uint8_t* data, uint32_t length);
-bool sendAndReceive(I2cManager* i2cMng,
+bool i2cSend(I2cManager* i2cMng, uint8_t slaveAddress, const uint8_t* data, uint32_t length);
+bool i2cReceive(I2cManager* i2cMng, uint8_t slaveAddress, uint8_t* data, uint32_t length);
+bool i2cSendAndReceive(I2cManager* i2cMng,
 					uint8_t slaveAddress,
 					uint8_t* sentData,
 					uint32_t sentLength,
