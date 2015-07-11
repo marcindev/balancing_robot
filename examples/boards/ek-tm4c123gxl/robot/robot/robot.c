@@ -12,41 +12,93 @@
 #include "driverlib/pin_map.h"
 #include "driverlib/rom.h"
 #include "driverlib/sysctl.h"
-#include "driverlib/uart.h"
 #include "FreeRTOS.h"
+#include "portable.h"
 #include "task.h"
 #include "queue.h"
 #include "semphr.h"
 #include "robot.h"
+#include "priorities.h"
+#include "drivers/i2c/i2cTask.h"
+
 
 // local globals
-static I2CComInstance g_i2cInstance;
 
+#define ROBOT_TASK_STACK_SIZE		300         // Stack size in words
+
+I2cManager g_i2cManager;
+GpioExpander g_gpioExpander;
 
 const HeapRegion_t xHeapRegions[] =
 {
-    { ( uint8_t * ) 0x20004000UL, 0x02000 },
     { ( uint8_t * ) 0x20006000UL, 0x02000 },
     { NULL, 0 } /* Terminates the array. */
 };
 
-initializeSysClock();
-initializeI2c();
-initializeGpioExpanders();
+void vApplicationStackOverflowHook(xTaskHandle *pxTask, char *pcTaskName)
+{
+
+    while(1)
+    {
+    }
+}
+
+void initializeSysClock();
+void initilizeFreeRTOS();
+void initializeGpioExpanders();
+bool initRobotTask();
 
 void runRobot()
 {
 	initializeRobot();
+	if(!i2cTaskInit())
+	{
+		while(1){ }
+	}
+	if(!initRobotTask())
+	{
+		while(1){ }
+	}
+
+	vTaskStartScheduler();
 }
 
 void initializeRobot()
 {
 	initializeSysClock();
+	enableInterrupts();
 	initilizeFreeRTOS();
-	initializeI2c();
-	initializeGpioExpanders();
+
 }
 
+static void robotTask(void *pvParameters)
+{
+	portTickType ui32WakeTime;
+	initializeGpioExpanders();
+
+	ui32WakeTime = xTaskGetTickCount();
+
+	GpioExpSetPinDirOut(&g_gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN1);
+
+	while(true)
+	{
+		GpioExpSetPin(&g_gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN1);
+		vTaskDelayUntil(&ui32WakeTime, 10 / portTICK_RATE_MS);
+		GpioExpClearPin(&g_gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN1);
+		vTaskDelayUntil(&ui32WakeTime, 10 / portTICK_RATE_MS);
+	}
+}
+
+bool initRobotTask()
+{
+    if(xTaskCreate(robotTask, (signed portCHAR *)"ROBOT", ROBOT_TASK_STACK_SIZE, NULL,
+                   tskIDLE_PRIORITY + PRIORITY_ROBOT_TASK, NULL) != pdTRUE)
+    {
+        return false;
+    }
+
+    return true;
+}
 
 void initializeSysClock()
 {
@@ -54,23 +106,12 @@ void initializeSysClock()
                        SYSCTL_OSC_MAIN);
 }
 
-void initializeI2c()
+void enableInterrupts()
 {
-	ZeroBuffer(&g_i2cInstance, sizeof(I2CComInstance));
-
-	// setup i2c communication
-	g_i2cInstance.gpioPeripheral 	= SYSCTL_PERIPH_GPIOA;
-	g_i2cInstance.gpioPortBase 		= GPIO_PORTA_BASE;
-	g_i2cInstance.i2cBase 			= I2C1_BASE;
-	g_i2cInstance.i2cPeripheral 	= SYSCTL_PERIPH_I2C1;
-	g_i2cInstance.sclPin 			= GPIO_PIN_6;
-	g_i2cInstance.sclPinConfig 		= GPIO_PA6_I2C1SCL;
-	g_i2cInstance.sdaPin 			= GPIO_PIN_7;
-	g_i2cInstance.sdaPinConfig		= GPIO_PA7_I2C1SDA;
-	g_i2cInstance.speed				= I2C_SPEED_400;
-
-	I2CComInit(&g_i2cInstance);
+	// Enable processor interrupts.
+	IntMasterEnable();
 }
+
 
 void initializeGpioExpanders()
 {
@@ -78,8 +119,7 @@ void initializeGpioExpanders()
 
 	// setup gpio expander
 	g_gpioExpander.hwAddress		= 0x20;
-	g_gpioExpander.i2cInstance 		= &g_i2cInstance;
-
+	g_gpioExpander.i2cManager 		= &g_i2cManager;
 	GpioExpInit(&g_gpioExpander);
 }
 

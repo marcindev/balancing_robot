@@ -11,25 +11,33 @@
 #include "semphr.h"
 #include "I2CWrapper.h"
 #include "messages.h"
+#include "utils.h"
+#include "i2cTask.h"
 
-#define I2C_TASK_STACK_SIZE		128         // Stack size in words
-#define I2C_QUEUE_SIZE			100
+#define I2C_TASK_STACK_SIZE		300        // Stack size in words
+#define I2C_QUEUE_SIZE			 20
 #define I2C_ITEM_SIZE			  4			// bytes
 
 extern xQueueHandle g_i2cRxQueues[];
 xQueueHandle g_i2cTxQueue;
-static I2CComInstance i2cInstance;
+static I2CComInstance g_i2cInstance;
 
 // TODO consider using dynamically allocated messages instead of automatic in case those didn't work
 // ... and other variables
+
+static void initializeI2c();
+static void i2cHandleSend(I2cSendMsgReq* request);
+static void i2cHandleReceive(I2cReceiveMsgReq* request);
+static void i2cHandleSendAndReceive(I2cSendAndReceiveMsgReq* request);
+
 static void i2cTask(void *pvParameters)
 {
-	I2CComInit(&i2cInstance);
+	initializeI2c();
 
 	while(true)
 	{
 		void* msg;
-        if(xQueueReceive(g_i2cTxQueue, msg, 0) == pdPASS)
+        if(xQueueReceive(g_i2cTxQueue, &msg, 0) == pdPASS)
         {
         	switch(*((uint8_t*)msg))
         	{
@@ -69,50 +77,94 @@ bool i2cTaskInit()
 void i2cHandleSend(I2cSendMsgReq* request)
 {
 	bool result;
-	result = I2CComSend(&i2cInstance, request->slaveAddress, request->data, request->length);
+	result = I2CComSend(&g_i2cInstance, request->slaveAddress, request->data, request->length);
 
-	I2cSendMsgRsp response = INIT_SEND_I2C_MSG_RSP;
-	response.status = result;
+	I2cSendMsgRsp* response = (I2cSendMsgRsp*) pvPortMalloc(sizeof(I2cSendMsgRsp));
+	if(!response)
+		return; // out of memory
 
-	xQueueSend(g_i2cRxQueues[request->sender], &response, portMAX_DELAY);
+	*response = INIT_SEND_I2C_MSG_RSP;
+	response->status = result;
+
+	xQueueSend(g_i2cRxQueues[request->sender], (void*) &response, portMAX_DELAY);
+
+	vPortFree(request);
 }
 
 void i2cHandleReceive(I2cReceiveMsgReq* request)
 {
 	bool result;
-	uint8_t data;
+	uint8_t* data = (uint8_t*) pvPortMalloc(request->length);
 
-	result = I2CComReceive(&i2cInstance, request->slaveAddress, &data, request->length);
+	if(!data)
+		return;
 
-	I2cReceiveMsgRsp response = INIT_I2C_RECEIVE_MSG_RSP;
-	response.status = result;
-	response.data = data;
-	response.length = request->length;
+	result = I2CComReceive(&g_i2cInstance, request->slaveAddress, data, request->length);
 
-	xQueueSend(g_i2cRxQueues[request->sender], &response, portMAX_DELAY);
+	I2cReceiveMsgRsp* response = (I2cReceiveMsgRsp*) pvPortMalloc(sizeof(I2cReceiveMsgRsp));
+	if(!response)
+		return; // out of memory
+
+	*response = INIT_I2C_RECEIVE_MSG_RSP;
+	response->status = result;
+	response->data = data;
+	response->length = request->length;
+
+	xQueueSend(g_i2cRxQueues[request->sender], (void*) &response, portMAX_DELAY);
+
+	vPortFree(request);
 }
 
 void i2cHandleSendAndReceive(I2cSendAndReceiveMsgReq* request)
 {
 	bool result;
-	uint8_t data;
-	I2cSendAndReceiveMsgRsp response = INIT_I2C_SEND_N_RECEIVE_MSG_RSP;
+	uint8_t* data = (uint8_t*) pvPortMalloc(request->rcvLength);
 
-	result = I2CComSend(&i2cInstance, request->slaveAddress, request->data, request->sentLength);
+	if(!data)
+		return;
+
+	I2cSendAndReceiveMsgRsp* response = (I2cSendAndReceiveMsgRsp*) pvPortMalloc(sizeof(I2cSendAndReceiveMsgRsp));
+	if(!response)
+		return; // out of memory
+
+	*response = INIT_I2C_SEND_N_RECEIVE_MSG_RSP;
+
+	result = I2CComSend(&g_i2cInstance, request->slaveAddress, request->data, request->sentLength);
 
 	if(!result)
 	{
-		response.status = 0;
-		xQueueSend(g_i2cRxQueues[request->sender], &response, portMAX_DELAY);
+		response->status = 0;
+		xQueueSend(g_i2cRxQueues[request->sender], (void*) &response, portMAX_DELAY);
 
 		return;
 	}
 
-	result = I2CComReceive(&i2cInstance, request->slaveAddress, &data, request->rcvLength);
+	result = I2CComReceive(&g_i2cInstance, request->slaveAddress, data, request->rcvLength);
 
-	response.status = result;
-	response.data = data;
-	response.length = request->rcvLength;
+	response->status = result;
+	response->data = data;
+	response->length = request->rcvLength;
 
-	xQueueSend(g_i2cRxQueues[request->sender], &response, portMAX_DELAY);
+	xQueueSend(g_i2cRxQueues[request->sender], (void*) &response, portMAX_DELAY);
+
+	vPortFree(request);
 }
+
+void initializeI2c()
+{
+	ZeroBuffer(&g_i2cInstance, sizeof(I2CComInstance));
+
+	// setup i2c communication
+	g_i2cInstance.gpioPeripheral 	= SYSCTL_PERIPH_GPIOA;
+	g_i2cInstance.gpioPortBase 		= GPIO_PORTA_BASE;
+	g_i2cInstance.i2cBase 			= I2C1_BASE;
+	g_i2cInstance.i2cPeripheral 	= SYSCTL_PERIPH_I2C1;
+	g_i2cInstance.sclPin 			= GPIO_PIN_6;
+	g_i2cInstance.sclPinConfig 		= GPIO_PA6_I2C1SCL;
+	g_i2cInstance.sdaPin 			= GPIO_PIN_7;
+	g_i2cInstance.sdaPinConfig		= GPIO_PA7_I2C1SDA;
+	g_i2cInstance.speed				= I2C_SPEED_400;
+
+	I2CComInit(&g_i2cInstance);
+}
+

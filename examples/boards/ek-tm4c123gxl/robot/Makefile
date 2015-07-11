@@ -40,33 +40,47 @@ include ${ROOT}/makedefs
 #
 # Where to find source files that do not live in this directory.
 #
-VPATH=../../../../cc3100
+VPATH=../../../../third_party/FreeRTOSV8.2.1/FreeRTOS/Source/portable/GCC/ARM_CM4F
+VPATH+=../../../../third_party/FreeRTOSV8.2.1/FreeRTOS/Source/portable/MemMang/
+VPATH+=../../../../third_party/FreeRTOSV8.2.1/FreeRTOS/Source
+VPATH+=../../../../cc3100
 VPATH+=../../../../cc3100/simplelink
 VPATH+=../../../../cc3100/simplelink/source
 VPATH+=../../../../cc3100/platform/tiva-c-launchpad
-VPATH+=../../../../cc3100/simplelink/source
 VPATH+=./drivers
+VPATH+=./drivers/i2c
 VPATH+=./utils
+VPATH+=./robot
+VPATH+=./messages
+VPATH+=./freertos
 
 #
 # Where to find header files that do not live in the source directory.
 #
-IPATH=..
+IPATH=.
+IPATH+=..
 IPATH+=../../../..
 IPATH+=../common
+IPATH+=../../../../third_party/FreeRTOSV8.2.1/FreeRTOS/Source/portable/GCC/ARM_CM4F
+IPATH+=../../../../third_party/FreeRTOSV8.2.1/FreeRTOS
+IPATH+=../../../../third_party/FreeRTOSV8.2.1/FreeRTOS/Source/include
+IPATH+=../../../../third_party
 IPATH+=../../../../cc3100
 IPATH+=../../../../cc3100/simplelink
 IPATH+=../../../../cc3100/simplelink/include
 IPATH+=../../../../cc3100/platform/tiva-c-launchpad
 IPATH+=./drivers
+IPATH+=./drivers/i2c
 IPATH+=./utils
-
+IPATH+=./messages
+IPATH+=./robot
+IPATH+=./freertos
 
 #
 # The default rule, which causes the CC3000 Basic WiFi Application to be built.
 #
 all: ${COMPILER}
-all: ${COMPILER}/robot.axf
+all: ${COMPILER}/robot_main.axf
 
 #
 # The rule to clean out all the build products.
@@ -83,30 +97,39 @@ ${COMPILER}:
 #
 # Rules for building the CC3100 Basic WiFi Application.
 #
-${COMPILER}/robot.axf: ${COMPILER}/board.o
-${COMPILER}/robot.axf: ${COMPILER}/cli_uart.o
-${COMPILER}/robot.axf: ${COMPILER}/spi.o
-${COMPILER}/robot.axf: ${COMPILER}/uart.o
-${COMPILER}/robot.axf: ${COMPILER}/device.o
-${COMPILER}/robot.axf: ${COMPILER}/driver.o
-${COMPILER}/robot.axf: ${COMPILER}/flowcont.o
-${COMPILER}/robot.axf: ${COMPILER}/fs.o
-${COMPILER}/robot.axf: ${COMPILER}/netapp.o
-${COMPILER}/robot.axf: ${COMPILER}/netcfg.o
-${COMPILER}/robot.axf: ${COMPILER}/nonos.o
-${COMPILER}/robot.axf: ${COMPILER}/socket.o
-${COMPILER}/robot.axf: ${COMPILER}/spawn.o
-${COMPILER}/robot.axf: ${COMPILER}/wlan.o
-${COMPILER}/robot.axf: ${COMPILER}/robot.o
-${COMPILER}/robot.axf: ${COMPILER}/I2CWrapper.o
-${COMPILER}/robot.axf: ${COMPILER}/MCP23017.o
-${COMPILER}/robot.axf: ${COMPILER}/utils.o
-${COMPILER}/robot.axf: ${COMPILER}/startup_${COMPILER}.o
-${COMPILER}/robot.axf: ${ROOT}/driverlib/${COMPILER}/libdriver.a
-${COMPILER}/robot.axf: robot.ld
-SCATTERgcc_robot=robot.ld
-ENTRY_robot=ResetISR
-CFLAGSgcc=-DTARGET_IS_TM4C123_RB1 -D_USE_CLI_ -g
+${COMPILER}/robot_main.axf: ${COMPILER}/robot_main.o
+${COMPILER}/robot_main.axf: ${COMPILER}/robot.o
+${COMPILER}/robot_main.axf: ${COMPILER}/board.o
+${COMPILER}/robot_main.axf: ${COMPILER}/spi.o
+${COMPILER}/robot_main.axf: ${COMPILER}/uart.o
+${COMPILER}/robot_main.axf: ${COMPILER}/device.o
+${COMPILER}/robot_main.axf: ${COMPILER}/driver.o
+${COMPILER}/robot_main.axf: ${COMPILER}/flowcont.o
+${COMPILER}/robot_main.axf: ${COMPILER}/fs.o
+${COMPILER}/robot_main.axf: ${COMPILER}/netapp.o
+${COMPILER}/robot_main.axf: ${COMPILER}/netcfg.o
+${COMPILER}/robot_main.axf: ${COMPILER}/nonos.o
+${COMPILER}/robot_main.axf: ${COMPILER}/socket.o
+${COMPILER}/robot_main.axf: ${COMPILER}/spawn.o
+${COMPILER}/robot_main.axf: ${COMPILER}/wlan.o
+${COMPILER}/robot_main.axf: ${COMPILER}/I2CWrapper.o
+${COMPILER}/robot_main.axf: ${COMPILER}/MCP23017.o
+${COMPILER}/robot_main.axf: ${COMPILER}/i2cManager.o
+${COMPILER}/robot_main.axf: ${COMPILER}/i2cTask.o
+${COMPILER}/robot_main.axf: ${COMPILER}/utils.o
+${COMPILER}/robot_main.axf: ${COMPILER}/heap_5.o
+${COMPILER}/robot_main.axf: ${COMPILER}/list.o
+${COMPILER}/robot_main.axf: ${COMPILER}/port.o
+${COMPILER}/robot_main.axf: ${COMPILER}/queue.o
+${COMPILER}/robot_main.axf: ${COMPILER}/tasks.o
+${COMPILER}/robot_main.axf: ${COMPILER}/messages.o
+${COMPILER}/robot_main.axf: ${COMPILER}/startup_${COMPILER}.o
+${COMPILER}/robot_main.axf: ${ROOT}/driverlib/${COMPILER}/libdriver.a
+${COMPILER}/robot_main.axf: robot_main.ld
+SCATTERgcc_robot_main=robot_main.ld
+ENTRY_robot_main=ResetISR
+CFLAGSgcc=-DTARGET_IS_TM4C123_RB1 -g
+#CFLAGSgcc=-DTARGET_IS_TM4C123_RB1 -D_USE_CLI_ -g
 
 #
 # Include the automatically generated dependency files.

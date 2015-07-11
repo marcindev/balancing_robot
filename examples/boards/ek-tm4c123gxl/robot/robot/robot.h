@@ -5,7 +5,7 @@
 //***********************************************
 #include <MCP23017.h>
 #include <utils.h>
-#include "global_defs.h"
+#include "../global_defs.h"
 
 
 

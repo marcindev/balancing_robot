@@ -9,6 +9,7 @@
 
 typedef struct
 {
+	// Do not modify
 	uint8_t taskId;
 }I2cManager;
 

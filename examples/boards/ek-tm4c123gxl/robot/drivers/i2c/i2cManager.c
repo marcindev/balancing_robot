@@ -9,6 +9,7 @@
 #include "semphr.h"
 #include "messages.h"
 #include "i2cManager.h"
+#include "portable.h"
 
 #define RX_QUEUES_MAX_SIZE			20
 #define RX_WAIT_TIME_TICKS			50
@@ -32,10 +33,10 @@ bool initI2cManager(I2cManager* i2cMng)
 
 	xSemaphoreTake(g_i2cNextSenderIdSem, portMAX_DELAY);
 
-	if(g_i2cNextSenderIdSem == RX_QUEUES_MAX_SIZE)
+	if(g_i2cNextSenderId == RX_QUEUES_MAX_SIZE)
 		return false;
 
-	i2cMng->taskId = g_i2cNextSenderIdSem++;
+	i2cMng->taskId = g_i2cNextSenderId++;
 
 	xSemaphoreGive(g_i2cNextSenderIdSem);
 
@@ -50,25 +51,33 @@ bool i2cSend(I2cManager* i2cMng, uint8_t slaveAddress, const uint8_t* data, uint
 {
 	size_t queueInd = i2cMng->taskId;
 
-	I2cSendMsgReq request = INIT_I2C_SEND_MSG_REQ;
-	request.slaveAddress = slaveAddress;
-	request.data = data;
-	request.length = length;
-	request.sender = queueInd;
+	I2cSendMsgReq* request = (I2cSendMsgReq*) pvPortMalloc(sizeof(I2cSendMsgReq));
+	if(!request)
+		return false; // out of memory
 
-	if(xQueueSend(g_i2cTxQueue, &request, portMAX_DELAY) != pdPASS)
+	*request = INIT_I2C_SEND_MSG_REQ;
+	request->slaveAddress = slaveAddress;
+	request->data = (uint8_t*)data;
+	request->length = length;
+	request->sender = queueInd;
+
+	if(xQueueSend(g_i2cTxQueue, (void*) &request, portMAX_DELAY) != pdPASS)
 	{
 		return false;
 	}
 
-	I2cSendMsgRsp response = INIT_SEND_I2C_MSG_RSP;
+	I2cSendMsgRsp* response;
 
 	if(xQueueReceive(g_i2cRxQueues[queueInd], &response, ( portTickType ) RX_WAIT_TIME_TICKS) != pdPASS)
 		return false;
 
-	if(response.msgId != I2C_SEND_MSG_RSP || !response.status)
+	if(response->msgId != I2C_SEND_MSG_RSP || !response->status)
+	{
+		vPortFree(response);
 		return false;
+	}
 
+	vPortFree(response);
 	return true;
 }
 
@@ -76,26 +85,34 @@ bool i2cReceive(I2cManager* i2cMng, uint8_t slaveAddress, uint8_t* data, uint32_
 {
 	size_t queueInd = i2cMng->taskId;
 
-	I2cReceiveMsgReq request = INIT_I2C_RECEIVE_MSG_REQ;
-	request.slaveAddress = slaveAddress;
-	request.length = length;
-	request.sender = queueInd;
+	I2cReceiveMsgReq* request = (I2cReceiveMsgReq*) pvPortMalloc(sizeof(I2cReceiveMsgReq));
+	if(!request)
+		return false; // out of memory
 
-	if(xQueueSend(g_i2cTxQueue, &request, portMAX_DELAY) != pdPASS)
+	*request = INIT_I2C_RECEIVE_MSG_REQ;
+	request->slaveAddress = slaveAddress;
+	request->length = length;
+	request->sender = queueInd;
+
+	if(xQueueSend(g_i2cTxQueue, (void*) &request, portMAX_DELAY) != pdPASS)
 	{
 		return false;
 	}
 
-	I2cReceiveMsgRsp response = INIT_I2C_RECEIVE_MSG_RSP;
+	I2cReceiveMsgRsp* response;;
 
 	if(xQueueReceive(g_i2cRxQueues[queueInd], &response, ( portTickType ) RX_WAIT_TIME_TICKS) != pdPASS)
 		return false;
 
-	if(response.msgId != I2C_RECEIVE_MSG_RSP || !response.status)
+	if(response->msgId != I2C_RECEIVE_MSG_RSP || !response->status)
+	{
+		vPortFree(response);
 		return false;
+	}
 
-	data = response.data;
+	data = response->data;
 
+	vPortFree(response);
 	return true;
 }
 
@@ -104,28 +121,36 @@ bool i2cSendAndReceive(I2cManager* i2cMng, uint8_t slaveAddress, uint8_t* sentDa
 {
 	size_t queueInd = i2cMng->taskId;
 
-	I2cSendAndReceiveMsgReq request = INIT_I2C_SEND_N_RECEIVE_MSG_REQ;
-	request.slaveAddress = slaveAddress;
-	request.data = sentData;
-	request.sentLength = sentLength;
-	request.rcvLength = recvLength;
-	request.sender = queueInd;
+	I2cSendAndReceiveMsgReq* request = (I2cSendAndReceiveMsgReq*) pvPortMalloc(sizeof(I2cSendAndReceiveMsgReq));
+	if(!request)
+		return false; // out of memory
 
-	if(xQueueSend(g_i2cTxQueue, &request, portMAX_DELAY) != pdPASS)
+	*request = INIT_I2C_SEND_N_RECEIVE_MSG_REQ;
+	request->slaveAddress = slaveAddress;
+	request->data = sentData;
+	request->sentLength = sentLength;
+	request->rcvLength = recvLength;
+	request->sender = queueInd;
+
+	if(xQueueSend(g_i2cTxQueue, (void*) &request, portMAX_DELAY) != pdPASS)
 	{
 		return false;
 	}
 
-	I2cSendAndReceiveMsgRsp response = INIT_I2C_SEND_N_RECEIVE_MSG_RSP;
+	I2cSendAndReceiveMsgRsp* response;
 
 	if(xQueueReceive(g_i2cRxQueues[queueInd], &response, ( portTickType ) RX_WAIT_TIME_TICKS) != pdPASS)
 		return false;
 
-	if(response.msgId != I2C_SEND_N_RECEIVE_MSG_RSP || !response.status)
+	if(response->msgId != I2C_SEND_N_RECEIVE_MSG_RSP || !response->status)
+	{
+		vPortFree(response);
 		return false;
+	}
 
-	recvData = response.data;
+	recvData = response->data;
 
+	vPortFree(response);
 	return true;
 }
 
