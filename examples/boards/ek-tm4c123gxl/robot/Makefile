@@ -53,6 +53,8 @@ VPATH+=./utils
 VPATH+=./robot
 VPATH+=./messages
 VPATH+=./freertos
+VPATH+=./logger
+VPATH+=./server
 
 #
 # Where to find header files that do not live in the source directory.
@@ -75,6 +77,8 @@ IPATH+=./utils
 IPATH+=./messages
 IPATH+=./robot
 IPATH+=./freertos
+IPATH+=./logger
+IPATH+=./server
 
 #
 # The default rule, which causes the CC3000 Basic WiFi Application to be built.
@@ -116,6 +120,9 @@ ${COMPILER}/robot_main.axf: ${COMPILER}/I2CWrapper.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/MCP23017.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/i2cManager.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/i2cTask.o
+${COMPILER}/robot_main.axf: ${COMPILER}/motor.o
+${COMPILER}/robot_main.axf: ${COMPILER}/motorsTask.o
+${COMPILER}/robot_main.axf: ${COMPILER}/i2cTask.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/utils.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/heap_5.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/list.o
@@ -123,12 +130,17 @@ ${COMPILER}/robot_main.axf: ${COMPILER}/port.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/queue.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/tasks.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/messages.o
+${COMPILER}/robot_main.axf: ${COMPILER}/logger.o
+${COMPILER}/robot_main.axf: ${COMPILER}/SimpleLinkWrapper.o
+${COMPILER}/robot_main.axf: ${COMPILER}/tcpServer.o
+${COMPILER}/robot_main.axf: ${COMPILER}/tcpServerTask.o
+${COMPILER}/robot_main.axf: ${COMPILER}/tcpServerHandlerTask.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/startup_${COMPILER}.o
 ${COMPILER}/robot_main.axf: ${ROOT}/driverlib/${COMPILER}/libdriver.a
 ${COMPILER}/robot_main.axf: robot_main.ld
 SCATTERgcc_robot_main=robot_main.ld
 ENTRY_robot_main=ResetISR
-CFLAGSgcc=-DTARGET_IS_TM4C123_RB1 -g
+CFLAGSgcc=-DTARGET_IS_TM4C123_RB1 -D_DISABLE_I2C_ACK -g
 #CFLAGSgcc=-DTARGET_IS_TM4C123_RB1 -D_USE_CLI_ -g
 
 #
