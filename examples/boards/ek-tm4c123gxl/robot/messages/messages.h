@@ -10,24 +10,31 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+uint16_t getMsgSize(uint8_t msgId);
+
 // Message ids
 
-#define HANDSHAKE_MSG_REQ			0x05
-#define HANDSHAKE_MSG_RSP			0x06
-#define TEST_MSG_REQ				0x07
-#define TEST_MSG_RSP				0x08
-#define I2C_SEND_MSG_REQ			0x09
-#define I2C_SEND_MSG_RSP			0x0A
-#define I2C_RECEIVE_MSG_REQ			0x0B
-#define I2C_RECEIVE_MSG_RSP			0x0C
-#define I2C_SEND_N_RECEIVE_MSG_REQ	0x0D
-#define I2C_SEND_N_RECEIVE_MSG_RSP	0x0E
-
+#define HANDSHAKE_MSG_REQ					0x05
+#define HANDSHAKE_MSG_RSP					0x06
+#define TEST_MSG_REQ						0x07
+#define TEST_MSG_RSP						0x08
+#define I2C_SEND_MSG_REQ					0x09
+#define I2C_SEND_MSG_RSP					0x0A
+#define I2C_RECEIVE_MSG_REQ					0x0B
+#define I2C_RECEIVE_MSG_RSP					0x0C
+#define I2C_SEND_N_RECEIVE_MSG_REQ			0x0D
+#define I2C_SEND_N_RECEIVE_MSG_RSP			0x0E
+#define MOTOR_SET_DUTY_CYCLE_MSG_REQ		0x0F
+#define MOTOR_SET_DUTY_CYCLE_MSG_RSP		0x10
+#define GET_LOGS_MSG_REQ					0x11
+#define GET_LOGS_MSG_RSP					0x12
+// TODO: try with union messages or memcpy
 
 //***********************
 // Local messages
 //***********************
 
+// i2c task messages
 typedef struct
 {
 	uint8_t msgId;
@@ -83,11 +90,46 @@ typedef struct
 }I2cSendAndReceiveMsgRsp;
 extern const I2cSendAndReceiveMsgRsp INIT_I2C_SEND_N_RECEIVE_MSG_RSP;
 
+// motor task messages
+typedef struct
+{
+	uint8_t msgId;
+	uint8_t motorId;
+	uint8_t dutyCycle;
+}MotorSetDutyCycleMsgReq;
+extern const MotorSetDutyCycleMsgReq INIT_MOTOR_SET_DUTY_CYCLE_MSG_REQ;
+
+typedef struct
+{
+	uint8_t msgId;
+	uint8_t status;
+}MotorSetDutyCycleMsgRsp;
+extern const MotorSetDutyCycleMsgRsp INIT_MOTOR_SET_DUTY_CYCLE_MSG_RSP;
+
+
 
 
 //***********************
 // Remote messages
 //***********************
+
+
+typedef struct
+{
+	uint8_t msgId;
+}GetLogsMsgReq;
+extern const GetLogsMsgReq INIT_GET_LOGS_MSG_REQ;
+
+typedef struct
+{
+	uint8_t msgId;
+	uint16_t lineNum;
+	uint16_t totalLineNum;
+	uint32_t timestamp;
+	uint8_t logLevel;
+	uint8_t buffer[100];
+}GetLogsMsgRsp;
+extern const GetLogsMsgRsp INIT_GET_LOGS_MSG_RSP;
 
 /*
 typedef struct
