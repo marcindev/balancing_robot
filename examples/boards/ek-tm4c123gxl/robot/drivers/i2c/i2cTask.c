@@ -15,7 +15,7 @@
 #include "i2cTask.h"
 
 #define I2C_TASK_STACK_SIZE		300        // Stack size in words
-#define I2C_QUEUE_SIZE			 20
+#define I2C_QUEUE_SIZE			200
 #define I2C_ITEM_SIZE			  4			// bytes
 
 extern xQueueHandle g_i2cRxQueues[];
@@ -78,7 +78,7 @@ void i2cHandleSend(I2cSendMsgReq* request)
 {
 	bool result;
 	result = I2CComSend(&g_i2cInstance, request->slaveAddress, request->data, request->length);
-
+#ifdef _DISABLE_I2C_ACK
 	I2cSendMsgRsp* response = (I2cSendMsgRsp*) pvPortMalloc(sizeof(I2cSendMsgRsp));
 	if(!response)
 		return; // out of memory
@@ -87,7 +87,7 @@ void i2cHandleSend(I2cSendMsgReq* request)
 	response->status = result;
 
 	xQueueSend(g_i2cRxQueues[request->sender], (void*) &response, portMAX_DELAY);
-
+#endif
 	vPortFree(request);
 }
 

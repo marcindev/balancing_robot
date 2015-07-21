@@ -65,7 +65,7 @@ bool i2cSend(I2cManager* i2cMng, uint8_t slaveAddress, const uint8_t* data, uint
 	{
 		return false;
 	}
-
+#ifdef _DISABLE_I2C_ACK
 	I2cSendMsgRsp* response;
 
 	if(xQueueReceive(g_i2cRxQueues[queueInd], &response, ( portTickType ) RX_WAIT_TIME_TICKS) != pdPASS)
@@ -78,6 +78,7 @@ bool i2cSend(I2cManager* i2cMng, uint8_t slaveAddress, const uint8_t* data, uint
 	}
 
 	vPortFree(response);
+#endif
 	return true;
 }
 
@@ -99,7 +100,7 @@ bool i2cReceive(I2cManager* i2cMng, uint8_t slaveAddress, uint8_t* data, uint32_
 		return false;
 	}
 
-	I2cReceiveMsgRsp* response;;
+	I2cReceiveMsgRsp* response;
 
 	if(xQueueReceive(g_i2cRxQueues[queueInd], &response, ( portTickType ) RX_WAIT_TIME_TICKS) != pdPASS)
 		return false;
