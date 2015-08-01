@@ -18,6 +18,7 @@
 #define I2C_TASK_STACK_SIZE		500        // Stack size in words
 #define I2C_QUEUE_SIZE			200
 #define I2C_ITEM_SIZE			  4			// bytes
+#define I2C_MSG_WAIT_TIME	 0xFFFF
 
 extern xQueueHandle g_i2cRxQueues[];
 xQueueHandle g_i2cTxQueue;
@@ -38,7 +39,7 @@ static void i2cTask(void *pvParameters)
 	while(true)
 	{
 		void* msg;
-        if(xQueueReceive(g_i2cTxQueue, &msg, 0) == pdPASS)
+        if(xQueueReceive(g_i2cTxQueue, &msg, I2C_MSG_WAIT_TIME) == pdPASS)
         {
         	switch(*((uint8_t*)msg))
         	{
