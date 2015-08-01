@@ -18,6 +18,9 @@
 #define MOTOR_LEFT		0x00
 #define MOTOR_RIGHT		0x01
 
+#define PWM_0			0x00
+#define PWM_1			0x01
+
 //*************************************************************************************
 //MotorA       ENA  IN1  IN2
 //Forward     High High Low
@@ -28,8 +31,7 @@
 typedef struct
 {
 	GpioExpander* gpioExpander;
-	uint8_t portEna;
-	uint8_t pinEna;
+	uint8_t pwm; // PWM_0 / PWM_1
 	uint8_t portFwd;
 	uint8_t pinFwd;
 	uint8_t portRev;
@@ -50,7 +52,7 @@ bool initializeMotor(MotorInstance* motorInstance);
 bool startMotor(MotorInstance* motorInstance);
 bool stopMotor(MotorInstance* motorInstance);
 bool isMotorRunning(MotorInstance* motorInstance);
-void setMotorDirection(MotorInstance* motorInstance, uint8_t direction);
+bool setMotorDirection(MotorInstance* motorInstance, uint8_t direction);
 void setMotorStopState(MotorInstance* motorInstance, uint8_t stopState);
 void setMotorDutyCycle(MotorInstance* motorInstance, uint8_t dutyCycle);
 void setMotorDutyCycleChangeTime(MotorInstance* motorInstance, uint32_t dutyCycleChangeTime);

@@ -11,6 +11,8 @@ const MotorSetDutyCycleMsgReq INIT_MOTOR_SET_DUTY_CYCLE_MSG_REQ = {MOTOR_SET_DUT
 const MotorSetDutyCycleMsgRsp INIT_MOTOR_SET_DUTY_CYCLE_MSG_RSP = {MOTOR_SET_DUTY_CYCLE_MSG_RSP};
 const GetLogsMsgReq INIT_GET_LOGS_MSG_REQ = {GET_LOGS_MSG_REQ};
 const GetLogsMsgRsp INIT_GET_LOGS_MSG_RSP = {GET_LOGS_MSG_RSP};
+const MotorSetDirectionMsgReq INIT_MOTOR_SET_DIRECTION_MSG_REQ = {MOTOR_SET_DIRECTION_MSG_REQ};
+const MotorSetDirectionMsgRsp INIT_MOTOR_SET_DIRECTION_MSG_RSP = {MOTOR_SET_DIRECTION_MSG_RSP};
 
 uint16_t getMsgSize(uint8_t msgId)
 {
@@ -32,6 +34,10 @@ uint16_t getMsgSize(uint8_t msgId)
 		return sizeof(MotorSetDutyCycleMsgReq);
 	case MOTOR_SET_DUTY_CYCLE_MSG_RSP:
 		return sizeof(MotorSetDutyCycleMsgRsp);
+	case MOTOR_SET_DIRECTION_MSG_REQ:
+		return sizeof(MotorSetDirectionMsgReq);
+	case MOTOR_SET_DIRECTION_MSG_RSP:
+		return sizeof(MotorSetDirectionMsgRsp);
 	case GET_LOGS_MSG_REQ:
 		return sizeof(GetLogsMsgReq);
 	case GET_LOGS_MSG_RSP:

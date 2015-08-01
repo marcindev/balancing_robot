@@ -14,6 +14,7 @@
 #include "global_defs.h"
 #include "motor.h"
 #include "motorsTask.h"
+#include "logger.h"
 
 #define MOTORS_TASK_STACK_SIZE		300        // Stack size in words
 #define MOTORS_QUEUE_SIZE			 50
@@ -22,12 +23,11 @@
 #define PWM_INITIAL_FREQUENCY		10000
 #define MOTORS_NUMBER				  1
 
-#define MOTOR_L_EN_PORT			GPIOEXP_PORTA
-#define MOTOR_L_EN_PIN			GPIOEXP_PIN1
+#define MOTOR_L_PWM			    PWM_0
 #define MOTOR_L_FW_PORT			GPIOEXP_PORTA
-#define MOTOR_L_FW_PIN			GPIOEXP_PIN2
+#define MOTOR_L_FW_PIN			GPIOEXP_PIN0
 #define MOTOR_L_RV_PORT			GPIOEXP_PORTA
-#define MOTOR_L_RV_PIN			GPIOEXP_PIN3
+#define MOTOR_L_RV_PIN			GPIOEXP_PIN1
 
 //#define MOTOR_R_EN_PORT
 //#define MOTOR_R_EN_PIN
@@ -36,25 +36,23 @@
 //#define MOTOR_R_RV_PORT
 //#define MOTOR_R_RV_PIN
 
-extern uint32_t g_pwmCounter;
 
 xQueueHandle g_motorsQueue;
-SemaphoreHandle_t g_pwmCounterSem = NULL;
 static MotorInstance g_motors[MOTORS_NUMBER];
 static GpioExpander g_gpioExpander;
 
 static void initializeMotors();
-static void motorsJob();
 static void handleMessages(void* msg);
 static void handleSetDutyCycle(MotorSetDutyCycleMsgReq* request);
+static void handleSetDirection(MotorSetDirectionMsgReq* request);
 
 
 static void motorsTask()
 {
-	g_pwmCounterSem = xSemaphoreCreateBinary();
-
 	initializePwm(PWM_INITIAL_FREQUENCY);
 	initializeMotors();
+	if(!startMotor(&g_motors[0]))
+		logger(Error, Log_Motors, "Could not start motor");
 
 	while(true)
 	{
@@ -64,8 +62,6 @@ static void motorsTask()
 			handleMessages(msg);
 		}
 
-		if( xSemaphoreTake( g_pwmCounterSem, portMAX_DELAY ) == pdTRUE )
-			motorsJob();	// wait for timer to give semaphore
 	}
 
 }
@@ -87,8 +83,7 @@ void initializeMotors()
 {
 	g_gpioExpander.hwAddress = GPIO_EXPANDER1_ADDRESS;
 	g_motors[MOTOR_LEFT].gpioExpander = &g_gpioExpander;
-	g_motors[MOTOR_LEFT].portEna = MOTOR_L_EN_PORT;
-	g_motors[MOTOR_LEFT].pinEna = MOTOR_L_EN_PIN;
+	g_motors[MOTOR_LEFT].pwm = MOTOR_L_PWM;
 	g_motors[MOTOR_LEFT].portFwd = MOTOR_L_FW_PORT;
 	g_motors[MOTOR_LEFT].pinFwd = MOTOR_L_FW_PIN;
 	g_motors[MOTOR_LEFT].portRev = MOTOR_L_RV_PORT;
@@ -99,32 +94,6 @@ void initializeMotors()
 		initializeMotor(&g_motors[i]);
 }
 
-void motorsJob()
-{
-	for(size_t i = 0; i != MOTORS_NUMBER; ++i)
-	{
-		uint8_t dutyCycle = getMotorDutyCycle(&g_motors[i]);
-
-		if(g_pwmCounter == 0)
-		{
-			if(dutyCycle == 0 && isMotorRunning(&g_motors[i]))
-			{
-				stopMotor(&g_motors[i]);
-			}
-			else if (!isMotorRunning(&g_motors[i]))
-			{
-				startMotor(&g_motors[i]);
-			}
-		}
-		else if(g_pwmCounter == dutyCycle)
-		{
-			//if(dutyCycle != 100)
-			stopMotor(&g_motors[i]);
-		}
-
-	}
-}
-
 void handleMessages(void* msg)
 {
 	switch(*((uint8_t*)msg))
@@ -132,7 +101,9 @@ void handleMessages(void* msg)
 	case MOTOR_SET_DUTY_CYCLE_MSG_REQ:
 		handleSetDutyCycle((MotorSetDutyCycleMsgReq*) msg);
 		break;
-
+	case MOTOR_SET_DIRECTION_MSG_REQ:
+		handleSetDirection((MotorSetDirectionMsgReq*) msg);
+		break;
 	default:
 		// Received not-recognized message
 		break;
@@ -147,6 +118,17 @@ void handleSetDutyCycle(MotorSetDutyCycleMsgReq* request)
 		return;
 
 	setMotorDutyCycle(&g_motors[request->motorId], request->dutyCycle);
+
+	vPortFree(request);
+}
+
+void handleSetDirection(MotorSetDirectionMsgReq* request)
+{
+
+	if(request->motorId >= MOTORS_NUMBER)
+		return;
+
+	setMotorDirection(&g_motors[request->motorId], request->direction);
 
 	vPortFree(request);
 }

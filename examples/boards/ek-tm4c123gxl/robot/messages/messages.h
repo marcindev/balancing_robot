@@ -28,6 +28,10 @@ uint16_t getMsgSize(uint8_t msgId);
 #define MOTOR_SET_DUTY_CYCLE_MSG_RSP		0x10
 #define GET_LOGS_MSG_REQ					0x11
 #define GET_LOGS_MSG_RSP					0x12
+#define GET_TASKS_INFO_MSG_REQ				0x13
+#define GET_TASKS_INFO_MSG_RSP				0x14
+#define MOTOR_SET_DIRECTION_MSG_REQ			0x15
+#define MOTOR_SET_DIRECTION_MSG_RSP			0x14
 // TODO: try with union messages or memcpy
 
 //***********************
@@ -106,6 +110,21 @@ typedef struct
 }MotorSetDutyCycleMsgRsp;
 extern const MotorSetDutyCycleMsgRsp INIT_MOTOR_SET_DUTY_CYCLE_MSG_RSP;
 
+typedef struct
+{
+	uint8_t msgId;
+	uint8_t motorId;
+	uint8_t direction;
+}MotorSetDirectionMsgReq;
+extern const MotorSetDirectionMsgReq INIT_MOTOR_SET_DIRECTION_MSG_REQ;
+
+typedef struct
+{
+	uint8_t msgId;
+	uint8_t status;
+}MotorSetDirectionMsgRsp;
+extern const MotorSetDirectionMsgRsp INIT_MOTOR_SET_DIRECTION_MSG_RSP;
+
 
 
 
@@ -130,6 +149,23 @@ typedef struct
 	uint8_t buffer[100];
 }GetLogsMsgRsp;
 extern const GetLogsMsgRsp INIT_GET_LOGS_MSG_RSP;
+
+typedef struct
+{
+	uint8_t msgId;
+}GetTasksInfoMsgReq;
+extern const GetTasksInfoMsgReq INIT_GET_TASKS_INFO_MSG_REQ;
+
+typedef struct
+{
+	uint8_t msgId;
+	uint16_t lineNum;
+	uint16_t totalLineNum;
+	uint32_t timestamp;
+	uint8_t logLevel;
+	uint8_t buffer[100];
+}GetTasksInfoMsgRsp;
+extern const GetTasksInfoMsgRsp INIT_GET_TASKS_INFO_MSG_RSP;
 
 /*
 typedef struct

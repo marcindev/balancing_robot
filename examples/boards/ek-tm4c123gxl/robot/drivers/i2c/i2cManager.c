@@ -10,6 +10,7 @@
 #include "messages.h"
 #include "i2cManager.h"
 #include "portable.h"
+#include <string.h>
 
 #define RX_QUEUES_MAX_SIZE			20
 #define RX_WAIT_TIME_TICKS			50
@@ -50,8 +51,9 @@ bool initI2cManager(I2cManager* i2cMng)
 bool i2cSend(I2cManager* i2cMng, uint8_t slaveAddress, const uint8_t* data, uint32_t length)
 {
 	size_t queueInd = i2cMng->taskId;
-
-	I2cSendMsgReq* request = (I2cSendMsgReq*) pvPortMalloc(sizeof(I2cSendMsgReq));
+	I2cSendMsgReq req;
+//	I2cSendMsgReq* request = (I2cSendMsgReq*) pvPortMalloc(sizeof(I2cSendMsgReq));
+	I2cSendMsgReq* request = &req;
 	if(!request)
 		return false; // out of memory
 
@@ -65,7 +67,7 @@ bool i2cSend(I2cManager* i2cMng, uint8_t slaveAddress, const uint8_t* data, uint
 	{
 		return false;
 	}
-#ifdef _DISABLE_I2C_ACK
+#ifndef _DISABLE_I2C_ACK
 	I2cSendMsgRsp* response;
 
 	if(xQueueReceive(g_i2cRxQueues[queueInd], &response, ( portTickType ) RX_WAIT_TIME_TICKS) != pdPASS)
@@ -77,7 +79,7 @@ bool i2cSend(I2cManager* i2cMng, uint8_t slaveAddress, const uint8_t* data, uint
 		return false;
 	}
 
-	vPortFree(response);
+	//vPortFree(response);
 #endif
 	return true;
 }
@@ -86,7 +88,9 @@ bool i2cReceive(I2cManager* i2cMng, uint8_t slaveAddress, uint8_t* data, uint32_
 {
 	size_t queueInd = i2cMng->taskId;
 
-	I2cReceiveMsgReq* request = (I2cReceiveMsgReq*) pvPortMalloc(sizeof(I2cReceiveMsgReq));
+	I2cReceiveMsgReq req;
+//	I2cReceiveMsgReq* request = (I2cReceiveMsgReq*) pvPortMalloc(sizeof(I2cReceiveMsgReq));
+	I2cReceiveMsgReq* request = &req; // TODO: dynamic allocation overrides stack memory
 	if(!request)
 		return false; // out of memory
 
@@ -121,8 +125,9 @@ bool i2cSendAndReceive(I2cManager* i2cMng, uint8_t slaveAddress, uint8_t* sentDa
 					uint32_t sentLength, uint8_t* recvData, uint32_t recvLength)
 {
 	size_t queueInd = i2cMng->taskId;
-
-	I2cSendAndReceiveMsgReq* request = (I2cSendAndReceiveMsgReq*) pvPortMalloc(sizeof(I2cSendAndReceiveMsgReq));
+	I2cSendAndReceiveMsgReq req;
+//	I2cSendAndReceiveMsgReq* request = (I2cSendAndReceiveMsgReq*) pvPortMalloc(sizeof(I2cSendAndReceiveMsgReq));
+	I2cSendAndReceiveMsgReq* request = &req;
 	if(!request)
 		return false; // out of memory
 
@@ -149,8 +154,9 @@ bool i2cSendAndReceive(I2cManager* i2cMng, uint8_t slaveAddress, uint8_t* sentDa
 		return false;
 	}
 
-	recvData = response->data;
+	memcpy(recvData, response->data, response->length);
 
+	vPortFree(response->data);
 	vPortFree(response);
 	return true;
 }

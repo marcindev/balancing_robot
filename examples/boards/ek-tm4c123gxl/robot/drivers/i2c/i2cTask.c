@@ -13,8 +13,9 @@
 #include "messages.h"
 #include "utils.h"
 #include "i2cTask.h"
+#include "logger.h"
 
-#define I2C_TASK_STACK_SIZE		300        // Stack size in words
+#define I2C_TASK_STACK_SIZE		500        // Stack size in words
 #define I2C_QUEUE_SIZE			200
 #define I2C_ITEM_SIZE			  4			// bytes
 
@@ -53,7 +54,7 @@ static void i2cTask(void *pvParameters)
         		break;
 
         	default:
-        		// Received not-recognized message
+        		logger(Error, Log_I2CTask, "[i2cTask] Received not-recognized message");
         		break;
         	}
 
@@ -78,7 +79,7 @@ void i2cHandleSend(I2cSendMsgReq* request)
 {
 	bool result;
 	result = I2CComSend(&g_i2cInstance, request->slaveAddress, request->data, request->length);
-#ifdef _DISABLE_I2C_ACK
+#ifndef _DISABLE_I2C_ACK
 	I2cSendMsgRsp* response = (I2cSendMsgRsp*) pvPortMalloc(sizeof(I2cSendMsgRsp));
 	if(!response)
 		return; // out of memory
@@ -166,5 +167,7 @@ void initializeI2c()
 	g_i2cInstance.speed				= I2C_SPEED_400;
 
 	I2CComInit(&g_i2cInstance);
+
+	logger(Info, Log_I2CTask, "[initializeI2c] I2C initialized");
 }
 

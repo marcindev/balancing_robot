@@ -7,41 +7,48 @@
 #include "driverlib/interrupt.h"
 #include "driverlib/pin_map.h"
 #include "driverlib/sysctl.h"
-#include "driverlib/timer.h"
+#include "driverlib/pwm.h"
 #include "FreeRTOS.h"
 #include "semphr.h"
 #include "motor.h"
+#include "logger.h"
 
 #define PWM_PERIOD_IN_CYCLES	100
 
-extern SemaphoreHandle_t g_pwmCounterSem;
 static I2cManager g_i2cManager;
 static uint32_t g_pwmFrequency;
-uint32_t g_pwmCounter;
 const uint32_t g_pwmPeriod = PWM_PERIOD_IN_CYCLES;
 static bool g_pwmInitialized = false;
 
-static void initPwmTimer();
-static void startPwmTimer();
-static void stopPwmTimer();
+static void initPwm();
+static void startPwm();
+static void stopPwm();
 
 
 void initializePwm(	uint32_t pwmFrequency)
 {
 	g_pwmFrequency = pwmFrequency;
-	g_pwmCounter = 0;
-
-	initPwmTimer();
-	startPwmTimer();
-
+	initPwm();
+	startPwm();
 	g_pwmInitialized = true;
+	logger(Info, Log_Motors, "[initializePwm] PWM initialized");
 }
 
 void setPwmFrequency(uint32_t pwmFrequency)
 {
-	stopPwmTimer();
 	g_pwmFrequency = pwmFrequency;
-	startPwmTimer();
+
+    // Set the PWM period to 250Hz.  To calculate the appropriate parameter
+    // use the following equation: N = (1 / f) * SysClk.  Where N is the
+    // function parameter, f is the desired frequency, and SysClk is the
+    // system clock frequency.
+
+	uint32_t cycles = (1 / g_pwmFrequency) * SysCtlClockGet()/64;
+
+    PWMGenPeriodSet(PWM1_BASE, PWM_GEN_0, cycles);
+
+    logger(Info, Log_Motors, "[setPwmFrequency] PWM frequency was set");
+
 }
 
 bool initializeMotor(MotorInstance* motorInstance)
@@ -58,18 +65,20 @@ bool initializeMotor(MotorInstance* motorInstance)
 
 	GpioExpInit(gpioExpander);
 
-	result &= GpioExpSetPinDirOut(gpioExpander, motorInstance->portEna, motorInstance->pinEna);
 	result &= GpioExpSetPinDirOut(gpioExpander, motorInstance->portFwd, motorInstance->pinFwd);
 	result &= GpioExpSetPinDirOut(gpioExpander, motorInstance->portRev, motorInstance->pinRev);
 
 	if(!result)
 		return false;
 
-	result &= GpioExpClearPin(gpioExpander, motorInstance->portEna, motorInstance->pinEna);
+	setMotorDutyCycle(motorInstance, motorInstance->dutyCycle);
+
 	result &= GpioExpClearPin(gpioExpander, motorInstance->portFwd, motorInstance->pinFwd);
 	result &= GpioExpClearPin(gpioExpander, motorInstance->portRev, motorInstance->pinRev);
 
 	motorInstance->initialized = result;
+
+	logger(Info, Log_Motors, "[initializeMotor] Motor initialized");
 
 	return result;
 }
@@ -81,32 +90,24 @@ bool startMotor(MotorInstance* motorInstance)
 
 	bool result = true;
 
-	GpioExpander* gpioExpander = motorInstance->gpioExpander;
+	result = setMotorDirection(motorInstance, motorInstance->direction);
 
-	switch(motorInstance->direction)
+	switch(motorInstance->pwm)
 	{
-	case FORWARD:
-		result &= GpioExpSetPin(gpioExpander,
-								motorInstance->portEna,
-								motorInstance->pinEna
-								| motorInstance->pinFwd);
-
-		result &= GpioExpClearPin(gpioExpander, motorInstance->portRev, motorInstance->pinRev);
+	case PWM_0:
+		PWMOutputState(PWM1_BASE, PWM_OUT_0_BIT, true);
 		break;
-	case REVERSE:
-		result &= GpioExpSetPin(gpioExpander,
-								motorInstance->portEna,
-								motorInstance->pinEna
-								| motorInstance->pinRev);
-		result &= GpioExpClearPin(gpioExpander, motorInstance->portFwd, motorInstance->pinFwd);
+	case PWM_1:
+		PWMOutputState(PWM1_BASE, PWM_OUT_1_BIT, true);
 		break;
 	default:
 		result = false;
-		break;
 	}
 
 	if(result)
+	{
 		motorInstance->isRunning = true;
+	}
 
 	return result;
 }
@@ -123,15 +124,33 @@ bool stopMotor(MotorInstance* motorInstance)
 	switch(motorInstance->stopState)
 	{
 	case BREAK:
-		result &= GpioExpSetPin(gpioExpander, motorInstance->portEna, motorInstance->pinEna);
-		result &= GpioExpClearPin(gpioExpander,
-								  motorInstance->portFwd,
-								  motorInstance->pinFwd |
-								  motorInstance->pinRev);
+		switch(motorInstance->pwm)
+		{
+		case PWM_0:
+			PWMOutputState(PWM1_BASE, PWM_OUT_0_BIT, true);
+			break;
+		case PWM_1:
+			PWMOutputState(PWM1_BASE, PWM_OUT_1_BIT, true);
+			break;
+		default:
+			result = false;
+		}
+
+		result &= GpioExpClearPin(gpioExpander, motorInstance->portFwd, motorInstance->pinFwd);
 		result &= GpioExpClearPin(gpioExpander, motorInstance->portRev, motorInstance->pinRev);
 		break;
 	case COAST:
-		result &= GpioExpClearPin(gpioExpander, motorInstance->portEna, motorInstance->pinEna);
+		switch(motorInstance->pwm)
+		{
+		case PWM_0:
+			PWMOutputState(PWM1_BASE, PWM_OUT_0_BIT, false);
+			break;
+		case PWM_1:
+			PWMOutputState(PWM1_BASE, PWM_OUT_1_BIT, false);
+			break;
+		default:
+			result = false;
+		}
 		break;
 	default:
 		result = false;
@@ -149,9 +168,33 @@ bool isMotorRunning(MotorInstance* motorInstance)
 	return motorInstance->isRunning;
 }
 
-void setMotorDirection(MotorInstance* motorInstance, uint8_t direction)
+bool setMotorDirection(MotorInstance* motorInstance, uint8_t direction)
 {
 	motorInstance->direction = direction;
+
+	if(!motorInstance->initialized)
+		return false;
+
+	bool result = true;
+
+	GpioExpander* gpioExpander = motorInstance->gpioExpander;
+
+	switch(motorInstance->direction)
+	{
+	case FORWARD:
+		result &= GpioExpSetPin(gpioExpander, motorInstance->portFwd, motorInstance->pinFwd);
+		result &= GpioExpClearPin(gpioExpander, motorInstance->portRev, motorInstance->pinRev);
+		break;
+	case REVERSE:
+		result &= GpioExpClearPin(gpioExpander, motorInstance->portFwd, motorInstance->pinFwd);
+		result &= GpioExpSetPin(gpioExpander, motorInstance->portRev, motorInstance->pinRev);
+		break;
+	default:
+		result = false;
+		break;
+	}
+
+	return result;
 }
 
 void setMotorStopState(MotorInstance* motorInstance, uint8_t stopState)
@@ -162,6 +205,23 @@ void setMotorStopState(MotorInstance* motorInstance, uint8_t stopState)
 void setMotorDutyCycle(MotorInstance* motorInstance, uint8_t dutyCycle)
 {
 	motorInstance->dutyCycle = dutyCycle;
+
+	switch(motorInstance->pwm)
+	{
+	case PWM_0:
+	    PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0,
+	                     ((float)PWMGenPeriodGet(PWM1_BASE, PWM_OUT_0))
+						 * (((float)motorInstance->dutyCycle) / 100.0f) );
+		break;
+	case PWM_1:
+	    PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1,
+	                     ((float)PWMGenPeriodGet(PWM1_BASE, PWM_OUT_1))
+						 * (((float)motorInstance->dutyCycle) / 100.0f) );
+		break;
+	default:
+		break;
+	}
+
 }
 
 void setMotorDutyCycleChangeTime(MotorInstance* motorInstance, uint32_t dutyCycleChangeTime)
@@ -189,60 +249,41 @@ uint8_t getMotorDutyCycleChangeTime(MotorInstance* motorInstance)
 	return motorInstance->dutyCycleChangeTime;
 }
 
-void Timer3BIntHandler(void)
+
+void initPwm()
 {
-	static BaseType_t xHigherPriorityTaskWoken;
+    // Set the PWM clock to the system clock.
+	SysCtlPWMClockSet(SYSCTL_PWMDIV_64);
 
-    TimerIntClear(TIMER3_BASE, TIMER_TIMB_TIMEOUT);
+    // The PWM peripheral must be enabled for use.
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_PWM1);
 
-    g_pwmCounter++;
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);
 
-    if(g_pwmCounter > g_pwmPeriod)
-    	g_pwmCounter = 0;
+    GPIOPinConfigure(GPIO_PD0_M1PWM0);
+    GPIOPinConfigure(GPIO_PD1_M1PWM1);
 
-    xHigherPriorityTaskWoken = pdFALSE;
+    // Configure the GPIO pad for PWM function on pins PD0 and PD1.
+    GPIOPinTypePWM(GPIO_PORTD_BASE, GPIO_PIN_0);
+    GPIOPinTypePWM(GPIO_PORTD_BASE, GPIO_PIN_1);
 
-    xSemaphoreGiveFromISR( g_pwmCounterSem, &xHigherPriorityTaskWoken );
+    // Configure the PWM1 to count up/down without synchronization.
+    PWMGenConfigure(PWM1_BASE, PWM_GEN_0, PWM_GEN_MODE_DOWN |
+                    PWM_GEN_MODE_NO_SYNC);
 
-    portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
+    setPwmFrequency(g_pwmFrequency);
+
+    // set PWM duty cycle to 0
+    PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, 0);
+    PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, 0);
 }
 
-void initPwmTimer()
+void startPwm()
 {
-	SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER3);
-
-	// Configure Timer3B as a 16-bit periodic timer.
-	TimerConfigure(TIMER3_BASE, TIMER_CFG_SPLIT_PAIR | TIMER_CFG_B_PERIODIC);
-
+    PWMGenEnable(PWM1_BASE, PWM_GEN_0);
 }
 
-void startPwmTimer()
+void stopPwm()
 {
-	// Set the Timer3B load value to 1ms.
-	TimerLoadSet(TIMER3_BASE, TIMER_B, SysCtlClockGet() / g_pwmFrequency);
-
-	// Configure the Timer3B interrupt for timer timeout.
-	TimerIntEnable(TIMER3_BASE, TIMER_TIMB_TIMEOUT);
-
-	// Enable the Timer3B interrupt on the processor (NVIC).
-	IntEnable(INT_TIMER3B);
-
-	// Enable Timer3B.
-	TimerEnable(TIMER3_BASE, TIMER_B);
-}
-
-void stopPwmTimer()
-{
-	// Clear the timer interrupt flag.
-	TimerIntClear(TIMER3_BASE, TIMER_TIMB_TIMEOUT);
-
-	// Disable the Timer0B interrupt.
-	IntDisable(INT_TIMER3B);
-
-	// Turn off Timer0B interrupt.
-	TimerIntDisable(TIMER3_BASE, TIMER_TIMB_TIMEOUT);
-
-	// Clear any pending interrupt flag.
-	TimerIntClear(TIMER3_BASE, TIMER_TIMB_TIMEOUT);
-
+	PWMGenDisable(PWM1_BASE, PWM_GEN_0);
 }
