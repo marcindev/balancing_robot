@@ -9,6 +9,6 @@ void ZeroBuffer(void* buffer, int len)
 
 	for(int i = 0; i != len; i++)
 	{
-		*uchPtr = 0;
+		*uchPtr++ = 0;
 	}
 }
