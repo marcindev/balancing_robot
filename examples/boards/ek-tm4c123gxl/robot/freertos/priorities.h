@@ -14,11 +14,12 @@
 //
 //*****************************************************************************
 
-#define PRIORITY_I2C_TASK  		  					1
-#define PRIORITY_MOTORS_TASK						2
+#define PRIORITY_I2C_TASK  		  					3
+#define PRIORITY_MOTORS_TASK						3
 #define PRIORITY_ROBOT_TASK							3
-#define PRIORITY_TCP_SERVER_HANDLER_TASK			7
-#define PRIORITY_TCP_SERVER_TASK					5
+#define PRIORITY_TCP_SERVER_HANDLER_TASK			3
+#define PRIORITY_TCP_SERVER_TASK					3
+#define PRIORITY_ENCODER_SAMPLER_TASK				4
 
 
 #endif // PRIORITIES_H
