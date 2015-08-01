@@ -68,6 +68,14 @@ void GpioExpInit(GpioExpander* gpioExp)
 		gpioExp->initiated = false;
 		return;
 	}
+	uint8_t regAddr = GPIOEXP_BANK0_IOCON,
+			regVal = 0x02; // interrupt polarity "active-high" and "open drain"
+	uint8_t msg[WRITE_MSG_SIZE];
+	msg[0] = regAddr;
+	msg[1] = regVal;
+
+	if(!i2cSend(gpioExp->i2cManager, gpioExp->hwAddress, msg, WRITE_MSG_SIZE))
+		return;
 
 	gpioExp->initiated = true;
 	gpioExp->outPinsA = 0;
@@ -371,10 +379,10 @@ bool GpioExpGetIntFlag(GpioExpander* gpioExp, uint8_t port, uint8_t* flagVal)
 	switch(port)
 	{
 	case GPIOEXP_PORTA:
-		regAddr = GPIOEXP_BANK1_INTFA;
+		regAddr = GPIOEXP_BANK0_INTFA;
 		break;
 	case GPIOEXP_PORTB:
-		regAddr = GPIOEXP_BANK1_INTFB;
+		regAddr = GPIOEXP_BANK0_INTFB;
 		break;
 	default:
 		return false;
@@ -443,20 +451,24 @@ bool GpioExpSetPin(GpioExpander* gpioExp, uint8_t port, uint8_t pins)
 		return false;
 
 	uint8_t msg[WRITE_MSG_SIZE];
-	uint8_t regAddr = 0;
-	uint8_t* outPinsPtr = 0, *outPinsStatePtr;
+	uint8_t regAddr = 0, regAddrPinsState = 0;
+	uint8_t* outPinsPtr = 0;
+	uint8_t* outPinsStatePtr = 0;
+	uint32_t tempPtr;
 
 	switch(port)
 	{
 	case GPIOEXP_PORTA:
 		regAddr = GPIOEXP_BANK0_OLATA;
-		outPinsPtr = &gpioExp->outPinsA;
-		outPinsStatePtr = &gpioExp->outPinsStateA;
+		regAddrPinsState = GPIOEXP_BANK0_GPIOA;
+		outPinsPtr = (uint8_t*) &gpioExp->outPinsA;
+		outPinsStatePtr = (uint8_t*) &gpioExp->outPinsStateA;
 		break;
 	case GPIOEXP_PORTB:
 		regAddr = GPIOEXP_BANK0_OLATB;
-		outPinsPtr = &gpioExp->outPinsB;
-		outPinsStatePtr = &gpioExp->outPinsStateB;
+		regAddrPinsState = GPIOEXP_BANK0_GPIOB;
+		outPinsPtr = (uint8_t*) &gpioExp->outPinsB;
+		outPinsStatePtr = (uint8_t*) &gpioExp->outPinsStateB;
 		break;
 	default:
 		return false;
@@ -464,8 +476,12 @@ bool GpioExpSetPin(GpioExpander* gpioExp, uint8_t port, uint8_t pins)
 
 	pins &= *outPinsPtr;
 
+	uint8_t currPinsState = 0;
+	GpioExpGetCurrRegVal(gpioExp, regAddrPinsState, &currPinsState);
+
 	msg[0] = regAddr;
-	msg[1] = *outPinsStatePtr | pins;
+	//msg[1] = (*outPinsStatePtr) | pins;
+	msg[1] = currPinsState | pins;
 
 	if(!i2cSend(gpioExp->i2cManager, gpioExp->hwAddress, msg, WRITE_MSG_SIZE))
 		return false;
@@ -481,20 +497,23 @@ bool GpioExpClearPin(GpioExpander* gpioExp, uint8_t port, uint8_t pins)
 		return false;
 
 	uint8_t msg[WRITE_MSG_SIZE];
-	uint8_t regAddr = 0;
-	uint8_t* outPinsPtr = 0, *outPinsStatePtr;
+	uint8_t regAddr = 0, regAddrPinsState = 0;
+	uint8_t* outPinsPtr = 0;
+	uint8_t* outPinsStatePtr;
 
 	switch(port)
 	{
 	case GPIOEXP_PORTA:
 		regAddr = GPIOEXP_BANK0_OLATA;
-		outPinsPtr = &gpioExp->outPinsA;
-		outPinsStatePtr = &gpioExp->outPinsStateA;
+		regAddrPinsState = GPIOEXP_BANK0_GPIOA;
+		outPinsPtr = (uint8_t*) &gpioExp->outPinsA;
+		outPinsStatePtr = (uint8_t*) &gpioExp->outPinsStateA;
 		break;
 	case GPIOEXP_PORTB:
 		regAddr = GPIOEXP_BANK0_OLATB;
-		outPinsPtr = &gpioExp->outPinsB;
-		outPinsStatePtr = &gpioExp->outPinsStateB;
+		regAddrPinsState = GPIOEXP_BANK0_GPIOB;
+		outPinsPtr = (uint8_t*) &gpioExp->outPinsB;
+		outPinsStatePtr = (uint8_t*) &gpioExp->outPinsStateB;
 		break;
 	default:
 		return false;
@@ -502,8 +521,12 @@ bool GpioExpClearPin(GpioExpander* gpioExp, uint8_t port, uint8_t pins)
 
 	pins &= *outPinsPtr;
 
+	uint8_t currPinsState = 0;
+	GpioExpGetCurrRegVal(gpioExp, regAddrPinsState, &currPinsState);
+
 	msg[0] = regAddr;
-	msg[1] = *outPinsStatePtr & (~pins);
+	//msg[1] = (*outPinsStatePtr) & (~pins);
+	msg[1] = currPinsState & (~pins);
 
 	if(!i2cSend(gpioExp->i2cManager, gpioExp->hwAddress, msg, WRITE_MSG_SIZE))
 		return false;

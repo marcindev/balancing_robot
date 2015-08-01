@@ -18,7 +18,7 @@
 #define GPIOEXP_PORTA	1
 #define GPIOEXP_PORTB	2
 
-#define GPIOEXP_PIN0	0x00
+#define GPIOEXP_PIN0	0x01
 #define GPIOEXP_PIN1	0x02
 #define GPIOEXP_PIN2	0x04
 #define GPIOEXP_PIN3	0x08
@@ -41,6 +41,7 @@ typedef struct
 			outPinsStateB;
 	bool initiated;
 } GpioExpander;
+
 
 void GpioExpInit(GpioExpander* gpioExp);
 bool GpioExpSetPinDirIn(GpioExpander* gpioExp, uint8_t port, uint8_t pins);
