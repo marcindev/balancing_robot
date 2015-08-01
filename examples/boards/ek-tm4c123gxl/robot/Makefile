@@ -55,6 +55,7 @@ VPATH+=./messages
 VPATH+=./freertos
 VPATH+=./logger
 VPATH+=./server
+VPATH+=./interrupts
 
 #
 # Where to find header files that do not live in the source directory.
@@ -79,6 +80,7 @@ IPATH+=./robot
 IPATH+=./freertos
 IPATH+=./logger
 IPATH+=./server
+IPATH+=./interrupts
 
 #
 # The default rule, which causes the CC3000 Basic WiFi Application to be built.
@@ -135,13 +137,16 @@ ${COMPILER}/robot_main.axf: ${COMPILER}/SimpleLinkWrapper.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/tcpServer.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/tcpServerTask.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/tcpServerHandlerTask.o
+${COMPILER}/robot_main.axf: ${COMPILER}/encoder.o
+${COMPILER}/robot_main.axf: ${COMPILER}/interrupts.o
+${COMPILER}/robot_main.axf: ${COMPILER}/encoderSamplerTask.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/startup_${COMPILER}.o
 ${COMPILER}/robot_main.axf: ${ROOT}/driverlib/${COMPILER}/libdriver.a
 ${COMPILER}/robot_main.axf: robot_main.ld
 SCATTERgcc_robot_main=robot_main.ld
 ENTRY_robot_main=ResetISR
-CFLAGSgcc=-DTARGET_IS_TM4C123_RB1 -D_DISABLE_I2C_ACK -g
-#CFLAGSgcc=-DTARGET_IS_TM4C123_RB1 -D_USE_CLI_ -g
+CFLAGSgcc=-DTARGET_IS_TM4C123_RB1 -g -O0
+#CFLAGSgcc=-DTARGET_IS_TM4C123_RB1 -D_USE_CLI_ -D_DISABLE_I2C_ACK -g
 
 #
 # Include the automatically generated dependency files.
