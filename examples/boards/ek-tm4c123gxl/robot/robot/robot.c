@@ -21,6 +21,7 @@
 #include "semphr.h"
 #include "robot.h"
 #include "messages.h"
+#include "msgSystem.h"
 #include "priorities.h"
 #include "drivers/i2c/i2cTask.h"
 #include "drivers/motorsTask.h"
@@ -32,11 +33,10 @@
 // local globals
 
 #define ROBOT_TASK_STACK_SIZE		500         // Stack size in words
+#define ROBOT_TASK_QUEUE_SIZE		 20
 
 //static I2cManager g_i2cManager;
 //static GpioExpander g_gpioExpander;
-
-extern xQueueHandle g_motorsQueue;
 
 const HeapRegion_t xHeapRegions[] =
 {
@@ -51,6 +51,8 @@ void vApplicationStackOverflowHook(xTaskHandle *pxTask, char *pcTaskName)
     {
     }
 }
+
+static MsgQueueId g_robotQueue;
 
 static void initializeSysClock();
 static void initilizeFreeRTOS();
@@ -134,13 +136,13 @@ static void robotTask(void *pvParameters)
 
 	while(true)
 	{
-/*		MotorSetDirectionMsgReq* directionReq = (MotorSetDirectionMsgReq*) pvPortMalloc(sizeof(MotorSetDirectionMsgReq));
+		MotorSetDirectionMsgReq* directionReq = (MotorSetDirectionMsgReq*) pvPortMalloc(sizeof(MotorSetDirectionMsgReq));
 
 		*directionReq = INIT_MOTOR_SET_DIRECTION_MSG_REQ;
 		directionReq->motorId = 0;
 		directionReq->direction = direction;
 
-		if(xQueueSend(g_motorsQueue, (void*) &directionReq, portMAX_DELAY) != pdPASS)
+		if(!msgSend(g_robotQueue, getQueueIdFromTaskId(Msg_MotorsTaskID), (void**) &directionReq, portMAX_DELAY))
 		{
 			while(1) {}
 		}
@@ -153,7 +155,7 @@ static void robotTask(void *pvParameters)
 			request->motorId = 0;
 			request->dutyCycle = dutyCycle;
 
-			if(xQueueSend(g_motorsQueue, (void*) &request, portMAX_DELAY) != pdPASS)
+			if(!msgSend(g_robotQueue, getQueueIdFromTaskId(Msg_MotorsTaskID), (void**) &request, portMAX_DELAY))
 			{
 				while(1) {}
 			}
@@ -169,7 +171,7 @@ static void robotTask(void *pvParameters)
 			request->motorId = 0;
 			request->dutyCycle = dutyCycle;
 
-			if(xQueueSend(g_motorsQueue, (void*) &request, portMAX_DELAY) != pdPASS)
+			if(!msgSend(g_robotQueue, getQueueIdFromTaskId(Msg_MotorsTaskID), (void**) &request, portMAX_DELAY))
 			{
 				while(1) {}
 			}
@@ -185,13 +187,15 @@ static void robotTask(void *pvParameters)
 //
 		vTaskDelayUntil(&ui32WakeTime, 2000 / portTICK_RATE_MS);
 		direction ^= 1;
-			*/
+
 	}
 
 }
 
 bool initRobotTask()
 {
+	g_robotQueue = registerMainMsgQueue(Msg_RobotTaskID, ROBOT_TASK_QUEUE_SIZE);
+
     if(xTaskCreate(robotTask, (signed portCHAR *)"ROBOT", ROBOT_TASK_STACK_SIZE, NULL,
                    tskIDLE_PRIORITY + PRIORITY_ROBOT_TASK, NULL) != pdTRUE)
     {

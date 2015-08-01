@@ -98,6 +98,7 @@ extern const I2cSendAndReceiveMsgRsp INIT_I2C_SEND_N_RECEIVE_MSG_RSP;
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t sender;
 	uint8_t motorId;
 	uint8_t dutyCycle;
 }MotorSetDutyCycleMsgReq;
@@ -113,6 +114,7 @@ extern const MotorSetDutyCycleMsgRsp INIT_MOTOR_SET_DUTY_CYCLE_MSG_RSP;
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t sender;
 	uint8_t motorId;
 	uint8_t direction;
 }MotorSetDirectionMsgReq;

@@ -98,7 +98,8 @@ ${COMPILER}/tcp_socket.axf: ${ROOT}/driverlib/${COMPILER}/libdriver.a
 ${COMPILER}/tcp_socket.axf: tcp_socket.ld
 SCATTERgcc_tcp_socket=tcp_socket.ld
 ENTRY_tcp_socket=ResetISR
-CFLAGSgcc=-DTARGET_IS_TM4C123_RB1 -D_USE_CLI_ -g
+CFLAGSgcc=-DTARGET_IS_TM4C123_RB1  -g
+#-D_USE_CLI_
 
 #
 # Include the automatically generated dependency files.

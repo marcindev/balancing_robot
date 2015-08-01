@@ -10,6 +10,7 @@
 #include "queue.h"
 #include "semphr.h"
 #include "messages.h"
+#include "msgSystem.h"
 #include "utils.h"
 #include "global_defs.h"
 #include "motor.h"
@@ -37,7 +38,7 @@
 //#define MOTOR_R_RV_PIN
 
 
-xQueueHandle g_motorsQueue;
+MsgQueueId g_motorsQueue;
 static MotorInstance g_motors[MOTORS_NUMBER];
 static GpioExpander g_gpioExpander;
 
@@ -57,7 +58,7 @@ static void motorsTask()
 	while(true)
 	{
 		void* msg;
-		if(xQueueReceive(g_motorsQueue, &msg, 0) == pdPASS)
+		if(msgReceive(g_motorsQueue, &msg, MSG_WAIT_LONG_TIME))
 		{
 			handleMessages(msg);
 		}
@@ -68,7 +69,7 @@ static void motorsTask()
 
 bool motorsTaskInit()
 {
-	g_motorsQueue = xQueueCreate(MOTORS_QUEUE_SIZE, MOTORS_ITEM_SIZE);
+	g_motorsQueue = registerMainMsgQueue(Msg_MotorsTaskID, MOTORS_QUEUE_SIZE);
 
     if(xTaskCreate(motorsTask, (signed portCHAR *)"Motors", MOTORS_TASK_STACK_SIZE, NULL,
                    tskIDLE_PRIORITY + PRIORITY_MOTORS_TASK, NULL) != pdTRUE)
