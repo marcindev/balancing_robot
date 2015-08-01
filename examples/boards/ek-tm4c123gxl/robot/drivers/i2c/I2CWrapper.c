@@ -74,27 +74,27 @@ bool I2CComReceive(I2CComInstance* i2cComInst, uint8_t slaveAddress, uint8_t* da
 
 	if(length == 1)
 	{
-		I2CMasterDataPut(i2cComInst->i2cBase, data[dataIndex]);
 		I2CMasterControl(i2cComInst->i2cBase, I2C_MASTER_CMD_SINGLE_RECEIVE);
 		while(I2CMasterBusy(i2cComInst->i2cBase));
+		data[dataIndex] = I2CMasterDataGet(i2cComInst->i2cBase);
 
 		return I2CComIsOk(i2cComInst);
 	}
 
-	I2CMasterDataPut(i2cComInst->i2cBase, data[dataIndex++]);
 	I2CMasterControl(i2cComInst->i2cBase, I2C_MASTER_CMD_BURST_RECEIVE_START);
 	while(I2CMasterBusy(i2cComInst->i2cBase));
+	data[dataIndex++] = I2CMasterDataGet(i2cComInst->i2cBase);
 
 	while(dataIndex < length - 1)
 	{
-		I2CMasterDataPut(i2cComInst->i2cBase, data[dataIndex++]);
 		I2CMasterControl(i2cComInst->i2cBase, I2C_MASTER_CMD_BURST_RECEIVE_CONT);
 		while(I2CMasterBusy(i2cComInst->i2cBase));
+		data[dataIndex++] = I2CMasterDataGet(i2cComInst->i2cBase);
 	}
 
-	I2CMasterDataPut(i2cComInst->i2cBase, data[dataIndex++]);
 	I2CMasterControl(i2cComInst->i2cBase, I2C_MASTER_CMD_BURST_RECEIVE_FINISH);
 	while(I2CMasterBusy(i2cComInst->i2cBase));
+	data[dataIndex++] = I2CMasterDataGet(i2cComInst->i2cBase);
 
 	return I2CComIsOk(i2cComInst);
 }
