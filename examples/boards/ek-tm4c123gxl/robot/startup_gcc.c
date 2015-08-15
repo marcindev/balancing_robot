@@ -33,7 +33,10 @@
 //*****************************************************************************
 void ResetISR(void);
 static void NmiSR(void);
-static void FaultISR(void);
+//static void FaultISR(void);
+/* The prototype shows it is a naked function - in effect this is just an
+assembly function. */
+static void FaultISR(void) __attribute__( ( naked ) );
 static void IntDefaultHandler(void);
 
 //*****************************************************************************
@@ -41,12 +44,13 @@ static void IntDefaultHandler(void);
 // External declarations for the interrupt handlers used by the application.
 //
 //*****************************************************************************
-//extern void GPIOB_intHandler(void);
-//extern void UART1_intHandler(void);
+extern void GPIOB_intHandler(void);
+extern void GPIOE_intHandler(void);
+extern void UART1_intHandler(void);
 extern void xPortPendSVHandler(void);
 extern void vPortSVCHandler(void);
 extern void xPortSysTickHandler(void);
-extern void Timer3BIntHandler(void);
+//extern void Timer3BIntHandler(void);
 
 //*****************************************************************************
 //
@@ -89,12 +93,12 @@ void (* const g_pfnVectors[])(void) =
     xPortPendSVHandler,                     // The PendSV handler
     xPortSysTickHandler,                    // The SysTick handler
     IntDefaultHandler,                      // GPIO Port A
-    IntDefaultHandler,                      // GPIO Port B
+	GPIOB_intHandler,                       // GPIO Port B
     IntDefaultHandler,                      // GPIO Port C
     IntDefaultHandler,                      // GPIO Port D
-    IntDefaultHandler,                      // GPIO Port E
+	GPIOE_intHandler,                      // GPIO Port E
     IntDefaultHandler,                      // UART0 Rx and Tx
-    IntDefaultHandler,                      // UART1 Rx and Tx
+	UART1_intHandler,                       // UART1 Rx and Tx
     IntDefaultHandler,                      // SSI0 Rx and Tx
     IntDefaultHandler,                      // I2C0 Master and Slave
     IntDefaultHandler,                      // PWM Fault
@@ -124,7 +128,7 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // UART2 Rx and Tx
     IntDefaultHandler,                      // SSI1 Rx and Tx
     IntDefaultHandler,                      // Timer 3 subtimer A
-	Timer3BIntHandler,                      // Timer 3 subtimer B
+	IntDefaultHandler,                      // Timer 3 subtimer B
     IntDefaultHandler,                      // I2C1 Master and Slave
     IntDefaultHandler,                      // Quadrature Encoder 1
     IntDefaultHandler,                      // CAN0
@@ -324,15 +328,33 @@ NmiSR(void)
 // for examination by a debugger.
 //
 //*****************************************************************************
+//static void
+//FaultISR(void)
+//{
+//
+//
+//
+//    //
+//    // Enter an infinite loop.
+//    //
+//    while(1)
+//    {
+//    }
+//}
 static void
 FaultISR(void)
 {
-    //
-    // Enter an infinite loop.
-    //
-    while(1)
-    {
-    }
+    __asm volatile
+    (
+        " tst lr, #4                                                \n"
+        " ite eq                                                    \n"
+        " mrseq r0, msp                                             \n"
+        " mrsne r0, psp                                             \n"
+        " ldr r1, [r0, #24]                                         \n"
+        " ldr r2, handler2_address_const                            \n"
+        " bx r2                                                     \n"
+        " handler2_address_const: .word prvGetRegistersFromStack    \n"
+    );
 }
 
 //*****************************************************************************
@@ -351,4 +373,34 @@ IntDefaultHandler(void)
     while(1)
     {
     }
+}
+
+void prvGetRegistersFromStack( uint32_t *pulFaultStackAddress )
+{
+	/* These are volatile to try and prevent the compiler/linker optimising them
+	away as the variables never actually get used.  If the debugger won't show the
+	values of the variables, make them global my moving their declaration outside
+	of this function. */
+
+	volatile uint32_t r0;
+	volatile uint32_t r1;
+	volatile uint32_t r2;
+	volatile uint32_t r3;
+	volatile uint32_t r12;
+	volatile uint32_t lr; /* Link register. */
+	volatile uint32_t pc; /* Program counter. */
+	volatile uint32_t psr;/* Program status register. */
+
+	r0 = pulFaultStackAddress[ 0 ];
+	r1 = pulFaultStackAddress[ 1 ];
+	r2 = pulFaultStackAddress[ 2 ];
+	r3 = pulFaultStackAddress[ 3 ];
+
+	r12 = pulFaultStackAddress[ 4 ];
+	lr = pulFaultStackAddress[ 5 ];
+	pc = pulFaultStackAddress[ 6 ];
+	psr = pulFaultStackAddress[ 7 ];
+
+	/* When the following line is hit, the variables contain the register values. */
+	for( ;; );
 }

@@ -8,4 +8,5 @@
 
 void ZeroBuffer(void* buffer, int len);
 
+
 #endif // UTILS_H

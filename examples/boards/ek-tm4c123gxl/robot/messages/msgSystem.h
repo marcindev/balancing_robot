@@ -12,7 +12,8 @@ typedef enum
 	Msg_TcpServerTaskID,
 	Msg_MotorsTaskID,
 	Msg_I2cTaskID,
-	Msg_EncoderTaskID
+	Msg_EncoderTaskID,
+	Msg_WheelsTaskID
 }MsgTaskId;
 
 typedef int16_t MsgQueueId;
@@ -23,6 +24,7 @@ MsgQueueId registerMainMsgQueue(uint8_t taskId, uint16_t queueSize);
 MsgQueueId getQueueIdFromTaskId(uint8_t taskId);
 bool msgReceive(MsgQueueId receiver, void** pMsg, uint16_t waitTicks);
 bool msgSend(MsgQueueId sender, MsgQueueId receiver, void** pMsg, uint16_t waitTicks);
+bool msgRespond(MsgQueueId receiver, void** pMsg, uint16_t waitTicks);
 
 
 

@@ -24,15 +24,15 @@
 #include "msgSystem.h"
 #include "priorities.h"
 #include "drivers/i2c/i2cTask.h"
-#include "drivers/motorsTask.h"
 #include "server/tcpServerTask.h"
 #include "interrupts/interrupts.h"
 #include "drivers/encoder.h"
+#include "drivers/wheelsTask.h"
 
 
 // local globals
 
-#define ROBOT_TASK_STACK_SIZE		500         // Stack size in words
+#define ROBOT_TASK_STACK_SIZE		200         // Stack size in words
 #define ROBOT_TASK_QUEUE_SIZE		 20
 
 //static I2cManager g_i2cManager;
@@ -56,7 +56,6 @@ static MsgQueueId g_robotQueue;
 
 static void initializeSysClock();
 static void initilizeFreeRTOS();
-static void initializeGpioExpanders();
 static bool initRobotTask();
 static void enableInterrupts();
 static void initializeFPU();
@@ -70,7 +69,7 @@ void runRobot()
 		while(1){ }
 	}
 
-	if(!motorsTaskInit())
+	if(!wheelsTaskInit())
 	{
 		while(1){ }
 	}
@@ -79,12 +78,6 @@ void runRobot()
 	{
 		while(1){ }
 	}
-
-	if(!encoderSamplerTaskInit())
-	{
-		while(1){ }
-	}
-
 
 //	if(!tcpServerTaskInit())
 //	{
@@ -111,82 +104,150 @@ static void robotTask(void *pvParameters)
 
 	I2cManager* i2cManager = (I2cManager*) pvPortMalloc(sizeof(I2cManager));
 	GpioExpander* gpioExpander = (GpioExpander*) pvPortMalloc(sizeof(GpioExpander));
-
+//
 	ZeroBuffer(gpioExpander, sizeof(GpioExpander));
 	gpioExpander->i2cManager = i2cManager;
-	gpioExpander->hwAddress		= 0x20;
-
-
+	gpioExpander->hwAddress		= 0x21;
+	GpioExpInit(gpioExpander);
+//
 	portTickType ui32WakeTime;
-//	initializeGpioExpanders();
-
+////	initializeGpioExpanders();
+//
 	ui32WakeTime = xTaskGetTickCount();
+//
+////	EncoderInstance encoder;
+////	encoder.gpioExpander = gpioExpander;
+////	encoder.ch1_pin = GPIOEXP_PIN1;
+////	encoder.ch2_pin = GPIOEXP_PIN2;
+////
+////	initEncoder(&encoder);
+//
+	GpioExpSetPinDirOut(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN7);
+	GpioExpSetPinDirOut(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN6);
+//
+//	uint8_t direction = 0;
 
-	EncoderInstance encoder;
-	encoder.gpioExpander = gpioExpander;
-	encoder.ch1_pin = GPIOEXP_PIN1;
-	encoder.ch2_pin = GPIOEXP_PIN2;
+	WheelSetSpeedMsgReq* wheelLeftSetSpeedReq = (WheelSetSpeedMsgReq*) pvPortMalloc(sizeof(WheelSetSpeedMsgReq));
+	*wheelLeftSetSpeedReq = INIT_WHEEL_SET_SPEED_MSG_REQ;
+	wheelLeftSetSpeedReq->wheelId = 0;
+	wheelLeftSetSpeedReq->speed = 2.0f;
 
-	initEncoder(&encoder);
+	if(!msgSend(g_robotQueue, getQueueIdFromTaskId(Msg_WheelsTaskID), (void**) &wheelLeftSetSpeedReq, portMAX_DELAY))
+	{
+		while(1) {}
+	}
 
-//	GpioExpSetPinDirOut(&g_gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN2);
-//	GpioExpSetPinDirOut(&g_gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN1);
+	WheelSetSpeedMsgReq* wheelRightSetSpeedReq = (WheelSetSpeedMsgReq*) pvPortMalloc(sizeof(WheelSetSpeedMsgReq));
+	*wheelRightSetSpeedReq = INIT_WHEEL_SET_SPEED_MSG_REQ;
+	wheelRightSetSpeedReq->wheelId = 1;
+	wheelRightSetSpeedReq->speed = 1.0f;
 
-	uint8_t direction = 0;
+	if(!msgSend(g_robotQueue, getQueueIdFromTaskId(Msg_WheelsTaskID), (void**) &wheelRightSetSpeedReq, portMAX_DELAY))
+	{
+		while(1) {}
+	}
+
+
+	WheelRunMsgReq* wheelLeftRunReq = (WheelRunMsgReq*) pvPortMalloc(sizeof(WheelRunMsgReq));
+	*wheelLeftRunReq = INIT_WHEEL_RUN_MSG_REQ;
+	wheelLeftRunReq->wheelId = 0;
+	wheelLeftRunReq->direction = 0;
+	wheelLeftRunReq->rotations = 10.0f;
+
+	if(!msgSend(g_robotQueue, getQueueIdFromTaskId(Msg_WheelsTaskID), (void**) &wheelLeftRunReq, portMAX_DELAY))
+	{
+		while(1) {}
+	}
+
+	WheelRunMsgReq* wheelRightRunReq = (WheelRunMsgReq*) pvPortMalloc(sizeof(WheelRunMsgReq));
+	*wheelRightRunReq = INIT_WHEEL_RUN_MSG_REQ;
+	wheelRightRunReq->wheelId = 1;
+	wheelRightRunReq->direction = 1;
+	wheelRightRunReq->rotations = 10.0f;
+
+	if(!msgSend(g_robotQueue, getQueueIdFromTaskId(Msg_WheelsTaskID), (void**) &wheelRightRunReq, portMAX_DELAY))
+	{
+		while(1) {}
+	}
+
+//	int motorsNum = 2;
+//
+//	for(int i = 0; i != motorsNum; ++i)
+//	{
+//	MotorStartMsgReq* motorStartReq = (MotorStartMsgReq*) pvPortMalloc(sizeof(MotorStartMsgReq));
+//
+//	*motorStartReq = INIT_MOTOR_START_MSG_REQ;
+//	motorStartReq->motorId = i;
+//
+//	if(!msgSend(g_robotQueue, getQueueIdFromTaskId(Msg_MotorsTaskID), (void**) &motorStartReq, portMAX_DELAY))
+//	{
+//		while(1) {}
+//	}
+//	}
+
 
 	while(true)
 	{
-		MotorSetDirectionMsgReq* directionReq = (MotorSetDirectionMsgReq*) pvPortMalloc(sizeof(MotorSetDirectionMsgReq));
-
-		*directionReq = INIT_MOTOR_SET_DIRECTION_MSG_REQ;
-		directionReq->motorId = 0;
-		directionReq->direction = direction;
-
-		if(!msgSend(g_robotQueue, getQueueIdFromTaskId(Msg_MotorsTaskID), (void**) &directionReq, portMAX_DELAY))
-		{
-			while(1) {}
-		}
-
-		for(int8_t dutyCycle = 2; dutyCycle <= 100; dutyCycle++)
-		{
-			MotorSetDutyCycleMsgReq* request = (MotorSetDutyCycleMsgReq*) pvPortMalloc(sizeof(MotorSetDutyCycleMsgReq));
-
-			*request = INIT_MOTOR_SET_DUTY_CYCLE_MSG_REQ;
-			request->motorId = 0;
-			request->dutyCycle = dutyCycle;
-
-			if(!msgSend(g_robotQueue, getQueueIdFromTaskId(Msg_MotorsTaskID), (void**) &request, portMAX_DELAY))
-			{
-				while(1) {}
-			}
-
-			vTaskDelayUntil(&ui32WakeTime, 100 / portTICK_RATE_MS);
-		}
-
-		for(int8_t dutyCycle = 100; dutyCycle > 1; dutyCycle--)
-		{
-			MotorSetDutyCycleMsgReq* request = (MotorSetDutyCycleMsgReq*) pvPortMalloc(sizeof(MotorSetDutyCycleMsgReq));
-
-			*request = INIT_MOTOR_SET_DUTY_CYCLE_MSG_REQ;
-			request->motorId = 0;
-			request->dutyCycle = dutyCycle;
-
-			if(!msgSend(g_robotQueue, getQueueIdFromTaskId(Msg_MotorsTaskID), (void**) &request, portMAX_DELAY))
-			{
-				while(1) {}
-			}
-
-			vTaskDelayUntil(&ui32WakeTime, 100 / portTICK_RATE_MS);
-		}
-////		GpioExpSetPin(&g_gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN1);
-////		GpioExpClearPin(&g_gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN2);
-////		vTaskDelayUntil(&ui32WakeTime, 50 / portTICK_RATE_MS);
-////		GpioExpClearPin(&g_gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN1);
-////		GpioExpSetPin(&g_gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN2);
-////		vTaskDelayUntil(&ui32WakeTime, 50 / portTICK_RATE_MS);
+//		for(int i = 0; i != motorsNum; ++i)
+//		{
+//		MotorSetDirectionMsgReq* directionReq = (MotorSetDirectionMsgReq*) pvPortMalloc(sizeof(MotorSetDirectionMsgReq));
 //
-		vTaskDelayUntil(&ui32WakeTime, 2000 / portTICK_RATE_MS);
-		direction ^= 1;
+//		*directionReq = INIT_MOTOR_SET_DIRECTION_MSG_REQ;
+//		directionReq->motorId = i;
+//		directionReq->direction = direction;
+//
+//		if(!msgSend(g_robotQueue, getQueueIdFromTaskId(Msg_MotorsTaskID), (void**) &directionReq, portMAX_DELAY))
+//		{
+//			while(1) {}
+//		}
+//		}
+//
+//		for(int8_t dutyCycle = 2; dutyCycle <= 100; dutyCycle++)
+//		{
+//			for(int i = 0; i != motorsNum; ++i)
+//			{
+//			MotorSetDutyCycleMsgReq* request = (MotorSetDutyCycleMsgReq*) pvPortMalloc(sizeof(MotorSetDutyCycleMsgReq));
+//
+//			*request = INIT_MOTOR_SET_DUTY_CYCLE_MSG_REQ;
+//			request->motorId = i;
+//			request->dutyCycle = dutyCycle;
+//
+//			if(!msgSend(g_robotQueue, getQueueIdFromTaskId(Msg_MotorsTaskID), (void**) &request, portMAX_DELAY))
+//			{
+//				while(1) {}
+//			}
+//			}
+//
+//			vTaskDelayUntil(&ui32WakeTime, 100 / portTICK_RATE_MS);
+//		}
+//
+//		for(int8_t dutyCycle = 100; dutyCycle > 1; dutyCycle--)
+//		{
+//			for(int i = 0; i != motorsNum; ++i)
+//			{
+//			MotorSetDutyCycleMsgReq* request = (MotorSetDutyCycleMsgReq*) pvPortMalloc(sizeof(MotorSetDutyCycleMsgReq));
+//
+//			*request = INIT_MOTOR_SET_DUTY_CYCLE_MSG_REQ;
+//			request->motorId = i;
+//			request->dutyCycle = dutyCycle;
+//
+//			if(!msgSend(g_robotQueue, getQueueIdFromTaskId(Msg_MotorsTaskID), (void**) &request, portMAX_DELAY))
+//			{
+//				while(1) {}
+//			}
+//			}
+//
+//			vTaskDelayUntil(&ui32WakeTime, 100 / portTICK_RATE_MS);
+//		}
+		GpioExpSetPin(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN6);
+		GpioExpClearPin(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN7);
+		vTaskDelayUntil(&ui32WakeTime, 50 / portTICK_RATE_MS);
+		GpioExpClearPin(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN6);
+		GpioExpSetPin(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN7);
+		vTaskDelayUntil(&ui32WakeTime, 50 / portTICK_RATE_MS);
+//
+//		vTaskDelayUntil(&ui32WakeTime, 2000 / portTICK_RATE_MS);
+//		direction ^= 1;
 
 	}
 

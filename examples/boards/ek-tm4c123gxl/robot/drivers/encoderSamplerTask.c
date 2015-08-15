@@ -7,15 +7,12 @@
 #include "priorities.h"
 #include "FreeRTOS.h"
 #include "task.h"
-#include "queue.h"
 #include "semphr.h"
-#include "messages.h"
 #include "utils.h"
-#include "global_defs.h"
 #include "encoder.h"
 #include "encoderSamplerTask.h"
 
-#define ENCODER_SAMPLER_TASK_STACK_SIZE		200        // Stack size in words
+#define ENCODER_SAMPLER_TASK_STACK_SIZE		100        // Stack size in words
 
 #define LONG_TIME 0xffff
 

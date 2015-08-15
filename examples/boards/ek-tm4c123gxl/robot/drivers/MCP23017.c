@@ -63,6 +63,9 @@ bool GpioExpGetCurrRegVal(GpioExpander* gpioExp, uint8_t regAddr, uint8_t* regVa
 
 void GpioExpInit(GpioExpander* gpioExp)
 {
+	if(gpioExp->initiated)
+		return;
+
 	if(!initI2cManager(gpioExp->i2cManager))
 	{
 		gpioExp->initiated = false;

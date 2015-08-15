@@ -43,7 +43,7 @@ void setPwmFrequency(uint32_t pwmFrequency)
     // function parameter, f is the desired frequency, and SysClk is the
     // system clock frequency.
 
-	uint32_t cycles = (1 / g_pwmFrequency) * SysCtlClockGet()/64;
+	uint32_t cycles = (uint32_t)((1.0 / (float)g_pwmFrequency) * SysCtlClockGet()/64.0);
 
     PWMGenPeriodSet(PWM1_BASE, PWM_GEN_0, cycles);
 
@@ -210,12 +210,12 @@ void setMotorDutyCycle(MotorInstance* motorInstance, uint8_t dutyCycle)
 	{
 	case PWM_0:
 	    PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0,
-	                     ((float)PWMGenPeriodGet(PWM1_BASE, PWM_OUT_0))
+	                     ((float)PWMGenPeriodGet(PWM1_BASE, PWM_GEN_0))
 						 * (((float)motorInstance->dutyCycle) / 100.0f) );
 		break;
 	case PWM_1:
 	    PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1,
-	                     ((float)PWMGenPeriodGet(PWM1_BASE, PWM_OUT_1))
+	                     ((float)PWMGenPeriodGet(PWM1_BASE, PWM_GEN_0))
 						 * (((float)motorInstance->dutyCycle) / 100.0f) );
 		break;
 	default:

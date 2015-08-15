@@ -5,7 +5,7 @@
 #include "msgSystem.h"
 
 #define QUEUE_ITEM_SIZE			4
-#define QUEUES_MAX_SIZE			50
+#define QUEUES_MAX_SIZE			30
 #define TASK_IDS_MAX_SIZE		50
 
 static xQueueHandle g_queues[QUEUES_MAX_SIZE] = {0};
@@ -76,4 +76,16 @@ bool msgSend(MsgQueueId sender, MsgQueueId receiver, void** pMsg, uint16_t waitT
 		return true;
 
 	return false;
+}
+
+bool msgRespond(MsgQueueId receiver, void** pMsg, uint16_t waitTicks)
+{
+	if(receiver < 0 || receiver >= g_nextQueueId)
+		return false;
+
+	if(xQueueSend(g_queues[receiver], pMsg, waitTicks) == pdTRUE)
+		return true;
+
+	return false;
+
 }

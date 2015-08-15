@@ -36,6 +36,9 @@ void initInterrupts()
 	GPIOIntTypeSet(GPIO_PORTE_BASE, INTERRUPT_PINS, GPIO_BOTH_EDGES);
 
 	GPIOIntEnable(GPIO_PORTE_BASE, INT_ACT_PINS);
+	// must be greater or equal to configMAX_SYSCALL_INTERRUPT_PRIORITY
+	// for the FREERTOS to work properly
+	IntPrioritySet(INT_GPIOE, 5 << 5);	// priority 5 (3 top bits)
 	IntEnable(INT_GPIOE);
 
 	g_gpioExp1PortBIntSem = xSemaphoreCreateBinary();

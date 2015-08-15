@@ -15,8 +15,8 @@
 #include "i2cTask.h"
 #include "logger.h"
 
-#define I2C_TASK_STACK_SIZE		500        // Stack size in words
-#define I2C_QUEUE_SIZE			200
+#define I2C_TASK_STACK_SIZE		200        // Stack size in words
+#define I2C_QUEUE_SIZE			 20
 #define I2C_ITEM_SIZE			  4			// bytes
 #define I2C_MSG_WAIT_TIME	 0xFFFF
 
@@ -90,7 +90,7 @@ void i2cHandleSend(I2cSendMsgReq* request)
 
 	xQueueSend(g_i2cRxQueues[request->sender], (void*) &response, portMAX_DELAY);
 #endif
-	vPortFree(request);
+	//vPortFree(request);
 }
 
 void i2cHandleReceive(I2cReceiveMsgReq* request)
@@ -114,7 +114,7 @@ void i2cHandleReceive(I2cReceiveMsgReq* request)
 
 	xQueueSend(g_i2cRxQueues[request->sender], (void*) &response, portMAX_DELAY);
 
-	vPortFree(request);
+	//vPortFree(request);
 }
 
 void i2cHandleSendAndReceive(I2cSendAndReceiveMsgReq* request)
@@ -149,7 +149,7 @@ void i2cHandleSendAndReceive(I2cSendAndReceiveMsgReq* request)
 
 	xQueueSend(g_i2cRxQueues[request->sender], (void*) &response, portMAX_DELAY);
 
-	vPortFree(request);
+	//vPortFree(request);
 }
 
 void initializeI2c()

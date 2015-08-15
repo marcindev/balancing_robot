@@ -1,4 +1,5 @@
 
+#include "FreeRTOS.h"
 #include "encoder.h"
 
 #define MAX_ENCODERS	3
@@ -12,7 +13,7 @@ static uint8_t g_encodersNum = 0;
 static bool isEncoderPin(EncoderInstance* encoder, uint8_t pin);
 static uint8_t portStateToFsmState(EncoderInstance* encoder, uint8_t portState);
 
-static uint8_t g_fsm[STATES_NUM][STATES_NUM] = {     // [currState][prevState]
+static const int8_t g_fsm[STATES_NUM][STATES_NUM] = {     // [currState][prevState]
 			{ 0,-1, 1, 0 },
 			{ 1, 0, 0,-1 },
 			{-1, 0, 0, 1 },
@@ -25,8 +26,12 @@ bool initEncoder(EncoderInstance* encoder)
 		return false;
 
 	encoder->rotationsCounter = 0;
+	encoder->prevRotationsCounter = 0;
+	encoder->speed = 0;
 	encoder->prevState = BOTH_CHANNELS_LOW;
 	encoder->statesCounter = 0;
+	encoder->rotationsCounterSem = xSemaphoreCreateMutex();
+	encoder->speedSem = xSemaphoreCreateMutex();
 	g_encoders[g_encodersNum++] = encoder;
 
 	GpioExpInit(encoder->gpioExpander);
@@ -38,6 +43,46 @@ bool initEncoder(EncoderInstance* encoder)
 	GpioExpReadPort(encoder->gpioExpander, ENCODERS_GPIOPORT, &portVal); // to clear any pending flags
 
 	return true;
+}
+
+
+int64_t getRotationsCounter(EncoderInstance* encoder)
+{
+	int64_t rotCntr = 0;
+
+	xSemaphoreTake(encoder->rotationsCounterSem, portMAX_DELAY);
+	rotCntr = encoder->rotationsCounter;
+	xSemaphoreGive(encoder->rotationsCounterSem);
+
+	return rotCntr;
+}
+
+uint64_t getEncoderSpeed(EncoderInstance* encoder)
+{
+	uint64_t speed = 0;
+
+	xSemaphoreTake(encoder->speedSem, portMAX_DELAY);
+	speed = encoder->speed;
+	xSemaphoreGive(encoder->speedSem);
+
+	return speed;
+}
+
+void measureEncoderSpeed(EncoderInstance* encoder, uint32_t period)
+{
+	int64_t currRotationsCounter = getRotationsCounter(encoder);
+	int64_t rotDelta = currRotationsCounter  - encoder->prevRotationsCounter;
+	encoder->prevRotationsCounter = currRotationsCounter;
+
+	if(rotDelta < 0)
+		rotDelta *= (-1);
+
+	uint64_t speed = rotDelta * (1000 / period); // rotations per sec
+
+	xSemaphoreTake(encoder->speedSem, portMAX_DELAY);
+	encoder->speed = speed;
+	xSemaphoreGive(encoder->speedSem);
+
 }
 
 void doEncoderJob()
@@ -80,13 +125,17 @@ void doEncoderJob()
 		if(g_encoders[i]->statesCounter >= STATES_NUM * 2) 	// STATES_NUM * 2 = full rotation
 		{
 			g_encoders[i]->statesCounter = 0;
+			xSemaphoreTake(g_encoders[i]->rotationsCounterSem, portMAX_DELAY);
 			g_encoders[i]->rotationsCounter++;
+			xSemaphoreGive(g_encoders[i]->rotationsCounterSem);
 		}
 
 		if(g_encoders[i]->statesCounter <= ((-1) * STATES_NUM * 2)) 	// STATES_NUM * 2 = full rotation
 		{
 			g_encoders[i]->statesCounter = 0;
+			xSemaphoreTake(g_encoders[i]->rotationsCounterSem, portMAX_DELAY);
 			g_encoders[i]->rotationsCounter--;
+			xSemaphoreGive(g_encoders[i]->rotationsCounterSem);
 		}
 	}
 }
@@ -112,3 +161,5 @@ inline uint8_t portStateToFsmState(EncoderInstance* encoder, uint8_t portState)
 
 	return 0;
 }
+
+

@@ -131,6 +131,7 @@ ${COMPILER}/robot_main.axf: ${COMPILER}/list.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/port.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/queue.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/tasks.o
+${COMPILER}/robot_main.axf: ${COMPILER}/timers.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/messages.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/logger.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/SimpleLinkWrapper.o
@@ -140,6 +141,9 @@ ${COMPILER}/robot_main.axf: ${COMPILER}/tcpServerHandlerTask.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/encoder.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/interrupts.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/encoderSamplerTask.o
+${COMPILER}/robot_main.axf: ${COMPILER}/encodersTask.o
+${COMPILER}/robot_main.axf: ${COMPILER}/wheelsTask.o
+${COMPILER}/robot_main.axf: ${COMPILER}/msgSystem.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/startup_${COMPILER}.o
 ${COMPILER}/robot_main.axf: ${ROOT}/driverlib/${COMPILER}/libdriver.a
 ${COMPILER}/robot_main.axf: robot_main.ld

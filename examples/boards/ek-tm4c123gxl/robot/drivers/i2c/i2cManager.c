@@ -79,7 +79,7 @@ bool i2cSend(I2cManager* i2cMng, uint8_t slaveAddress, const uint8_t* data, uint
 		return false;
 	}
 
-	//vPortFree(response);
+	vPortFree(response);
 #endif
 	return true;
 }
