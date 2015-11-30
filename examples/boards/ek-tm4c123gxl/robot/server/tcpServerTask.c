@@ -11,24 +11,30 @@
 #include "queue.h"
 #include "semphr.h"
 #include "messages.h"
+#include "msgSystem.h"
 #include "utils.h"
 #include "global_defs.h"
 #include "tcpServerTask.h"
 #include "tcpServer.h"
 #include "logger.h"
 
-#define TCP_SERVER_TASK_STACK_SIZE		700        // Stack size in words
-#define TCP_SERVER_QUEUE_SIZE			50
-#define TCP_SERVER_ITEM_SIZE			4			// bytes
+#define TCP_SERVER_TASK_STACK_SIZE		250        // Stack size in words
+#define TCP_SERVER_QUEUE_SIZE			5
 
+static MsgQueueId g_tcpServerMainQueue;
 
+static void handleStartTask(StartTaskMsgReq* request);
 
 static void tcpServerTask()
 {
-	initTcpServer();
-
 	while(true)
 	{
+		void* msg;
+		if(msgReceive(g_tcpServerMainQueue, &msg, 0))
+		{
+			handleMessages(msg);
+		}
+
 		runTcpServer();
 	}
 
@@ -36,8 +42,18 @@ static void tcpServerTask()
 
 bool tcpServerTaskInit()
 {
-	//g_motorsQueue = xQueueCreate(MOTORS_QUEUE_SIZE, MOTORS_ITEM_SIZE);
+	g_tcpServerMainQueue = registerMainMsgQueue(Msg_TcpServerTaskID, TCP_SERVER_QUEUE_SIZE);
 
+	if(g_tcpServerMainQueue < 0)
+	{
+		logger(Error, Log_Wheels, "[tcpServerTaskInit] Couldn't register main msg queue");
+		return false;
+	}
+
+    if(!startSimpleLinkTask(PRIORITY_SIMPLE_LINK_TASK))
+    {
+    	while(1){}
+    }
 
     if(xTaskCreate(tcpServerTask, (signed portCHAR *)"TcpServer", TCP_SERVER_TASK_STACK_SIZE, NULL,
                    tskIDLE_PRIORITY + PRIORITY_TCP_SERVER_TASK, NULL) != pdTRUE)
@@ -49,5 +65,29 @@ bool tcpServerTaskInit()
     return true;
 }
 
+void handleMessages(void* msg)
+{
+	switch(*((uint8_t*)msg))
+	{
+	case START_TASK_MSG_REQ:
+		handleStartTask((StartTaskMsgReq*) msg);
+		break;
+	default:
+		logger(Warning, Log_Wheels, "[handleMessages] Received not recognized message");
+		break;
+	}
+}
+
+
+void handleStartTask(StartTaskMsgReq* request)
+{
+	bool result = initTcpServer();
+
+	StartTaskMsgRsp* response = (StartTaskMsgRsp*) pvPortMalloc(sizeof(StartTaskMsgRsp));
+	*response = INIT_START_TASK_MSG_RSP;
+	response->status = result;
+	msgRespond(request->sender, &response, MSG_WAIT_LONG_TIME);
+	vPortFree(request);
+}
 
 

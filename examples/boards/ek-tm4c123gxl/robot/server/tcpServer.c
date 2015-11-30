@@ -9,7 +9,7 @@
 
 #define PORT	5001
 
-extern g_isApConnected;
+extern bool g_isApConnected;
 bool g_tcpServerInitialized = false;
 uint16_t g_TcpServSocketId;
 SlSockAddrIn_t  g_localAddr;
@@ -24,6 +24,7 @@ uint8_t initTcpServer()
     _i32          Status = 0;
     _i16          newSockID = 0;
     _i16          recvSize = 0;
+
 
 	if(!g_isApConnected)
 	{
@@ -92,6 +93,7 @@ uint8_t runTcpServer()
     	logger(Error, Log_TcpServer, "[runTcpServer] Couldn't create task for new connection");
     	return false;
     }
+
 
     logger(Debug, Log_TcpServer, "[runTcpServer] New connection created");
 

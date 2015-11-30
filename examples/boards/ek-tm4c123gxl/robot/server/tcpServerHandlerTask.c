@@ -16,8 +16,8 @@
 #include "tcpServerHandlerTask.h"
 #include "logger.h"
 
-#define TCP_SERVER_HANDLER_TASK_STACK_SIZE		400        // Stack size in words
-#define TCP_SERVER_HANDLER_QUEUE_SIZE			50
+#define TCP_SERVER_HANDLER_TASK_STACK_SIZE		200        // Stack size in words
+#define TCP_SERVER_HANDLER_QUEUE_SIZE			10
 #define TCP_SERVER_HANDLER_ITEM_SIZE			4			// bytes
 #define MAX_SLOTS_NUM							3
 
@@ -38,6 +38,7 @@ static void handleGetLogs(uint16_t slot);
 static void tcpServerHandlerTask(void *pvParameters)
 {
 	uint16_t slot = *((uint16_t*)pvParameters);
+	vPortFree(pvParameters);
 
 	while(true)
 	{
@@ -55,7 +56,8 @@ bool tcpServerHandlerTaskInit(uint16_t socketID)
 {
 	//g_motorsQueue = xQueueCreate(MOTORS_QUEUE_SIZE, MOTORS_ITEM_SIZE);
 
-	uint16_t slot = reserveSlot(socketID);
+	uint16_t* slot = (uint16_t*) pvPortMalloc(sizeof(uint16_t));
+	*slot = reserveSlot(socketID);
 
 	if(slot < 0)
 	{
@@ -63,10 +65,10 @@ bool tcpServerHandlerTaskInit(uint16_t socketID)
 		return false;
 	}
 
-    if(xTaskCreate(tcpServerHandlerTask, (signed portCHAR *)"TcpServHandler", TCP_SERVER_HANDLER_TASK_STACK_SIZE, (void*) &slot,
+    if(xTaskCreate(tcpServerHandlerTask, (signed portCHAR *)"TcpServHandler", TCP_SERVER_HANDLER_TASK_STACK_SIZE, (void*) slot,
                    tskIDLE_PRIORITY + PRIORITY_TCP_SERVER_HANDLER_TASK, NULL) != pdTRUE)
     {
-    	freeSlot(slot);
+    	freeSlot(*slot);
         return false;
     }
 
@@ -93,7 +95,10 @@ void handleGetLogs(uint16_t slot)
 {
 	uint32_t timestamp;
 	LogLevel logLevel;
+	LogComponent logComponent;
 	const char* strPtr;
+	uint8_t argsNum;
+	uint8_t* argsBuffer;
 
 	uint16_t totalLinesNum = getLinesNumber();
 
@@ -101,13 +106,17 @@ void handleGetLogs(uint16_t slot)
 
 	uint16_t lineNum = 1;
 
-	while(getNextLogLine(&timestamp, &logLevel, (void*)&strPtr))
+	while(getNextLogLine(&timestamp, &logLevel, &logComponent,
+			(void*)&strPtr, &argsNum, (void*)&argsBuffer))
 	{
 		response.lineNum = lineNum++;
 		response.totalLineNum = totalLinesNum;
 		response.timestamp = timestamp;
 		response.logLevel = (uint8_t) logLevel;
-		strcpy(&response.buffer[0], strPtr);
+		response.component = (uint8_t) logComponent;
+		strcpy(&response.strBuffer[0], strPtr);
+		response.argsNum = argsNum;
+		memcpy(&response.argsBuffer[0], argsBuffer, argsNum * sizeof(uint64_t));
 
 		sendTcpMsg(slot, response.msgId, (void*) &response);
 	}
