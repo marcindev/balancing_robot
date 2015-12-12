@@ -23,24 +23,29 @@
 #include "messages.h"
 #include "msgSystem.h"
 #include "priorities.h"
+#include "utils.h"
 #include "drivers/i2c/i2cTask.h"
 #include "server/tcpServerTask.h"
 #include "interrupts/interrupts.h"
 #include "drivers/encoder.h"
 #include "drivers/wheelsTask.h"
 
-
+#include "utils/uartstdio.h"
+extern void _edata;
+extern void _ebss;
+extern void _data;
+extern void _bss;
 // local globals
 
-#define ROBOT_TASK_STACK_SIZE		200         // Stack size in words
-#define ROBOT_TASK_QUEUE_SIZE		 20
+#define ROBOT_TASK_STACK_SIZE		100         // Stack size in words
+#define ROBOT_TASK_QUEUE_SIZE		 10
 
 //static I2cManager g_i2cManager;
 //static GpioExpander g_gpioExpander;
 
 const HeapRegion_t xHeapRegions[] =
 {
-    { ( uint8_t * ) 0x20005000UL, 0x03000 },
+	{ ( uint8_t * ) 0x20005000UL, 0x03000 },
     { NULL, 0 } /* Terminates the array. */
 };
 
@@ -59,30 +64,51 @@ static void initilizeFreeRTOS();
 static bool initRobotTask();
 static void enableInterrupts();
 static void initializeFPU();
+static bool startTcpServer();
+static bool startSpiServerCom();
+static bool startWheels();
 
 
 void runRobot()
 {
 	initializeRobot();
+	ConfigureUART();
+	UARTprintf("Starting robot\n");
+#ifdef _ROBOT_MASTER_BOARD
+
 	if(!i2cTaskInit())
 	{
 		while(1){ }
 	}
 
-	if(!wheelsTaskInit())
-	{
-		while(1){ }
-	}
+//	if(!wheelsTaskInit())
+//	{
+//		while(1){ }
+//	}
+
+#endif
 
 	if(!initRobotTask())
 	{
 		while(1){ }
 	}
 
-//	if(!tcpServerTaskInit())
-//	{
-//		while(1){ }
-//	}
+	if(!serverSpiComTaskInit())
+	{
+		while(1){ }
+	}
+
+#ifndef _ROBOT_MASTER_BOARD
+	if(!tcpServerTaskInit())
+	{
+		while(1){ }
+	}
+
+#endif
+	uint32_t beg_data = ( uint32_t ) &_data;
+	uint32_t end_data = ( uint32_t ) &_edata;
+	uint32_t beg_bss = ( uint32_t ) &_bss;
+	uint32_t end_bss = ( uint32_t ) &_ebss;
 
 
 	vTaskStartScheduler();
@@ -100,7 +126,27 @@ void initializeRobot()
 
 static void robotTask(void *pvParameters)
 {
+	if(!startSpiServerCom())
+	{
+		while(1){}
+	}
 
+#ifndef _ROBOT_MASTER_BOARD
+
+	if(!startTcpServer())
+	{
+		while(1){}
+	}
+
+	while(1) {}
+
+#else
+	while(1){}
+/*
+	if(!startWheels())
+	{
+		while(1){}
+	}
 
 	I2cManager* i2cManager = (I2cManager*) pvPortMalloc(sizeof(I2cManager));
 	GpioExpander* gpioExpander = (GpioExpander*) pvPortMalloc(sizeof(GpioExpander));
@@ -125,12 +171,12 @@ static void robotTask(void *pvParameters)
 	GpioExpSetPinDirOut(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN7);
 	GpioExpSetPinDirOut(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN6);
 //
-//	uint8_t direction = 0;
+	uint8_t direction = 0;
 
 	WheelSetSpeedMsgReq* wheelLeftSetSpeedReq = (WheelSetSpeedMsgReq*) pvPortMalloc(sizeof(WheelSetSpeedMsgReq));
 	*wheelLeftSetSpeedReq = INIT_WHEEL_SET_SPEED_MSG_REQ;
 	wheelLeftSetSpeedReq->wheelId = 0;
-	wheelLeftSetSpeedReq->speed = 2.0f;
+	wheelLeftSetSpeedReq->speed = 0.5f;
 
 	if(!msgSend(g_robotQueue, getQueueIdFromTaskId(Msg_WheelsTaskID), (void**) &wheelLeftSetSpeedReq, portMAX_DELAY))
 	{
@@ -148,27 +194,27 @@ static void robotTask(void *pvParameters)
 	}
 
 
-	WheelRunMsgReq* wheelLeftRunReq = (WheelRunMsgReq*) pvPortMalloc(sizeof(WheelRunMsgReq));
-	*wheelLeftRunReq = INIT_WHEEL_RUN_MSG_REQ;
-	wheelLeftRunReq->wheelId = 0;
-	wheelLeftRunReq->direction = 0;
-	wheelLeftRunReq->rotations = 10.0f;
-
-	if(!msgSend(g_robotQueue, getQueueIdFromTaskId(Msg_WheelsTaskID), (void**) &wheelLeftRunReq, portMAX_DELAY))
-	{
-		while(1) {}
-	}
-
-	WheelRunMsgReq* wheelRightRunReq = (WheelRunMsgReq*) pvPortMalloc(sizeof(WheelRunMsgReq));
-	*wheelRightRunReq = INIT_WHEEL_RUN_MSG_REQ;
-	wheelRightRunReq->wheelId = 1;
-	wheelRightRunReq->direction = 1;
-	wheelRightRunReq->rotations = 10.0f;
-
-	if(!msgSend(g_robotQueue, getQueueIdFromTaskId(Msg_WheelsTaskID), (void**) &wheelRightRunReq, portMAX_DELAY))
-	{
-		while(1) {}
-	}
+//	WheelRunMsgReq* wheelLeftRunReq = (WheelRunMsgReq*) pvPortMalloc(sizeof(WheelRunMsgReq));
+//	*wheelLeftRunReq = INIT_WHEEL_RUN_MSG_REQ;
+//	wheelLeftRunReq->wheelId = 0;
+//	wheelLeftRunReq->direction = 0;
+//	wheelLeftRunReq->rotations = 2.0f;
+//
+//	if(!msgSend(g_robotQueue, getQueueIdFromTaskId(Msg_WheelsTaskID), (void**) &wheelLeftRunReq, portMAX_DELAY))
+//	{
+//		while(1) {}
+//	}
+//
+//	WheelRunMsgReq* wheelRightRunReq = (WheelRunMsgReq*) pvPortMalloc(sizeof(WheelRunMsgReq));
+//	*wheelRightRunReq = INIT_WHEEL_RUN_MSG_REQ;
+//	wheelRightRunReq->wheelId = 1;
+//	wheelRightRunReq->direction = 1;
+//	wheelRightRunReq->rotations = 10.0f;
+//
+//	if(!msgSend(g_robotQueue, getQueueIdFromTaskId(Msg_WheelsTaskID), (void**) &wheelRightRunReq, portMAX_DELAY))
+//	{
+//		while(1) {}
+//	}
 
 //	int motorsNum = 2;
 //
@@ -188,6 +234,27 @@ static void robotTask(void *pvParameters)
 
 	while(true)
 	{
+		WheelRunMsgReq* wheelLeftRunReq = (WheelRunMsgReq*) pvPortMalloc(sizeof(WheelRunMsgReq));
+		*wheelLeftRunReq = INIT_WHEEL_RUN_MSG_REQ;
+		wheelLeftRunReq->wheelId = 0;
+		wheelLeftRunReq->direction = direction ^ 1;
+		wheelLeftRunReq->rotations = 0.02f;
+
+		if(!msgSend(g_robotQueue, getQueueIdFromTaskId(Msg_WheelsTaskID), (void**) &wheelLeftRunReq, portMAX_DELAY))
+		{
+			while(1) {}
+		}
+
+		WheelRunMsgReq* wheelRightRunReq = (WheelRunMsgReq*) pvPortMalloc(sizeof(WheelRunMsgReq));
+		*wheelRightRunReq = INIT_WHEEL_RUN_MSG_REQ;
+		wheelRightRunReq->wheelId = 1;
+		wheelRightRunReq->direction = direction;
+		wheelRightRunReq->rotations = 0.02f;
+
+		if(!msgSend(g_robotQueue, getQueueIdFromTaskId(Msg_WheelsTaskID), (void**) &wheelRightRunReq, portMAX_DELAY))
+		{
+			while(1) {}
+		}
 //		for(int i = 0; i != motorsNum; ++i)
 //		{
 //		MotorSetDirectionMsgReq* directionReq = (MotorSetDirectionMsgReq*) pvPortMalloc(sizeof(MotorSetDirectionMsgReq));
@@ -239,17 +306,19 @@ static void robotTask(void *pvParameters)
 //
 //			vTaskDelayUntil(&ui32WakeTime, 100 / portTICK_RATE_MS);
 //		}
-		GpioExpSetPin(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN6);
-		GpioExpClearPin(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN7);
-		vTaskDelayUntil(&ui32WakeTime, 50 / portTICK_RATE_MS);
-		GpioExpClearPin(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN6);
-		GpioExpSetPin(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN7);
-		vTaskDelayUntil(&ui32WakeTime, 50 / portTICK_RATE_MS);
+//		GpioExpSetPin(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN6);
+//		GpioExpClearPin(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN7);
+//		vTaskDelayUntil(&ui32WakeTime, 50 / portTICK_RATE_MS);
+//		GpioExpClearPin(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN6);
+//		GpioExpSetPin(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN7);
+//		vTaskDelayUntil(&ui32WakeTime, 50 / portTICK_RATE_MS);
 //
-//		vTaskDelayUntil(&ui32WakeTime, 2000 / portTICK_RATE_MS);
-//		direction ^= 1;
+		vTaskDelayUntil(&ui32WakeTime, pdMS_TO_TICKS(2000));
+		direction ^= 1;
 
 	}
+*/
+#endif
 
 }
 
@@ -274,7 +343,7 @@ void initializeFPU()
 
 void initializeSysClock()
 {
-    SysCtlClockSet(SYSCTL_SYSDIV_4 | SYSCTL_USE_PLL | SYSCTL_XTAL_16MHZ |
+    SysCtlClockSet(SYSCTL_SYSDIV_2_5 | SYSCTL_USE_PLL | SYSCTL_XTAL_16MHZ |
                        SYSCTL_OSC_MAIN);
 }
 
@@ -298,4 +367,49 @@ void enableInterrupts()
 void initilizeFreeRTOS()
 {
 	vPortDefineHeapRegions( xHeapRegions );
+}
+
+bool startTcpServer()
+{
+	StartTaskMsgReq* request = (StartTaskMsgReq*) pvPortMalloc(sizeof(StartTaskMsgReq));
+	*request = INIT_START_TASK_MSG_REQ;
+	msgSend(g_robotQueue, getQueueIdFromTaskId(Msg_TcpServerTaskID), &request, MSG_WAIT_LONG_TIME);
+
+	StartTaskMsgRsp* response;
+	if(!msgReceive(g_robotQueue, &response, MSG_WAIT_LONG_TIME))
+		return false;
+
+	bool result = response->status;
+	vPortFree(response);
+	return result;
+}
+
+bool startSpiServerCom()
+{
+	StartTaskMsgReq* request = (StartTaskMsgReq*) pvPortMalloc(sizeof(StartTaskMsgReq));
+	*request = INIT_START_TASK_MSG_REQ;
+	msgSend(g_robotQueue, getQueueIdFromTaskId(Msg_ServerSpiComTaskID), &request, MSG_WAIT_LONG_TIME);
+
+	StartTaskMsgRsp* response;
+	if(!msgReceive(g_robotQueue, &response, MSG_WAIT_LONG_TIME))
+		return false;
+
+	bool result = response->status;
+	vPortFree(response);
+	return result;
+}
+
+bool startWheels()
+{
+	StartTaskMsgReq* request = (StartTaskMsgReq*) pvPortMalloc(sizeof(StartTaskMsgReq));
+	*request = INIT_START_TASK_MSG_REQ;
+	msgSend(g_robotQueue, getQueueIdFromTaskId(Msg_WheelsTaskID), &request, MSG_WAIT_LONG_TIME);
+
+	StartTaskMsgRsp* response;
+	if(!msgReceive(g_robotQueue, &response, MSG_WAIT_LONG_TIME))
+		return false;
+
+	bool result = response->status;
+	vPortFree(response);
+	return result;
 }
