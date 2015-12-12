@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+uint8_t startSimpleLinkTask(uint16_t priority);
 uint8_t connectToAP();
 
 

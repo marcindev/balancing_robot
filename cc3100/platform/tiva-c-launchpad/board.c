@@ -45,6 +45,7 @@
 #include "driverlib/sysctl.h"
 #include "driverlib/fpu.h"
 #include "driverlib/uart.h"
+#include "driverlib/interrupt.h"
 #include "board.h"
 
 
@@ -95,6 +96,7 @@ void CC3100_enable()
 
 void CC3100_InterruptEnable()
 {
+	IntPrioritySet(INT_GPIOB, 5 << 5);	// priority 5 (3 top bits) for freertos's sake
     GPIOIntEnable(GPIO_PORTB_BASE,GPIO_PIN_2);
 #ifdef SL_IF_TYPE_UART
     ROM_UARTIntEnable(UART1_BASE, UART_INT_RX);

@@ -227,6 +227,18 @@ void SimpleLinkSockEventHandler(SlSockEvent_t *pSock)
  * ASYNCHRONOUS EVENT HANDLERS -- End
  */
 
+uint8_t startSimpleLinkTask(uint16_t priority)
+{
+	OsiReturnVal_e retVal;
+	retVal = VStartSimpleLinkSpawnTask(priority);
+
+	if(retVal == OSI_OK)
+		return true;
+
+	return false;
+}
+
+
 uint8_t connectToAP()
 {
 	_i32 retVal = -1;
@@ -317,7 +329,11 @@ _i32 configureSimpleLinkToDefaultState()
         if (ROLE_AP == mode)
         {
             /* If the device is in AP mode, we need to wait for this event before doing anything */
-            while(!IS_IP_ACQUIRED(g_Status)) { _SlNonOsMainLoopTask(); }
+#ifdef SL_PLATFORM_MULTI_THREADED
+        	while(!IS_IP_ACQUIRED(g_Status)) {};
+#else
+        	while(!IS_IP_ACQUIRED(g_Status)) { _SlNonOsMainLoopTask(); }
+#endif
         }
 
         /* Switch to STA role and restart */
@@ -361,7 +377,12 @@ _i32 configureSimpleLinkToDefaultState()
     if(0 == retVal)
     {
         /* Wait */
+#ifdef SL_PLATFORM_MULTI_THREADED
+        while(IS_CONNECTED(g_Status)) {}
+#else
         while(IS_CONNECTED(g_Status)) { _SlNonOsMainLoopTask(); }
+#endif
+
     }
 
     /* Enable DHCP client*/
@@ -427,7 +448,11 @@ _i32 establishConnectionWithAP()
     ASSERT_ON_ERROR(retVal);
 
     /* Wait */
+#ifdef SL_PLATFORM_MULTI_THREADED
+    while((!IS_CONNECTED(g_Status)) || (!IS_IP_ACQUIRED(g_Status))) {}
+#else
     while((!IS_CONNECTED(g_Status)) || (!IS_IP_ACQUIRED(g_Status))) { _SlNonOsMainLoopTask(); }
+#endif
 
     return SUCCESS;
 }

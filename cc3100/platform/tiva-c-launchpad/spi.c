@@ -61,7 +61,7 @@ int spi_Close(Fd_t fd)
     /* Disable WLAN Interrupt ... */
     CC3100_InterruptDisable();
 
-    return NONOS_RET_OK;
+    return 0;
 }
 
 Fd_t spi_Open(char *ifName, unsigned long flags)
@@ -109,7 +109,7 @@ Fd_t spi_Open(char *ifName, unsigned long flags)
     /* Enable WLAN interrupt */
     CC3100_InterruptEnable();
 
-    return NONOS_RET_OK;
+    return 0;
 }
 
 

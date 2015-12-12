@@ -78,6 +78,7 @@ extern "C" {
 #include <string.h>
 #include "board.h"
 #include "cli_uart.h"
+#include "osi.h"
 
 #ifndef SL_IF_TYPE_UART
 #include "spi.h"
@@ -683,9 +684,9 @@ typedef P_EVENT_HANDLER                         SL_P_EVENT_HANDLER;
 
     \warning
 */
-/*
+
 #define SL_MEMORY_MGMT_DYNAMIC
-*/
+
 
 #ifdef SL_MEMORY_MGMT_DYNAMIC
 
@@ -698,7 +699,7 @@ typedef P_EVENT_HANDLER                         SL_P_EVENT_HANDLER;
 
     \warning        
 */
-#define sl_Malloc(Size)
+#define sl_Malloc(Size)						mem_Malloc(Size)
 
 /*!
     \brief
@@ -709,7 +710,7 @@ typedef P_EVENT_HANDLER                         SL_P_EVENT_HANDLER;
 
     \warning        
 */
-#define sl_Free(pMem)
+#define sl_Free(pMem)						mem_Free(pMem)
 
 #endif
 
@@ -746,9 +747,8 @@ typedef P_EVENT_HANDLER                         SL_P_EVENT_HANDLER;
  ******************************************************************************
  */
 
-/*
+
 #define SL_PLATFORM_MULTI_THREADED
-*/
 
 #ifdef SL_PLATFORM_MULTI_THREADED
 
@@ -758,7 +758,7 @@ typedef P_EVENT_HANDLER                         SL_P_EVENT_HANDLER;
     \note           belongs to \ref porting_sec
     \warning
 */
-#define SL_OS_RET_CODE_OK
+#define SL_OS_RET_CODE_OK                       ((int)OSI_OK)
 
 /*!
     \brief
@@ -766,7 +766,7 @@ typedef P_EVENT_HANDLER                         SL_P_EVENT_HANDLER;
     \note           belongs to \ref porting_sec
     \warning
 */
-#define SL_OS_WAIT_FOREVER
+#define SL_OS_WAIT_FOREVER                      ((OsiTime_t)OSI_WAIT_FOREVER)
 
 /*!
     \brief
@@ -774,7 +774,7 @@ typedef P_EVENT_HANDLER                         SL_P_EVENT_HANDLER;
     \note           belongs to \ref porting_sec
     \warning
 */
-#define SL_OS_NO_WAIT
+#define SL_OS_NO_WAIT	                        ((OsiTime_t)OSI_NO_WAIT)
 
 /*!
 	\brief type definition for a time value
@@ -783,7 +783,7 @@ typedef P_EVENT_HANDLER                         SL_P_EVENT_HANDLER;
 
     \note       belongs to \ref porting_sec
 */
-#define _SlTime_t				
+#define _SlTime_t				OsiTime_t
 
 /*!
 	\brief 	type definition for a sync object container
@@ -798,7 +798,7 @@ typedef P_EVENT_HANDLER                         SL_P_EVENT_HANDLER;
 
     \note       belongs to \ref porting_sec
 */
-#define _SlSyncObj_t			
+#define _SlSyncObj_t			OsiSyncObj_t
 
     
 /*!
@@ -815,7 +815,7 @@ typedef P_EVENT_HANDLER                         SL_P_EVENT_HANDLER;
     \note       belongs to \ref porting_sec
 	\warning
 */
-#define sl_SyncObjCreate(pSyncObj,pName)           
+#define sl_SyncObjCreate(pSyncObj,pName)            osi_SyncObjCreate(pSyncObj)
 
     
 /*!
@@ -828,7 +828,7 @@ typedef P_EVENT_HANDLER                         SL_P_EVENT_HANDLER;
     \note       belongs to \ref porting_sec
 	\warning
 */
-#define sl_SyncObjDelete(pSyncObj)                  
+#define sl_SyncObjDelete(pSyncObj)                  osi_SyncObjDelete(pSyncObj)
 
     
 /*!
@@ -843,8 +843,8 @@ typedef P_EVENT_HANDLER                         SL_P_EVENT_HANDLER;
 	\note		the function could be called from ISR context
 	\warning
 */
-#define sl_SyncObjSignal(pSyncObj)                
-
+#define sl_SyncObjSignal(pSyncObj)                  osi_SyncObjSignal(pSyncObj)   
+    
 /*!
 	\brief 		This function generates a sync signal for the object from Interrupt
 
@@ -857,7 +857,7 @@ typedef P_EVENT_HANDLER                         SL_P_EVENT_HANDLER;
 	\note		the function could be called from ISR context
 	\warning
 */
-#define sl_SyncObjSignalFromIRQ(pSyncObj)           
+#define sl_SyncObjSignalFromIRQ(pSyncObj)           osi_SyncObjSignalFromISR(pSyncObj)
 /*!
 	\brief 	This function waits for a sync signal of the specific sync object
 
@@ -873,7 +873,7 @@ typedef P_EVENT_HANDLER                         SL_P_EVENT_HANDLER;
     \note       belongs to \ref porting_sec
 	\warning
 */
-#define sl_SyncObjWait(pSyncObj,Timeout)             
+#define sl_SyncObjWait(pSyncObj,Timeout)            osi_SyncObjWait(pSyncObj,Timeout)     
     
 /*!
 	\brief 	type definition for a locking object container
@@ -885,7 +885,7 @@ typedef P_EVENT_HANDLER                         SL_P_EVENT_HANDLER;
 	\note	On each porting or platform the type could be whatever is needed - integer, structure etc.
     \note       belongs to \ref porting_sec
 */
-#define _SlLockObj_t 			
+#define _SlLockObj_t 			                    OsiLockObj_t
 
 /*!
 	\brief 	This function creates a locking object.
@@ -900,7 +900,7 @@ typedef P_EVENT_HANDLER                         SL_P_EVENT_HANDLER;
     \note       belongs to \ref porting_sec
 	\warning
 */
-#define sl_LockObjCreate(pLockObj,pName)            
+#define sl_LockObjCreate(pLockObj,pName)            osi_LockObjCreate(pLockObj)   
     
 /*!
 	\brief 	This function deletes a locking object.
@@ -912,7 +912,7 @@ typedef P_EVENT_HANDLER                         SL_P_EVENT_HANDLER;
     \note       belongs to \ref porting_sec
 	\warning
 */
-#define sl_LockObjDelete(pLockObj)                 
+#define sl_LockObjDelete(pLockObj)                  osi_LockObjDelete(pLockObj)
     
 /*!
 	\brief 	This function locks a locking object.
@@ -933,7 +933,7 @@ typedef P_EVENT_HANDLER                         SL_P_EVENT_HANDLER;
     \note       belongs to \ref porting_sec
 	\warning
 */
-#define sl_LockObjLock(pLockObj,Timeout)            
+#define sl_LockObjLock(pLockObj,Timeout)            osi_LockObjLock(pLockObj,Timeout)
     
 /*!
 	\brief 	This function unlock a locking object.
@@ -945,7 +945,7 @@ typedef P_EVENT_HANDLER                         SL_P_EVENT_HANDLER;
     \note       belongs to \ref porting_sec
 	\warning
 */
-#define sl_LockObjUnlock(pLockObj)                 
+#define sl_LockObjUnlock(pLockObj)                  osi_LockObjUnlock(pLockObj)   
 
 #endif
 /*!
@@ -965,12 +965,12 @@ typedef P_EVENT_HANDLER                         SL_P_EVENT_HANDLER;
     \note       belongs to \ref porting_sec
 	\warning
 */
-/*
+
 #define SL_PLATFORM_EXTERNAL_SPAWN
-*/
+
 
 #ifdef SL_PLATFORM_EXTERNAL_SPAWN
-#define sl_Spawn(pEntry,pValue,flags)               
+#define sl_Spawn(pEntry,pValue,flags)               osi_Spawn(pEntry,pValue,flags)
 #endif
 
 /*!
