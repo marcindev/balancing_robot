@@ -54,6 +54,8 @@ uint16_t getMsgSize(uint8_t msgId);
 #define MOTOR_START_MSG_RSP								0x29
 #define MOTOR_STOP_MSG_REQ								0x2A
 #define MOTOR_STOP_MSG_RSP								0x2B
+#define START_TASK_MSG_REQ								0x2C
+#define START_TASK_MSG_RSP								0x2D
 
 
 // TODO: try with union messages or memcpy
@@ -332,28 +334,54 @@ typedef struct
 }WheelRunMsgRsp;
 extern const WheelRunMsgRsp INIT_WHEEL_RUN_MSG_RSP;
 
+// task messages
+
+typedef struct
+{
+	uint8_t msgId;
+	uint8_t sender;
+}StartTaskMsgReq;
+extern const StartTaskMsgReq INIT_START_TASK_MSG_REQ;
+
+typedef struct
+{
+	uint8_t msgId;
+	uint8_t status;
+}StartTaskMsgRsp;
+extern const StartTaskMsgRsp INIT_START_TASK_MSG_RSP;
+
 
 
 //***********************
 // Remote messages
 //***********************
+typedef struct
+{
+	uint8_t msgId;
+	uint8_t slot;
+}TcpMsgHeader;
 
 
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t slot;
+	uint8_t isMaster;
 }GetLogsMsgReq;
 extern const GetLogsMsgReq INIT_GET_LOGS_MSG_REQ;
 
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t slot;
+	uint8_t isMaster;
 	uint16_t lineNum;
 	uint16_t totalLineNum;
 	uint32_t timestamp;
 	uint8_t logLevel;
+	uint8_t component;
 	uint8_t argsNum;
-	uint32_t argsBuffer[10];
+	uint64_t argsBuffer[10];
 	uint8_t strBuffer[100];
 }GetLogsMsgRsp;
 extern const GetLogsMsgRsp INIT_GET_LOGS_MSG_RSP;

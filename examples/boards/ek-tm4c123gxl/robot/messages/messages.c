@@ -35,6 +35,8 @@ const MotorStopMsgReq INIT_MOTOR_STOP_MSG_REQ = {MOTOR_STOP_MSG_REQ};
 const MotorStopMsgRsp INIT_MOTOR_STOP_MSG_RSP = {MOTOR_STOP_MSG_RSP};
 const WheelRunMsgReq INIT_WHEEL_RUN_MSG_REQ = {WHEEL_RUN_MSG_REQ};
 const WheelRunMsgRsp INIT_WHEEL_RUN_MSG_RSP = {WHEEL_RUN_MSG_RSP};
+const StartTaskMsgReq INIT_START_TASK_MSG_REQ = {START_TASK_MSG_REQ};
+const StartTaskMsgRsp INIT_START_TASK_MSG_RSP = {START_TASK_MSG_RSP};
 
 
 uint16_t getMsgSize(uint8_t msgId)
@@ -101,6 +103,10 @@ uint16_t getMsgSize(uint8_t msgId)
 		return sizeof(MotorStopMsgReq);
 	case MOTOR_STOP_MSG_RSP:
 		return sizeof(MotorStopMsgRsp);
+	case START_TASK_MSG_REQ:
+		return sizeof(StartTaskMsgReq);
+	case START_TASK_MSG_RSP:
+		return sizeof(StartTaskMsgRsp);
 	case GET_LOGS_MSG_REQ:
 		return sizeof(GetLogsMsgReq);
 	case GET_LOGS_MSG_RSP:
