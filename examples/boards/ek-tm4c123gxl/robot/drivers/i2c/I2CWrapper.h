@@ -26,8 +26,10 @@ typedef struct
 			 gpioPortBase,
 			 sclPin,
 			 sdaPin,
-			 i2cBase;
+			 i2cBase,
+			 slaveAddress;
 	uint8_t speed;
+	bool isMaster;
 	bool initiated;
 	uint32_t errState;
 } I2CComInstance;

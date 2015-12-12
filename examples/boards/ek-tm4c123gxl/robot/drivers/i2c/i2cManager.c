@@ -12,7 +12,7 @@
 #include "portable.h"
 #include <string.h>
 
-#define RX_QUEUES_MAX_SIZE			20
+#define RX_QUEUES_MAX_SIZE			15
 #define RX_WAIT_TIME_TICKS			50
 #define I2C_RX_QUEUE_SIZE       	5
 #define I2C_RX_QUEUE_ITEM_SIZE     	5

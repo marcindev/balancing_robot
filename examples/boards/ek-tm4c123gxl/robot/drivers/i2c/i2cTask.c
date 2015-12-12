@@ -15,8 +15,8 @@
 #include "i2cTask.h"
 #include "logger.h"
 
-#define I2C_TASK_STACK_SIZE		200        // Stack size in words
-#define I2C_QUEUE_SIZE			 20
+#define I2C_TASK_STACK_SIZE		100        // Stack size in words
+#define I2C_QUEUE_SIZE			 10
 #define I2C_ITEM_SIZE			  4			// bytes
 #define I2C_MSG_WAIT_TIME	 0xFFFF
 
