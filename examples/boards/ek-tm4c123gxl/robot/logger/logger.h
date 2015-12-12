@@ -17,16 +17,20 @@ typedef enum
 {
 	Log_Robot = 0,
 	Log_Motors,
+	Log_Encoders,
 	Log_TcpServer,
 	Log_TcpServerHandler,
 	Log_Wlan,
 	Log_GpioExpander,
 	Log_I2CManager,
-	Log_I2CTask
+	Log_I2CTask,
+	Log_Wheels,
+	Log_ServerSpiCom
 } LogComponent;
 
-void logger(LogLevel level, LogComponent component, const char* string);
-bool getNextLogLine(uint32_t* timestamp, LogLevel* logLevel, void** strPtr);
+void logger(LogLevel level, LogComponent component, const char* string, ...);
+bool getNextLogLine(uint32_t* timestamp, LogLevel* logLevel, LogComponent* component,
+		            void** strPtr, uint8_t* argsNum, void** argsBufferPtr);
 uint16_t getLinesNumber();
 
 
