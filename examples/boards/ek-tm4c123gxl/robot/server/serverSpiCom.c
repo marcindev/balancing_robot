@@ -11,44 +11,101 @@
 #include "serverSpiCom.h"
 #include "logger.h"
 #include "spiWrapper.h"
+#include "circularBuffer.h"
 
-static SpiComInstance g_spiComInst;
+#include "driverlib/uart.h"
+#include "utils/uartstdio.h"
 
-static void handleGetLogs(uint16_t slot);
+#include "MCP23017.h"
+
+SpiComInstance* g_spiComInstServer = NULL;
+#define SPI_BUFFER_SIZE		1000
+#define UDMA_RX_READ_SIZE	16
+
 
 void initializeSpi()
 {
-	ZeroBuffer(&g_spiComInst, sizeof(SpiComInstance));
+	void* bufferRx = pvPortMalloc(SPI_BUFFER_SIZE);
+	void* bufferTx = pvPortMalloc(SPI_BUFFER_SIZE);
+	CircularBuffer* circBufferRx = (CircularBuffer*) pvPortMalloc(sizeof(CircularBuffer));
+	CircularBuffer* circBufferTx = (CircularBuffer*) pvPortMalloc(sizeof(CircularBuffer));
+	g_spiComInstServer = (SpiComInstance*) pvPortMalloc(sizeof(SpiComInstance));
 
-	g_spiComInst.spiPeripheral = SYSCTL_PERIPH_SSI0;
-	g_spiComInst.gpioPeripheral = SYSCTL_PERIPH_GPIOA;
-	g_spiComInst.clkPinConfig = GPIO_PA2_SSI0CLK;
-	g_spiComInst.fssPinConfig = GPIO_PA3_SSI0FSS;
-	g_spiComInst.rxPinConfig = GPIO_PA4_SSI0RX;
-	g_spiComInst.txPinConfig = GPIO_PA5_SSI0TX;
-	g_spiComInst.gpioPortBase = GPIO_PORTA_BASE;
-	g_spiComInst.ssiBase = SSI0_BASE;
+	ZeroBuffer(g_spiComInstServer, sizeof(SpiComInstance));
+	ZeroBuffer(circBufferRx, sizeof(SpiComInstance));
+	ZeroBuffer(circBufferTx, sizeof(SpiComInstance));
+	ZeroBuffer(bufferRx, sizeof(SPI_BUFFER_SIZE));
+	ZeroBuffer(bufferTx, sizeof(SPI_BUFFER_SIZE));
+
+	CB_setBuffer(circBufferRx, bufferRx, SPI_BUFFER_SIZE);
+	CB_setBuffer(circBufferTx, bufferTx, SPI_BUFFER_SIZE);
+	g_spiComInstServer->circBufferRx = circBufferRx;
+	g_spiComInstServer->circBufferTx = circBufferTx;
+
+	g_spiComInstServer->spiPeripheral = SYSCTL_PERIPH_SSI0;
+	g_spiComInstServer->gpioPeripheral = SYSCTL_PERIPH_GPIOA;
+	g_spiComInstServer->sigTxGpioPeripheral = SYSCTL_PERIPH_GPIOC;
+	g_spiComInstServer->clkPinConfig = GPIO_PA2_SSI0CLK;
+	g_spiComInstServer->fssPinConfig = GPIO_PA3_SSI0FSS;
+	g_spiComInstServer->rxPinConfig = GPIO_PA4_SSI0RX;
+	g_spiComInstServer->txPinConfig = GPIO_PA5_SSI0TX;
+	g_spiComInstServer->gpioPortBase = GPIO_PORTA_BASE;
+	g_spiComInstServer->sigTxPortBase = GPIO_PORTC_BASE;
+	g_spiComInstServer->ssiBase = SSI0_BASE;
 #ifdef _ROBOT_MASTER_BOARD
-	g_spiComInst.masterSlave = SPI_MASTER;
+	g_spiComInstServer->masterSlave = SPI_MASTER;
 #else
-	g_spiComInst.masterSlave = SPI_SLAVE;
+	g_spiComInstServer->masterSlave = SPI_SLAVE;
 #endif
-	g_spiComInst.clkPin = GPIO_PIN_2;
-	g_spiComInst.fssPin = GPIO_PIN_3;
-	g_spiComInst.rxPin = GPIO_PIN_4;
-	g_spiComInst.txPin = GPIO_PIN_5;
+	g_spiComInstServer->clkPin = GPIO_PIN_2;
+	g_spiComInstServer->fssPin = GPIO_PIN_3;
+	g_spiComInstServer->rxPin = GPIO_PIN_4;
+	g_spiComInstServer->txPin = GPIO_PIN_5;
+	g_spiComInstServer->sigTxPin = GPIO_PIN_6;
+	g_spiComInstServer->enableInt = true;
+	g_spiComInstServer->uDmaRxReadSize = UDMA_RX_READ_SIZE;
+	g_spiComInstServer->uDmaChannelRx = UDMA_CHANNEL_SSI0RX;
+	g_spiComInstServer->uDmaChannelTx = UDMA_CHANNEL_SSI0TX;
 
-	SpiComInit(g_spiComInst);
+
+	SpiComInit(g_spiComInstServer);
 }
 
 bool receiveSpiMsg(void** msg)
 {
-	if(!SpiComReceive(g_spiComInst, *msg, 1))
+	uint8_t msgId = 0;
+	if(!SpiComReceive(g_spiComInstServer, &msgId, 1))
 		return false;
 
-	uint32_t msgLen = getMsgSize(*((uint8_t*) *msg));
-	SpiComReceive(g_spiComInst, (*msg) + 1, msgLen);
+#ifdef _ROBOT_MASTER_BOARD
+	I2cManager* i2cManager = (I2cManager*) pvPortMalloc(sizeof(I2cManager));
+	GpioExpander* gpioExpander = (GpioExpander*) pvPortMalloc(sizeof(GpioExpander));
+	//
+	ZeroBuffer(gpioExpander, sizeof(GpioExpander));
+	gpioExpander->i2cManager = i2cManager;
+	gpioExpander->hwAddress		= 0x21;
+	GpioExpInit(gpioExpander);
+	GpioExpSetPinDirOut(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN5);
+	GpioExpSetPin(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN5);
+#endif
+	UARTprintf("receiveSpiMsg msgId: %d\n", msgId);
+	uint32_t msgLen = getMsgSize(msgId);
+	*msg = pvPortMalloc(msgLen);
+#ifdef _ROBOT_MASTER_BOARD
+	UARTprintf("receiveSpiMsg msgLen: %d\n", msgLen);
+#endif
+	if(*msg == NULL)
+		return false;
 
+	*((uint8_t*) *msg) = msgId;
+
+	if(!SpiComReceive(g_spiComInstServer, ((uint8_t*)*msg) + 1, msgLen - 1))
+		return false;
+#ifdef _ROBOT_MASTER_BOARD
+	uint8_t* m = (uint8_t*)*msg;
+	UARTprintf("receiveSpiMsg msg: %d %d %d\n", m[0], m[1], m[2]);
+	UARTprintf("receiveSpiMsg success ");
+#endif
 	return true;
 }
 
@@ -56,42 +113,10 @@ bool sendSpiMsg(void* msg)
 {
 	uint32_t msgLen = getMsgSize(*((uint8_t*) msg));
 
-	if(!SpiComSend(g_spiComInst, msg, msgLen))
+	if(!SpiComSend(g_spiComInstServer, msg, msgLen))
 		return false;
-
+	logger(Info, Log_ServerSpiCom, "[sendSpiMsg] Message sent");
 	return true;
-}
-
-
-void handleGetLogs()
-{
-	uint32_t timestamp;
-	LogLevel logLevel;
-	LogComponent logComponent;
-	const char* strPtr;
-	uint8_t argsNum;
-	uint8_t* argsBuffer;
-
-	uint16_t totalLinesNum = getLinesNumber();
-
-	GetLogsMsgRsp response = INIT_GET_LOGS_MSG_RSP;
-
-	uint16_t lineNum = 1;
-
-	while(getNextLogLine(&timestamp, &logLevel, &logComponent,
-			(void*)&strPtr, &argsNum, (void*)&argsBuffer))
-	{
-		response.lineNum = lineNum++;
-		response.totalLineNum = totalLinesNum;
-		response.timestamp = timestamp;
-		response.logLevel = (uint8_t) logLevel;
-		response.component = (uint8_t) logComponent;
-		strcpy(&response.strBuffer[0], strPtr);
-		response.argsNum = argsNum;
-		memcpy(&response.argsBuffer[0], argsBuffer, argsNum * sizeof(uint64_t));
-
-		SpiComSend(&g_spiComInst, &response, sizeof(GetLogsMsgRsp));
-	}
 }
 
 

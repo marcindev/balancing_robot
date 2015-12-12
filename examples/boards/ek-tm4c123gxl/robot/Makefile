@@ -47,8 +47,11 @@ VPATH+=../../../../cc3100
 VPATH+=../../../../cc3100/simplelink
 VPATH+=../../../../cc3100/simplelink/source
 VPATH+=../../../../cc3100/platform/tiva-c-launchpad
+VPATH+=../../../../cc3100/oslib
+VPATH+=../../../../utils/
 VPATH+=./drivers
 VPATH+=./drivers/i2c
+VPATH+=./drivers/spi
 VPATH+=./utils
 VPATH+=./robot
 VPATH+=./messages
@@ -72,8 +75,11 @@ IPATH+=../../../../cc3100
 IPATH+=../../../../cc3100/simplelink
 IPATH+=../../../../cc3100/simplelink/include
 IPATH+=../../../../cc3100/platform/tiva-c-launchpad
+IPATH+=../../../../cc3100/oslib
+IPATH+=../../../../utils/
 IPATH+=./drivers
 IPATH+=./drivers/i2c
+IPATH+=./drivers/spi
 IPATH+=./utils
 IPATH+=./messages
 IPATH+=./robot
@@ -108,20 +114,22 @@ ${COMPILER}/robot_main.axf: ${COMPILER}/robot.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/board.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/spi.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/uart.o
+${COMPILER}/robot_main.axf: ${COMPILER}/uartstdio.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/device.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/driver.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/flowcont.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/fs.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/netapp.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/netcfg.o
-${COMPILER}/robot_main.axf: ${COMPILER}/nonos.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/socket.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/spawn.o
+${COMPILER}/robot_main.axf: ${COMPILER}/osi_freertos.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/wlan.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/I2CWrapper.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/MCP23017.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/i2cManager.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/i2cTask.o
+${COMPILER}/robot_main.axf: ${COMPILER}/spiWrapper.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/motor.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/motorsTask.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/i2cTask.o
@@ -138,18 +146,21 @@ ${COMPILER}/robot_main.axf: ${COMPILER}/SimpleLinkWrapper.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/tcpServer.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/tcpServerTask.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/tcpServerHandlerTask.o
+${COMPILER}/robot_main.axf: ${COMPILER}/serverSpiCom.o
+${COMPILER}/robot_main.axf: ${COMPILER}/serverSpiComTask.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/encoder.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/interrupts.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/encoderSamplerTask.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/encodersTask.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/wheelsTask.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/msgSystem.o
+${COMPILER}/robot_main.axf: ${COMPILER}/circularBuffer.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/startup_${COMPILER}.o
 ${COMPILER}/robot_main.axf: ${ROOT}/driverlib/${COMPILER}/libdriver.a
 ${COMPILER}/robot_main.axf: robot_main.ld
 SCATTERgcc_robot_main=robot_main.ld
 ENTRY_robot_main=ResetISR
-CFLAGSgcc=-DTARGET_IS_TM4C123_RB1 -g -O0
+override CFLAGSgcc+=-DTARGET_IS_TM4C123_RB1  -g -O0
 #CFLAGSgcc=-DTARGET_IS_TM4C123_RB1 -D_USE_CLI_ -D_DISABLE_I2C_ACK -g
 
 #

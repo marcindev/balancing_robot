@@ -7,6 +7,7 @@
 
 void initializeSpi();
 bool receiveSpiMsg(void** msg);
-bool sendSpiMsg(void** msg);
+bool sendSpiMsg(void* msg);
+
 
 #endif // SERVER_SPI_COM_H

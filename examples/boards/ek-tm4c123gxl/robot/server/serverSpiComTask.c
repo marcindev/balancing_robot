@@ -15,11 +15,13 @@
 #include "utils.h"
 #include "global_defs.h"
 #include "serverSpiComTask.h"
+#include "serverSpiCom.h"
 #include "logger.h"
 
+#include "MCP23017.h"
+#include "spiWrapper.h"
 
-
-#define SERVER_SPI_TASK_STACK_SIZE		50        // Stack size in words
+#define SERVER_SPI_TASK_STACK_SIZE		200        // Stack size in words
 #define SERVER_SPI_QUEUE_SIZE			10
 #define SERVER_SPI_ITEM_SIZE			4			// bytes
 
@@ -28,26 +30,59 @@
 extern SemaphoreHandle_t g_ssiRxIntSem;
 
 static MsgQueueId g_serverSpiComQueue;
+static bool isSpiComInitialized = false;
 
 static void handleMessages(void* msg);
 static void handleGetLogs(void* msg);
+static void handleGetLogsRsp(void* msg);
 
+
+extern SpiComInstance* g_spiComInstServer;
 
 static void serverSpiComTask()
 {
-	initInterrupts();
-	initializeSpi();
 
+	 TickType_t xLastWakeTime;
+	 const TickType_t xFrequency = 10;
+	 xLastWakeTime = xTaskGetTickCount();
+	 uint32_t counter = 0;
 	while(true)
 	{
 		void* msg = NULL;
 
-		if(xSemaphoreTake(g_ssiRxIntSem, SPI_SEM_WAIT_TIME) == pdTRUE)
+		if(isSpiComInitialized) //&& (xSemaphoreTake(g_ssiRxIntSem, SPI_SEM_WAIT_TIME) == pdTRUE))
 		{
-			if(receiveSpiMsg(&msg))
-				handleMessages(msg);
-		}
+#ifdef _ROBOT_MASTER_BOARD
+			uint8_t dummy = 55;
+			SpiComSend(g_spiComInstServer, &dummy, 1);
+#endif
+			if(receiveSpiMsg(&msg)){
+#ifdef _ROBOT_MASTER_BOARD
+				I2cManager* i2cManager = (I2cManager*) pvPortMalloc(sizeof(I2cManager));
+				GpioExpander* gpioExpander = (GpioExpander*) pvPortMalloc(sizeof(GpioExpander));
+				//
+				ZeroBuffer(gpioExpander, sizeof(GpioExpander));
+				gpioExpander->i2cManager = i2cManager;
+				gpioExpander->hwAddress		= 0x21;
+				GpioExpInit(gpioExpander);
+				GpioExpSetPinDirOut(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN3);
+				GpioExpSetPin(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN3);
+				GetLogsMsgReq getLogsReq = INIT_GET_LOGS_MSG_REQ;
+				getLogsReq.slot = 1;
+				msg = &getLogsReq;
+#endif
 
+				handleMessages(msg);
+				vPortFree(msg);
+
+			}
+		}
+#ifndef _ROBOT_MASTER_BOARD
+//		vTaskDelayUntil( &xLastWakeTime, 1000 / portTICK_RATE_MS );
+//		GetLogsMsgReq getLogsReq = INIT_GET_LOGS_MSG_REQ;
+//		if(!(++counter % 10000UL))
+//			sendSpiMsg(&getLogsReq);
+#endif
 		if(msgReceive(g_serverSpiComQueue, &msg, 0))
 		{
 			handleMessages(msg);
@@ -88,27 +123,59 @@ void handleMessages(void* msg)
 	case GET_LOGS_MSG_REQ:
 		handleGetLogs(msg);
 		break;
+#ifdef _ROBOT_MASTER_BOARD
+
 
 	default:
 		logger(Warning, Log_ServerSpiCom, "[handleMessages] Received not recognized message");
 		break;
+#else
+	case GET_LOGS_MSG_RSP:
+		handleGetLogsRsp(msg);
+		break;
+
+	default:
+		sendSpiMsg(msg);
+		break;
+#endif
 	}
 }
 
 void handleStartTask(StartTaskMsgReq* request)
 {
-	bool result = serverSpiComTaskInit();
+
+	initInterrupts();
+	initializeSpi();
+	bool result = true;
 
 	StartTaskMsgRsp* response = (StartTaskMsgRsp*) pvPortMalloc(sizeof(StartTaskMsgRsp));
 	*response = INIT_START_TASK_MSG_RSP;
 	response->status = result;
 	msgRespond(request->sender, &response, MSG_WAIT_LONG_TIME);
 	vPortFree(request);
+
+	isSpiComInitialized = true;
+	logger(Info, Log_ServerSpiCom, "[handleStartTask] task initiated");
+
 }
+
 
 void handleGetLogs(void* msg)
 {
 #ifdef _ROBOT_MASTER_BOARD
+
+	I2cManager* i2cManager = (I2cManager*) pvPortMalloc(sizeof(I2cManager));
+	GpioExpander* gpioExpander = (GpioExpander*) pvPortMalloc(sizeof(GpioExpander));
+	//
+	ZeroBuffer(gpioExpander, sizeof(GpioExpander));
+	gpioExpander->i2cManager = i2cManager;
+	gpioExpander->hwAddress		= 0x21;
+	GpioExpInit(gpioExpander);
+	GpioExpSetPinDirOut(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN4);
+	GpioExpSetPin(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN4);
+
+
+
 	uint32_t timestamp;
 	LogLevel logLevel;
 	LogComponent logComponent;
@@ -125,6 +192,8 @@ void handleGetLogs(void* msg)
 	while(getNextLogLine(&timestamp, &logLevel, &logComponent,
 			(void*)&strPtr, &argsNum, (void*)&argsBuffer))
 	{
+		response.slot = ((GetLogsMsgReq*)msg)->slot;
+		response.isMaster = 1;
 		response.lineNum = lineNum++;
 		response.totalLineNum = totalLinesNum;
 		response.timestamp = timestamp;
@@ -137,8 +206,26 @@ void handleGetLogs(void* msg)
 		sendSpiMsg(&response);
 	}
 #else
+	logger(Info, Log_ServerSpiCom, "[handleGetLogs] forwarding msg to master; msgId: %d", *((uint8_t*)msg));
 	sendSpiMsg(msg);
+	vPortFree(msg);
 #endif
 }
 
+#ifdef _ROBOT_MASTER_BOARD
+
+#else
+
+void handleGetLogsRsp(void* msg)
+{
+	UARTprintf("handleGetLogsRsp: response received\n");
+	GetLogsMsgRsp* getLogsRsp = (GetLogsMsgRsp*) pvPortMalloc(sizeof(GetLogsMsgRsp));
+	*getLogsRsp = *((GetLogsMsgRsp*) msg);
+//	UARTprintf("handleGetLogsRsp: response received: %s\n", getLogsRsp->strBuffer);
+	msgSend(g_serverSpiComQueue, getQueueIdFromTaskId(MSG_TcpServerHandlerID), &getLogsRsp, MSG_WAIT_LONG_TIME);
+	logger(Info, Log_ServerSpiCom, "[handleGetLogsRsp] response received");
+
+}
+
+#endif
 
