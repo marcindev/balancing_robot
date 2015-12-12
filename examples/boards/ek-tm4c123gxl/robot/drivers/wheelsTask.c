@@ -20,7 +20,10 @@
 #include "wheel.h"
 #include "logger.h"
 
-#define WHEELS_TASK_STACK_SIZE		300        // Stack size in words
+
+#include "MCP23017.h"
+
+#define WHEELS_TASK_STACK_SIZE		150        // Stack size in words
 #define WHEELS_QUEUE_SIZE			 20
 #define WHEELS_SUB_QUEUES			  5
 #define WHEELS_ITEM_SIZE			  4			// bytes
@@ -51,6 +54,8 @@ static MsgQueueId g_wheelsMainQueue;
 static MsgQueueId g_motorsRxQueue;
 static MsgQueueId g_encodersRxQueue;
 
+static bool g_taskStarted = false;
+
 static void initializeWheels();
 static void initializeWheelsData();
 static void initializeDutyCycleTimers();
@@ -65,6 +70,7 @@ static bool requestNotifAfterSpeed(uint8_t wheelId, float speed);
 static bool startDutyCycleTimer(uint8_t wheelId);
 static void dutyCycleCallback(TimerHandle_t pxTimer);
 static void handleMessages(void* msg);
+static void handleStartTask(StartTaskMsgReq* request);
 static void handleRun(WheelRunMsgReq* request);
 static void handleSetSpeed(WheelSetSpeedMsgReq* request);
 static void handleNotifyAfterRotations(EncoderNotifyAfterRotationsMsgRsp* response);
@@ -162,7 +168,7 @@ void initializeDutyCycleTimers()
 	{
 		wheelsData[i].dutyCycleTimer = xTimerCreate(
 				"DutyCycleTimer",
-				DUTY_CYCLE_TIMER_PERIOD / portTICK_RATE_MS,
+				pdMS_TO_TICKS(DUTY_CYCLE_TIMER_PERIOD),
 				pdTRUE,
 				( void * ) i,
 				dutyCycleCallback
@@ -178,6 +184,9 @@ void initializeDutyCycleTimers()
 
 void doWheelsJob()
 {
+	if(!g_taskStarted)
+		return;
+
 	for(int i = 0; i != WHEELS_NUMBER; ++i)
 	{
 		if(wheelsData[i].isRunning)
@@ -197,6 +206,9 @@ void handleMessages(void* msg)
 {
 	switch(*((uint8_t*)msg))
 	{
+	case START_TASK_MSG_REQ:
+		handleStartTask((StartTaskMsgReq*) msg);
+		break;
 	case WHEEL_RUN_MSG_REQ:
 		handleRun((WheelRunMsgReq*) msg);
 		break;
@@ -215,8 +227,51 @@ void handleMessages(void* msg)
 	}
 }
 
-static void handleRun(WheelRunMsgReq* request)
+void handleStartTask(StartTaskMsgReq* request)
 {
+	bool result = true;
+
+	StartTaskMsgReq* startMotorsTaskReq = (StartTaskMsgReq*) pvPortMalloc(sizeof(StartTaskMsgReq));
+	*startMotorsTaskReq = INIT_START_TASK_MSG_REQ;
+	msgSend(g_motorsRxQueue, getQueueIdFromTaskId(Msg_MotorsTaskID), &startMotorsTaskReq, MSG_WAIT_LONG_TIME);
+
+	StartTaskMsgRsp* response;
+	result &= msgReceive(g_motorsRxQueue, &response, MSG_WAIT_LONG_TIME);
+	if(result)
+	{
+		result &= response->status;
+		vPortFree(response);
+	}
+
+	StartTaskMsgReq* startEncodersTaskReq = (StartTaskMsgReq*) pvPortMalloc(sizeof(StartTaskMsgReq));
+	*startEncodersTaskReq = INIT_START_TASK_MSG_REQ;
+	msgSend(g_encodersRxQueue, getQueueIdFromTaskId(Msg_EncoderTaskID), &startEncodersTaskReq, MSG_WAIT_LONG_TIME);
+
+	result &= msgReceive(g_encodersRxQueue, &response, MSG_WAIT_LONG_TIME);
+	if(result)
+	{
+		result &= response->status;
+		vPortFree(response);
+	}
+
+	response = (StartTaskMsgRsp*) pvPortMalloc(sizeof(StartTaskMsgRsp));
+	*response = INIT_START_TASK_MSG_RSP;
+	response->status = result;
+	msgRespond(request->sender, &response, MSG_WAIT_LONG_TIME);
+	vPortFree(request);
+
+	g_taskStarted = result;
+}
+
+
+void handleRun(WheelRunMsgReq* request)
+{
+	if(!g_taskStarted)
+	{
+		logger(Warning, Log_Wheels, "[handleRun] task not started yet");
+		return;
+	}
+
 	uint8_t wheelId = request->wheelId;
 
 	if(wheelId >= WHEELS_NUMBER)
@@ -267,18 +322,44 @@ static void handleRun(WheelRunMsgReq* request)
 
 void handleSetSpeed(WheelSetSpeedMsgReq* request)
 {
+	if(!g_taskStarted)
+		return;
+
 	wheelsData[request->wheelId].speed = request->speed;
 	vPortFree(request);
 }
 
 void handleNotifyAfterRotations(EncoderNotifyAfterRotationsMsgRsp* response)
 {
+	I2cManager* i2cManager = (I2cManager*) pvPortMalloc(sizeof(I2cManager));
+	GpioExpander* gpioExpander = (GpioExpander*) pvPortMalloc(sizeof(GpioExpander));
+//
+	ZeroBuffer(gpioExpander, sizeof(GpioExpander));
+	gpioExpander->i2cManager = i2cManager;
+	gpioExpander->hwAddress		= 0x21;
+	GpioExpInit(gpioExpander);
+	GpioExpSetPinDirOut(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN6);
+	GpioExpSetPin(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN6);
+	size_t leftHeap = xPortGetFreeHeapSize();
+	logger(Debug, Log_Wheels, "[handleNotifyAfterRotations] rotations reached (actual rotations = %f)",
+			((float)response->actualRotations)/WHEEL_ROTATION);
 	wheelsData[response->encoderId].isRotationsReached = true;
 	vPortFree(response);
 }
 
 void handleNotifyAfterSpeed(EncoderNotifyAfterSpeedMsgRsp* response)
 {
+	I2cManager* i2cManager = (I2cManager*) pvPortMalloc(sizeof(I2cManager));
+	GpioExpander* gpioExpander = (GpioExpander*) pvPortMalloc(sizeof(GpioExpander));
+//
+	ZeroBuffer(gpioExpander, sizeof(GpioExpander));
+	gpioExpander->i2cManager = i2cManager;
+	gpioExpander->hwAddress		= 0x21;
+	GpioExpInit(gpioExpander);
+	GpioExpSetPinDirOut(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN7);
+	GpioExpSetPin(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN7);
+	logger(Debug, Log_Wheels, "[handleNotifyAfterSpeed] speed reached (actual speed = %f)",
+			((float)response->actualSpeed)/WHEEL_ROTATION);
 	wheelsData[response->encoderId].isSpeedReached = true;
 	vPortFree(response);
 }
@@ -306,7 +387,7 @@ void setDutyCycle(uint8_t wheelId, uint8_t dutyCycle)
 
 	*request = INIT_MOTOR_SET_DUTY_CYCLE_MSG_REQ;
 	request->motorId = wheelsData[wheelId].motorId;
-	request->dutyCycle = dutyCycle;
+	request->dutyCycle = 10;//dutyCycle;
 
 	if(!msgSend(g_motorsRxQueue, getQueueIdFromTaskId(Msg_MotorsTaskID), (void**) &request, portMAX_DELAY))
 	{
@@ -347,6 +428,7 @@ void stopMotor(uint8_t wheelId)
 	}
 
 	wheelsData[wheelId].isRunning = false;
+	wheelsData[wheelId].dutyCycle = 0;
 }
 
 bool getSpeedFromEncoder(uint8_t wheelId, float* speed)

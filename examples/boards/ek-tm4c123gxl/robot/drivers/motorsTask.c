@@ -17,8 +17,8 @@
 #include "motorsTask.h"
 #include "logger.h"
 
-#define MOTORS_TASK_STACK_SIZE		200        // Stack size in words
-#define MOTORS_QUEUE_SIZE			 10
+#define MOTORS_TASK_STACK_SIZE		150        // Stack size in words
+#define MOTORS_QUEUE_SIZE			  5
 #define MOTORS_ITEM_SIZE			  4			// bytes
 
 #define PWM_INITIAL_FREQUENCY	  10000
@@ -43,6 +43,7 @@ static GpioExpander g_gpioExpander;
 
 static void initializeMotors();
 static void handleMessages(void* msg);
+static void handleStartTask(StartTaskMsgReq* request);
 static void handleStart(MotorStartMsgReq* request);
 static void handleStop(MotorStopMsgReq* request);
 static void handleSetDutyCycle(MotorSetDutyCycleMsgReq* request);
@@ -51,8 +52,6 @@ static void handleSetDirection(MotorSetDirectionMsgReq* request);
 
 static void motorsTask()
 {
-	initializePwm(PWM_INITIAL_FREQUENCY);
-	initializeMotors();
 
 	while(true)
 	{
@@ -102,8 +101,13 @@ void initializeMotors()
 
 void handleMessages(void* msg)
 {
-	switch(*((uint8_t*)msg))
+	uint8_t msgId = *((uint8_t*)msg);
+
+	switch(msgId)
 	{
+	case START_TASK_MSG_REQ:
+		handleStartTask((StartTaskMsgReq*) msg);
+		break;
 	case MOTOR_START_MSG_REQ:
 		handleStart((MotorStartMsgReq*) msg);
 		break;
@@ -117,9 +121,21 @@ void handleMessages(void* msg)
 		handleSetDirection((MotorSetDirectionMsgReq*) msg);
 		break;
 	default:
-		logger(Warning, Log_Motors, "[handleMessages] Received not recognized message");
+		logger(Warning, Log_Motors, "[handleMessages] Received not recognized message %d", msgId);
 		break;
 	}
+}
+
+void handleStartTask(StartTaskMsgReq* request)
+{
+	initializePwm(PWM_INITIAL_FREQUENCY);
+	initializeMotors();
+
+	StartTaskMsgRsp* response = (StartTaskMsgRsp*) pvPortMalloc(sizeof(StartTaskMsgRsp));
+	*response = INIT_START_TASK_MSG_RSP;
+	response->status = true;
+	msgRespond(request->sender, &response, MSG_WAIT_LONG_TIME);
+	vPortFree(request);
 }
 
 void handleStart(MotorStartMsgReq* request)
@@ -128,7 +144,7 @@ void handleStart(MotorStartMsgReq* request)
 		return;
 
 	if(!startMotor(&g_motors[request->motorId]))
-		logger(Error, Log_Motors, "[handleStart] Could not start the motor");
+		logger(Error, Log_Motors, "[handleStart] Could not start motor %d", request->motorId);
 
 	vPortFree(request);
 }
@@ -139,7 +155,7 @@ void handleStop(MotorStopMsgReq* request)
 		return;
 
 	if(!stopMotor(&g_motors[request->motorId]))
-		logger(Error, Log_Motors, "[handleStart] Could not stop the motor");
+		logger(Error, Log_Motors, "[handleStart] Could not stop motor %d", request->motorId);
 
 	vPortFree(request);
 }
@@ -147,7 +163,6 @@ void handleStop(MotorStopMsgReq* request)
 
 void handleSetDutyCycle(MotorSetDutyCycleMsgReq* request)
 {
-
 	if(request->motorId >= MOTORS_NUMBER)
 		return;
 
@@ -158,7 +173,6 @@ void handleSetDutyCycle(MotorSetDutyCycleMsgReq* request)
 
 void handleSetDirection(MotorSetDirectionMsgReq* request)
 {
-
 	if(request->motorId >= MOTORS_NUMBER)
 		return;
 

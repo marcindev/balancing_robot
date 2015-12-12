@@ -19,8 +19,8 @@
 #include "encoderSamplerTask.h"
 #include "logger.h"
 
-#define ENCODERS_TASK_STACK_SIZE	200        // Stack size in words
-#define ENCODERS_QUEUE_SIZE			 10
+#define ENCODERS_TASK_STACK_SIZE	 110        // Stack size in words
+#define ENCODERS_QUEUE_SIZE			 100
 
 #define ENCODERS_NUMBER				  2
 
@@ -67,6 +67,7 @@ static void notifyAfterRotationsCallback(TimerHandle_t pxTimer);
 static void measureSpeedCallback(TimerHandle_t pxTimer);
 static void checkSpeedNotif(uint8_t encoderId);
 static void handleMessages(void* msg);
+static void handleStartTask(StartTaskMsgReq* request);
 static void handleGetCounter(EncoderGetCounterMsgReq* request);
 static void handleGetSpeed(EncoderGetSpeedMsgReq* request);
 static void handleNotifyAfterRotations(EncoderNotifyAfterRotationsMsgReq* request);
@@ -75,11 +76,6 @@ static void handleNotifyAfterSpeed(EncoderNotifyAfterSpeedMsgReq* request);
 
 static void encodersTask()
 {
-	initializeEncoders();
-	initializeNotifTimers();
-	initEncoderSamplerTask();
-	initializeSpeedTimer();
-	startSpeedMeasurement();
 
 	while(true)
 	{
@@ -180,7 +176,7 @@ void initializeSpeedTimer()
 
 	speedTimer = xTimerCreate(
 			"SpeedTimer",
-			SPEED_TIMER_PERIOD / portTICK_RATE_MS,
+			pdMS_TO_TICKS(SPEED_TIMER_PERIOD),
 			pdTRUE,
 			( void * ) 0,
 			measureSpeedCallback
@@ -205,7 +201,7 @@ void initializeNotifTimers()
 
 		rotationNotifData[i].notifTimer = xTimerCreate(
 				"EncNotifTimer",
-				ENC_NOTIF_TIMER_PERIOD / portTICK_RATE_MS,
+				pdMS_TO_TICKS(ENC_NOTIF_TIMER_PERIOD),
 				pdTRUE,
 				( void * ) i,
 				notifyAfterRotationsCallback
@@ -223,6 +219,9 @@ void handleMessages(void* msg)
 {
 	switch(*((uint8_t*)msg))
 	{
+	case START_TASK_MSG_REQ:
+		handleStartTask((StartTaskMsgReq*) msg);
+		break;
 	case ENCODER_GET_COUNTER_MSG_REQ:
 		handleGetCounter((EncoderGetCounterMsgReq*) msg);
 		break;
@@ -240,6 +239,21 @@ void handleMessages(void* msg)
 		logger(Warning, Log_Encoders, "[handleMessages] Received not-recognized message");
 		break;
 	}
+}
+
+void handleStartTask(StartTaskMsgReq* request)
+{
+	initializeEncoders();
+	initializeNotifTimers();
+	initEncoderSamplerTask();
+	initializeSpeedTimer();
+	startSpeedMeasurement();
+
+	StartTaskMsgRsp* response = (StartTaskMsgRsp*) pvPortMalloc(sizeof(StartTaskMsgRsp));
+	*response = INIT_START_TASK_MSG_RSP;
+	response->status = true;
+	msgRespond(request->sender, &response, MSG_WAIT_LONG_TIME);
+	vPortFree(request);
 }
 
 
@@ -290,12 +304,6 @@ void handleNotifyAfterRotations(EncoderNotifyAfterRotationsMsgReq* request)
 	if(encoderId >= ENCODERS_NUMBER)
 		return;
 
-	if(rotationNotifData[encoderId].isActive)
-	{
-		logger(Warning, Log_Encoders, "[handleNotifyAfterRotations] Notification timer is already active");
-		return;
-	}
-
 	int64_t startCounter = getRotationsCounter(g_encoders[encoderId]);
 
 	switch(request->direction)
@@ -314,10 +322,15 @@ void handleNotifyAfterRotations(EncoderNotifyAfterRotationsMsgReq* request)
 	rotationNotifData[encoderId].notifReceiver = request->sender;
 	rotationNotifData[encoderId].expectedDirection = request->direction;
 
-    if( xTimerStart( rotationNotifData[encoderId].notifTimer, 0 ) != pdPASS )
-    {
-    	logger(Error, Log_Encoders, "[handleNotifyAfterRotations] Couldn't start timer");
-    }
+	if(!rotationNotifData[encoderId].isActive)
+	{
+//		logger(Warning, Log_Encoders, "[handleNotifyAfterRotations] Notification timer is already active");
+	    if( xTimerStart( rotationNotifData[encoderId].notifTimer, 0 ) != pdPASS )
+	    {
+	    	logger(Error, Log_Encoders, "[handleNotifyAfterRotations] Couldn't start timer");
+	    }
+	}
+
 
     rotationNotifData[encoderId].isActive = true;
 
@@ -379,11 +392,11 @@ void handleNotifyAfterSpeed(EncoderNotifyAfterSpeedMsgReq* request)
 	if(encoderId >= ENCODERS_NUMBER)
 		return;
 
-	if(speedNotifData[encoderId].isActive)
-	{
-		logger(Warning, Log_Encoders, "[handleNotifyAfterSpeed] Notification timer is already active");
-		return;
-	}
+//	if(speedNotifData[encoderId].isActive)
+//	{
+//		logger(Warning, Log_Encoders, "[handleNotifyAfterSpeed] Notification timer is already active");
+//		return;
+//	}
 
 	speedNotifData[encoderId].threshold = request->speed;
 	speedNotifData[encoderId].greaterOrLess =
