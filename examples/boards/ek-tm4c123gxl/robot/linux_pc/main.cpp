@@ -19,6 +19,7 @@ using namespace std;
 const size_t BUFFER_SIZE = 512;
 size_t totalLineNumber = 0;
 const string getLogsString = "getLogs";
+string g_paramIp = "192.168.2.5";
 
 int sockfd, n;
 struct sockaddr_in serv_addr;
@@ -34,33 +35,55 @@ void sendTcpMsg(uint8_t msgId, void* msg);
 void handleMessages();
 bool sortLine(const string& str1, const string& str2);
 bool handleGetLogsRsp(GetLogsMsgRsp* response);
-void getLogs();
+void getLogs(bool isMaster);
 
 int main(int argc, char** argv)
 {
 
-	if(argc < 2)
+	if(argc > 2)
 	{
 		cout << "Invalid number of parameters" << endl;
 		return -1;
 	}
 
+	if(argc == 2)
+		g_paramIp = string(argv[1]);
+
 
 	while(!establishConnection()) { }
 
-	if(string(argv[1]) == getLogsString)
+	string line;
+	while(true)
 	{
-		getLogs();
+		cout << "command: ";
+		getline(cin, line);
+		string argument;
+		cin >> argument;
+
+		if(argument == getLogsString)
+		{
+			bool isMaster;
+			cin >> argument;
+			isMaster = argument != string("0");
+			getLogs(isMaster);
+		}
+		else
+		{
+			cout << "\nWrong command!" << endl;
+		}
+
+		cout << endl;
 	}
 
 	return 0;
 }
 
-void getLogs()
+void getLogs(bool isMaster)
 {
     memset(buffer, 0, BUFFER_SIZE);
 
     GetLogsMsgReq request = INIT_GET_LOGS_MSG_REQ;
+    request.isMaster = isMaster;
 
     sendTcpMsg(request.msgId, (void*) &request);
 
@@ -76,7 +99,7 @@ void getLogs()
 			if(!handleGetLogsRsp((GetLogsMsgRsp*) &buffer[0]))
 				break;
 		}
-		cout << endl;
+
 	}
 }
 
@@ -128,12 +151,93 @@ bool handleGetLogsRsp(GetLogsMsgRsp* response)
 	}
 	line += ss.str() + " ";
 	ss.str("");
-	for(size_t i = 0; i != 100; ++i)
+	ss.clear();
+	switch(response->component)
 	{
-		if(response->buffer[i] == 0)
-			break;
+	case 0:
+		ss << "Log_Robot";
+		break;
+	case 1:
+		ss << "Log_Motors";
+		break;
+	case 2:
+		ss << "Log_Encoders";
+		break;
+	case 3:
+		ss << "Log_TcpServer";
+		break;
+	case 4:
+		ss << "Log_TcpServerHandler";
+		break;
+	case 5:
+		ss << "Log_Wlan";
+		break;
+	case 6:
+		ss << "Log_GpioExpander";
+		break;
+	case 7:
+		ss << "Log_I2CManager";
+		break;
+	case 8:
+		ss << "Log_I2CTask";
+		break;
+	case 9:
+		ss << "Log_Wheels";
+		break;
+	default:
+	ss << "Unknown flag( " << static_cast<int>(response->component) << " )";
+	}
+	line += ss.str() + " ";
+	ss.str("");
+	ss.clear();
 
-		line += static_cast<char>(response->buffer[i]);
+	string strTemp(reinterpret_cast<char*>(response->strBuffer));
+	uint64_t* argsBuffer = &response->argsBuffer[0];
+	const size_t FORMAT_BUFF_SIZE = 200;
+	char formatBuffer[FORMAT_BUFF_SIZE] = {0};
+	size_t charsNum = 0;
+
+	size_t pos = strTemp.find('%');
+
+	if(pos != string::npos)
+	{
+		line += strTemp.substr(0, pos);
+
+		for(int i = 0; i != response->argsNum; ++i)
+		{
+			size_t tempPos = strTemp.find('%', pos + 1);
+
+			if(tempPos != string::npos)
+			{
+				if(tempPos - pos)
+				{
+					charsNum  = snprintf(formatBuffer,
+										FORMAT_BUFF_SIZE,
+										strTemp.substr(pos, tempPos - pos).c_str(),
+										argsBuffer[i]
+										);
+
+					line += string(formatBuffer).substr(0, charsNum);
+				}
+				pos = tempPos;
+			}
+			else
+			{
+				charsNum  = snprintf(formatBuffer,
+									FORMAT_BUFF_SIZE,
+									strTemp.substr(pos).c_str(),
+									argsBuffer[i]
+									);
+
+				line += string(formatBuffer).substr(0, charsNum);
+				break;
+			}
+
+		}
+	}
+	else
+	{
+		line += strTemp;
 	}
 
 	vecLogs.push_back(line);
@@ -161,15 +265,23 @@ bool handleGetLogsRsp(GetLogsMsgRsp* response)
 
 bool sortLine(const string& str1, const string& str2)
 {
-	return str1[0] < str2[0];
+	uint32_t lineNum1 = 0, lineNum2 = 0;
+	stringstream ss;
+	ss.str(str1);
+	ss >> lineNum1;
+	ss.clear();
+	ss.str(str2);
+	ss >> lineNum2;
+	return lineNum1 < lineNum2;
 }
 
 bool establishConnection()
 {
-	static int ipLastNum = 0;
+	static bool paramIpChecked = false;
+	static int ipLastNum = 2;
 	string ipPrefix("192.168.2.");
 	stringstream ss;
-	static string scanningString("Scannin for robot server ");
+	static string scanningString("Scanning for robot server ");
 	scanningString += ".";
 	cout << scanningString << "\r";
 	cout.flush();
@@ -180,8 +292,17 @@ bool establishConnection()
 		cout << "No more addresses, host not found in given range" << endl;
 	}
 
-	ss << ipLastNum;
-	ipPrefix += ss.str();
+	if(!paramIpChecked)
+	{
+		ipPrefix = g_paramIp;
+		ipLastNum = 1;
+		paramIpChecked = true;
+	}
+	else
+	{
+		ss << ipLastNum;
+		ipPrefix += ss.str();
+	}
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0)
@@ -269,10 +390,6 @@ bool receiveTcpMsg()
 
 	while(leftToRcv > 0)
 	{
-		//status = read(sockfd, &(buffer[bufferIndex]), leftToRcv);
-
-
-
 		status = read(sockfd, &(buffer[bufferIndex]), leftToRcv);
 
 		if(status == 0)
