@@ -5,8 +5,8 @@
 #include "msgSystem.h"
 
 #define QUEUE_ITEM_SIZE			4
-#define QUEUES_MAX_SIZE			30
-#define TASK_IDS_MAX_SIZE		50
+#define QUEUES_MAX_SIZE			20
+#define TASK_IDS_MAX_SIZE		20
 
 static xQueueHandle g_queues[QUEUES_MAX_SIZE] = {0};
 static MsgQueueId g_queuesByTasks[TASK_IDS_MAX_SIZE] = {0};

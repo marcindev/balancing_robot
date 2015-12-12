@@ -13,7 +13,9 @@ typedef enum
 	Msg_MotorsTaskID,
 	Msg_I2cTaskID,
 	Msg_EncoderTaskID,
-	Msg_WheelsTaskID
+	Msg_WheelsTaskID,
+	Msg_ServerSpiComTaskID,
+	MSG_TcpServerHandlerID
 }MsgTaskId;
 
 typedef int16_t MsgQueueId;
