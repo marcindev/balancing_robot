@@ -94,6 +94,13 @@ IPATH+=./interrupts
 all: ${COMPILER}
 all: ${COMPILER}/robot_main.axf
 
+master: ${COMPILER}
+master: ${COMPILER}/robot_main.axf
+
+
+slave: ${COMPILER}
+slave: ${COMPILER}/robot_main.axf
+
 #
 # The rule to clean out all the build products.
 #
@@ -109,12 +116,37 @@ ${COMPILER}:
 #
 # Rules for building the CC3100 Basic WiFi Application.
 #
-${COMPILER}/robot_main.axf: ${COMPILER}/robot_main.o
-${COMPILER}/robot_main.axf: ${COMPILER}/robot.o
+
+ifeq ($(MAKECMDGOALS),master)
+${COMPILER}/robot_main.axf: ${COMPILER}/I2CWrapper.o
+${COMPILER}/robot_main.axf: ${COMPILER}/MCP23017.o
+${COMPILER}/robot_main.axf: ${COMPILER}/i2cManager.o
+${COMPILER}/robot_main.axf: ${COMPILER}/i2cTask.o
+${COMPILER}/robot_main.axf: ${COMPILER}/motor.o
+${COMPILER}/robot_main.axf: ${COMPILER}/motorsTask.o
+${COMPILER}/robot_main.axf: ${COMPILER}/encoder.o
+${COMPILER}/robot_main.axf: ${COMPILER}/encoderSamplerTask.o
+${COMPILER}/robot_main.axf: ${COMPILER}/encodersTask.o
+${COMPILER}/robot_main.axf: ${COMPILER}/wheelsTask.o
+${COMPILER}/robot_main.axf: ${COMPILER}/wheelsTask.o
+else ifeq ($(MAKECMDGOALS),slave)
+${COMPILER}/robot_main.axf: ${COMPILER}/device.o
+${COMPILER}/robot_main.axf: ${COMPILER}/driver.o
+${COMPILER}/robot_main.axf: ${COMPILER}/flowcont.o
+${COMPILER}/robot_main.axf: ${COMPILER}/fs.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/board.o
-${COMPILER}/robot_main.axf: ${COMPILER}/spi.o
-${COMPILER}/robot_main.axf: ${COMPILER}/uart.o
-${COMPILER}/robot_main.axf: ${COMPILER}/uartstdio.o
+${COMPILER}/robot_main.axf: ${COMPILER}/netapp.o
+${COMPILER}/robot_main.axf: ${COMPILER}/netcfg.o
+${COMPILER}/robot_main.axf: ${COMPILER}/socket.o
+${COMPILER}/robot_main.axf: ${COMPILER}/socket.o
+${COMPILER}/robot_main.axf: ${COMPILER}/spawn.o
+${COMPILER}/robot_main.axf: ${COMPILER}/osi_freertos.o
+${COMPILER}/robot_main.axf: ${COMPILER}/wlan.o
+${COMPILER}/robot_main.axf: ${COMPILER}/SimpleLinkWrapper.o
+${COMPILER}/robot_main.axf: ${COMPILER}/tcpServer.o
+${COMPILER}/robot_main.axf: ${COMPILER}/tcpServerTask.o
+${COMPILER}/robot_main.axf: ${COMPILER}/tcpServerHandlerTask.o
+else
 ${COMPILER}/robot_main.axf: ${COMPILER}/device.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/driver.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/flowcont.o
@@ -123,16 +155,30 @@ ${COMPILER}/robot_main.axf: ${COMPILER}/netapp.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/netcfg.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/socket.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/spawn.o
+${COMPILER}/robot_main.axf: ${COMPILER}/board.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/osi_freertos.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/wlan.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/I2CWrapper.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/MCP23017.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/i2cManager.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/i2cTask.o
-${COMPILER}/robot_main.axf: ${COMPILER}/spiWrapper.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/motor.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/motorsTask.o
-${COMPILER}/robot_main.axf: ${COMPILER}/i2cTask.o
+${COMPILER}/robot_main.axf: ${COMPILER}/SimpleLinkWrapper.o
+${COMPILER}/robot_main.axf: ${COMPILER}/tcpServer.o
+${COMPILER}/robot_main.axf: ${COMPILER}/tcpServerTask.o
+${COMPILER}/robot_main.axf: ${COMPILER}/tcpServerHandlerTask.o
+${COMPILER}/robot_main.axf: ${COMPILER}/encoder.o
+${COMPILER}/robot_main.axf: ${COMPILER}/encoderSamplerTask.o
+${COMPILER}/robot_main.axf: ${COMPILER}/encodersTask.o
+${COMPILER}/robot_main.axf: ${COMPILER}/wheelsTask.o
+endif
+${COMPILER}/robot_main.axf: ${COMPILER}/robot_main.o
+${COMPILER}/robot_main.axf: ${COMPILER}/robot.o
+${COMPILER}/robot_main.axf: ${COMPILER}/spi.o
+${COMPILER}/robot_main.axf: ${COMPILER}/uart.o
+${COMPILER}/robot_main.axf: ${COMPILER}/uartstdio.o
+${COMPILER}/robot_main.axf: ${COMPILER}/spiWrapper.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/utils.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/heap_5.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/list.o
@@ -142,17 +188,9 @@ ${COMPILER}/robot_main.axf: ${COMPILER}/tasks.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/timers.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/messages.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/logger.o
-${COMPILER}/robot_main.axf: ${COMPILER}/SimpleLinkWrapper.o
-${COMPILER}/robot_main.axf: ${COMPILER}/tcpServer.o
-${COMPILER}/robot_main.axf: ${COMPILER}/tcpServerTask.o
-${COMPILER}/robot_main.axf: ${COMPILER}/tcpServerHandlerTask.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/serverSpiCom.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/serverSpiComTask.o
-${COMPILER}/robot_main.axf: ${COMPILER}/encoder.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/interrupts.o
-${COMPILER}/robot_main.axf: ${COMPILER}/encoderSamplerTask.o
-${COMPILER}/robot_main.axf: ${COMPILER}/encodersTask.o
-${COMPILER}/robot_main.axf: ${COMPILER}/wheelsTask.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/msgSystem.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/circularBuffer.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/startup_${COMPILER}.o
@@ -160,7 +198,10 @@ ${COMPILER}/robot_main.axf: ${ROOT}/driverlib/${COMPILER}/libdriver.a
 ${COMPILER}/robot_main.axf: robot_main.ld
 SCATTERgcc_robot_main=robot_main.ld
 ENTRY_robot_main=ResetISR
-override CFLAGSgcc+=-DTARGET_IS_TM4C123_RB1  -g -O0
+CFLAGSgcc=-DTARGET_IS_TM4C123_RB1  -g -O0
+ifeq ($(MAKECMDGOALS),master)
+CFLAGSgcc+=-D_ROBOT_MASTER_BOARD
+endif
 #CFLAGSgcc=-DTARGET_IS_TM4C123_RB1 -D_USE_CLI_ -D_DISABLE_I2C_ACK -g
 
 #

@@ -44,14 +44,19 @@ static void BusFaultISR(void);
 // External declarations for the interrupt handlers used by the application.
 //
 //*****************************************************************************
-extern void GPIOB_intHandler(void);
 extern void GPIOE_intHandler(void);
-extern void UART1_intHandler(void);
 extern void xPortPendSVHandler(void);
 extern void vPortSVCHandler(void);
 extern void xPortSysTickHandler(void);
 extern void SSI0_intHandler(void);
 extern void uDMAErrorHandler(void);
+
+#ifdef _ROBOT_MASTER_BOARD
+
+#else
+extern void GPIOB_intHandler(void);
+extern void UART1_intHandler(void);
+#endif
 //extern void Timer3BIntHandler(void);
 
 //*****************************************************************************
@@ -66,7 +71,7 @@ extern int main(void);
 // Reserve space for the system stack.
 //
 //*****************************************************************************
-static uint32_t pui32Stack[4096];
+static uint32_t pui32Stack[128];
 
 //*****************************************************************************
 //
@@ -95,12 +100,20 @@ void (* const g_pfnVectors[])(void) =
     xPortPendSVHandler,                     // The PendSV handler
     xPortSysTickHandler,                    // The SysTick handler
     IntDefaultHandler,                      // GPIO Port A
+#ifdef _ROBOT_MASTER_BOARD
+	IntDefaultHandler,                       // GPIO Port B
+#else
 	GPIOB_intHandler,                       // GPIO Port B
+#endif
     IntDefaultHandler,                      // GPIO Port C
     IntDefaultHandler,                      // GPIO Port D
 	GPIOE_intHandler,                      // GPIO Port E
     IntDefaultHandler,                      // UART0 Rx and Tx
+#ifdef _ROBOT_MASTER_BOARD
+	IntDefaultHandler,                       // UART1 Rx and Tx
+#else
 	UART1_intHandler,                       // UART1 Rx and Tx
+#endif
 	SSI0_intHandler,                       // SSI0 Rx and Tx
     IntDefaultHandler,                      // I2C0 Master and Slave
     IntDefaultHandler,                      // PWM Fault

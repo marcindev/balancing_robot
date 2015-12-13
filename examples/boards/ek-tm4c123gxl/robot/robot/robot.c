@@ -24,11 +24,15 @@
 #include "msgSystem.h"
 #include "priorities.h"
 #include "utils.h"
+#include "interrupts.h"
+
+#ifdef _ROBOT_MASTER_BOARD
 #include "drivers/i2c/i2cTask.h"
-#include "server/tcpServerTask.h"
-#include "interrupts/interrupts.h"
 #include "drivers/encoder.h"
 #include "drivers/wheelsTask.h"
+#else
+#include "server/tcpServerTask.h"
+#endif
 
 #include "utils/uartstdio.h"
 extern void _edata;
@@ -45,7 +49,7 @@ extern void _bss;
 
 const HeapRegion_t xHeapRegions[] =
 {
-	{ ( uint8_t * ) 0x20005000UL, 0x03000 },
+	{ ( uint8_t * ) 0x20002000UL, 0x06000 },
     { NULL, 0 } /* Terminates the array. */
 };
 
@@ -141,6 +145,7 @@ static void robotTask(void *pvParameters)
 	while(1) {}
 
 #else
+
 	while(1){}
 /*
 	if(!startWheels())
@@ -369,20 +374,6 @@ void initilizeFreeRTOS()
 	vPortDefineHeapRegions( xHeapRegions );
 }
 
-bool startTcpServer()
-{
-	StartTaskMsgReq* request = (StartTaskMsgReq*) pvPortMalloc(sizeof(StartTaskMsgReq));
-	*request = INIT_START_TASK_MSG_REQ;
-	msgSend(g_robotQueue, getQueueIdFromTaskId(Msg_TcpServerTaskID), &request, MSG_WAIT_LONG_TIME);
-
-	StartTaskMsgRsp* response;
-	if(!msgReceive(g_robotQueue, &response, MSG_WAIT_LONG_TIME))
-		return false;
-
-	bool result = response->status;
-	vPortFree(response);
-	return result;
-}
 
 bool startSpiServerCom()
 {
@@ -398,7 +389,7 @@ bool startSpiServerCom()
 	vPortFree(response);
 	return result;
 }
-
+#ifdef _ROBOT_MASTER_BOARD
 bool startWheels()
 {
 	StartTaskMsgReq* request = (StartTaskMsgReq*) pvPortMalloc(sizeof(StartTaskMsgReq));
@@ -413,3 +404,19 @@ bool startWheels()
 	vPortFree(response);
 	return result;
 }
+#else
+bool startTcpServer()
+{
+	StartTaskMsgReq* request = (StartTaskMsgReq*) pvPortMalloc(sizeof(StartTaskMsgReq));
+	*request = INIT_START_TASK_MSG_REQ;
+	msgSend(g_robotQueue, getQueueIdFromTaskId(Msg_TcpServerTaskID), &request, MSG_WAIT_LONG_TIME);
+
+	StartTaskMsgRsp* response;
+	if(!msgReceive(g_robotQueue, &response, MSG_WAIT_LONG_TIME))
+		return false;
+
+	bool result = response->status;
+	vPortFree(response);
+	return result;
+}
+#endif
