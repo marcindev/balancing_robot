@@ -52,7 +52,7 @@ typedef struct
 void SpiComInit(SpiComInstance* i2cComInst);
 bool SpiComInitiated(SpiComInstance* i2cComInst);
 bool SpiComSend(SpiComInstance* i2cComInst, const uint8_t* data, uint32_t length);
-bool SpiComReceive(SpiComInstance* i2cComInst, uint8_t* data, uint32_t length);
+bool SpiComReceive(SpiComInstance* i2cComInst, void** data, uint32_t* length);
 bool startDmaTransactionRx(SpiComInstance* spiComInst);
 bool startDmaTransactionTx(SpiComInstance* spiComInst);
 void onDmaTransactionRxEnd(SpiComInstance* spiComInst);

@@ -5,7 +5,7 @@
 #include "logger.h"
 #include <stdarg.h>
 
-#define BUFFER_SIZE			100
+#define BUFFER_SIZE			50
 
 typedef struct
 {

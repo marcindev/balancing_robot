@@ -10,6 +10,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+// Currently max message size is 255 bytes
 uint16_t getMsgSize(uint8_t msgId);
 
 // Message ids

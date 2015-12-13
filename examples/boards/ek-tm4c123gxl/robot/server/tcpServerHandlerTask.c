@@ -23,7 +23,7 @@
 #define TCP_SERVER_HANDLER_ITEM_SIZE			4			// bytes
 #define MAX_SLOTS_NUM							3
 
-#define TCP_BUFFER_SIZE		500
+#define TCP_BUFFER_SIZE		256
 
 static MsgQueueId g_serverHandlerQueue;
 
@@ -135,6 +135,7 @@ void handleGetLogs(uint16_t slot)
 
 	if(msg->isMaster)
 	{
+//		UARTprintf("handleGetLogs(uint16_t slot): slot: %d", slot);
 		GetLogsMsgReq* getLogsReq = (GetLogsMsgReq*) pvPortMalloc(sizeof(GetLogsMsgReq));
 		*getLogsReq = INIT_GET_LOGS_MSG_REQ;
 		getLogsReq->slot = slot;
@@ -178,6 +179,7 @@ void handleGetLogsRsp(GetLogsMsgRsp* msg)
 	sendTcpMsg(msg->slot, msg->msgId, (void*) msg);
 
 	vPortFree(msg);
+	msg = NULL;
 }
 
 void forwardMsgToSpi(uint16_t slot)

@@ -22,7 +22,7 @@
 #include "spiWrapper.h"
 
 #define SERVER_SPI_TASK_STACK_SIZE		200        // Stack size in words
-#define SERVER_SPI_QUEUE_SIZE			10
+#define SERVER_SPI_QUEUE_SIZE			5
 #define SERVER_SPI_ITEM_SIZE			4			// bytes
 
 #define SPI_SEM_WAIT_TIME				10
@@ -53,8 +53,9 @@ static void serverSpiComTask()
 		if(isSpiComInitialized) //&& (xSemaphoreTake(g_ssiRxIntSem, SPI_SEM_WAIT_TIME) == pdTRUE))
 		{
 #ifdef _ROBOT_MASTER_BOARD
-			uint8_t dummy = 55;
-			SpiComSend(g_spiComInstServer, &dummy, 1);
+			if(!(++counter % 100000UL))
+				UARTprintf("Ping\n");
+
 #endif
 			if(receiveSpiMsg(&msg)){
 #ifdef _ROBOT_MASTER_BOARD
@@ -67,21 +68,22 @@ static void serverSpiComTask()
 				GpioExpInit(gpioExpander);
 				GpioExpSetPinDirOut(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN3);
 				GpioExpSetPin(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN3);
-				GetLogsMsgReq getLogsReq = INIT_GET_LOGS_MSG_REQ;
-				getLogsReq.slot = 1;
-				msg = &getLogsReq;
+//				GetLogsMsgReq getLogsReq = INIT_GET_LOGS_MSG_REQ;
+//				getLogsReq.slot = 1;
+//				msg = &getLogsReq;  // TODO delete ??
 #endif
 
 				handleMessages(msg);
-				vPortFree(msg);
 
 			}
 		}
 #ifndef _ROBOT_MASTER_BOARD
 //		vTaskDelayUntil( &xLastWakeTime, 1000 / portTICK_RATE_MS );
-//		GetLogsMsgReq getLogsReq = INIT_GET_LOGS_MSG_REQ;
-//		if(!(++counter % 10000UL))
+		GetLogsMsgReq getLogsReq = INIT_GET_LOGS_MSG_REQ;
+		if(!(++counter % 100000UL))
+		{	UARTprintf("Ping\n");
 //			sendSpiMsg(&getLogsReq);
+		}
 #endif
 		if(msgReceive(g_serverSpiComQueue, &msg, 0))
 		{
@@ -153,6 +155,7 @@ void handleStartTask(StartTaskMsgReq* request)
 	response->status = result;
 	msgRespond(request->sender, &response, MSG_WAIT_LONG_TIME);
 	vPortFree(request);
+	request = NULL;
 
 	isSpiComInitialized = true;
 	logger(Info, Log_ServerSpiCom, "[handleStartTask] task initiated");
@@ -208,8 +211,10 @@ void handleGetLogs(void* msg)
 #else
 	logger(Info, Log_ServerSpiCom, "[handleGetLogs] forwarding msg to master; msgId: %d", *((uint8_t*)msg));
 	sendSpiMsg(msg);
-	vPortFree(msg);
 #endif
+
+	vPortFree(msg);
+	msg = NULL;
 }
 
 #ifdef _ROBOT_MASTER_BOARD
@@ -218,11 +223,12 @@ void handleGetLogs(void* msg)
 
 void handleGetLogsRsp(void* msg)
 {
+	// TODO memory leak
 	UARTprintf("handleGetLogsRsp: response received\n");
-	GetLogsMsgRsp* getLogsRsp = (GetLogsMsgRsp*) pvPortMalloc(sizeof(GetLogsMsgRsp));
-	*getLogsRsp = *((GetLogsMsgRsp*) msg);
+//	GetLogsMsgRsp* getLogsRsp = (GetLogsMsgRsp*) pvPortMalloc(sizeof(GetLogsMsgRsp));
+//	*getLogsRsp = *((GetLogsMsgRsp*) msg);
 //	UARTprintf("handleGetLogsRsp: response received: %s\n", getLogsRsp->strBuffer);
-	msgSend(g_serverSpiComQueue, getQueueIdFromTaskId(MSG_TcpServerHandlerID), &getLogsRsp, MSG_WAIT_LONG_TIME);
+	msgSend(g_serverSpiComQueue, getQueueIdFromTaskId(MSG_TcpServerHandlerID), &msg, MSG_WAIT_LONG_TIME);
 	logger(Info, Log_ServerSpiCom, "[handleGetLogsRsp] response received");
 
 }
