@@ -385,6 +385,7 @@ typedef struct
 	uint8_t logLevel;
 	uint8_t component;
 	uint8_t argsNum;
+	uint8_t argTypes[9]; // to keep alignment
 	uint64_t argsBuffer[10];
 	uint8_t strBuffer[100];
 }GetLogsMsgRsp;

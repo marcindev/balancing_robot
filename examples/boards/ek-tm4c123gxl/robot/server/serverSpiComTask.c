@@ -186,7 +186,9 @@ void handleGetLogs(void* msg)
 	LogComponent logComponent;
 	const char* strPtr;
 	uint8_t argsNum;
+	uint8_t* argTypes;
 	uint8_t* argsBuffer;
+	uint8_t* argsBuffSize;
 
 	uint16_t totalLinesNum = getLinesNumber();
 
@@ -195,7 +197,7 @@ void handleGetLogs(void* msg)
 	uint16_t lineNum = 1;
 
 	while(getNextLogLine(&timestamp, &logLevel, &logComponent,
-			(void*)&strPtr, &argsNum, (void*)&argsBuffer))
+			(void*)&strPtr, &argsNum, (void*)&argTypes, (void*)&argsBuffer, &argsBuffSize))
 	{
 		response.sender = ((GetLogsMsgReq*)msg)->sender;
 		response.slot = ((GetLogsMsgReq*)msg)->slot;
@@ -207,12 +209,13 @@ void handleGetLogs(void* msg)
 		response.component = (uint8_t) logComponent;
 		strcpy(&response.strBuffer[0], strPtr);
 		response.argsNum = argsNum;
-		memcpy(&response.argsBuffer[0], argsBuffer, argsNum * sizeof(uint64_t));
+		memcpy(&response.argTypes[0], argTypes, argsNum);
+		memcpy(&response.argsBuffer[0], argsBuffer, argsBuffSize);
 
 		sendSpiMsg(&response);
 	}
 #else
-	logger(Info, Log_ServerSpiCom, "[handleGetLogs] forwarding msg to master; msgId: %d",12);// *((uint8_t*)msg));
+	logger(Info, Log_ServerSpiCom, "[handleGetLogs] forwarding msg to master; msgId: %d,%f,%d,%f,%f",2, 3.0, 4, 5.0, 6.0);// *((uint8_t*)msg));
 	sendSpiMsg(msg);
 #endif
 

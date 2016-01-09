@@ -29,8 +29,14 @@ typedef enum
 } LogComponent;
 
 void logger(LogLevel level, LogComponent component, const char* string, ...);
-bool getNextLogLine(uint32_t* timestamp, LogLevel* logLevel, LogComponent* component,
-		            void** strPtr, uint8_t* argsNum, void** argsBufferPtr);
+bool getNextLogLine(uint32_t* timestamp,
+					LogLevel* logLevel,
+					LogComponent* component,
+		            void** strPtr,
+					uint8_t* argsNum,
+					void** argsTypes,
+					void** argsBufferPtr,
+					uint8_t* argsBuffSize);
 uint16_t getLinesNumber();
 
 

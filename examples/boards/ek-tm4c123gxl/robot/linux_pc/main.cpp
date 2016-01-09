@@ -195,10 +195,15 @@ bool handleGetLogsRsp(GetLogsMsgRsp* response)
 	ss.clear();
 
 	string strTemp(reinterpret_cast<char*>(response->strBuffer));
-	uint64_t* argsBuffer = &response->argsBuffer[0];
+	uint8_t* argsBuffer = reinterpret_cast<uint8_t*>(&response->argsBuffer[0]);
 	const size_t FORMAT_BUFF_SIZE = 200;
 	char formatBuffer[FORMAT_BUFF_SIZE] = {0};
 	size_t charsNum = 0;
+
+	const uint8_t INT_ARG = 1;
+	const uint8_t DOUBLE_ARG = 2;
+
+	uint8_t* argsBufferPtr = argsBuffer;
 
 	size_t pos = strTemp.find('%');
 
@@ -214,11 +219,26 @@ bool handleGetLogsRsp(GetLogsMsgRsp* response)
 			{
 				if(tempPos - pos)
 				{
-					charsNum  = snprintf(formatBuffer,
+					if(response->argTypes[i] == DOUBLE_ARG)
+					{
+						charsNum  = snprintf(formatBuffer,
 										FORMAT_BUFF_SIZE,
 										strTemp.substr(pos, tempPos - pos).c_str(),
-										argsBuffer[i]
-										);
+										*((double*)argsBufferPtr)
+						);
+
+						argsBufferPtr += sizeof(double);
+					}
+					else
+					{
+						charsNum  = snprintf(formatBuffer,
+										FORMAT_BUFF_SIZE,
+										strTemp.substr(pos, tempPos - pos).c_str(),
+										*((uint32_t*)argsBufferPtr)
+						);
+
+						argsBufferPtr += sizeof(uint32_t);
+					}
 
 					line += string(formatBuffer).substr(0, charsNum);
 				}
@@ -226,11 +246,26 @@ bool handleGetLogsRsp(GetLogsMsgRsp* response)
 			}
 			else
 			{
-				charsNum  = snprintf(formatBuffer,
-									FORMAT_BUFF_SIZE,
-									strTemp.substr(pos).c_str(),
-									argsBuffer[i]
-									);
+				if(response->argTypes[i] == DOUBLE_ARG)
+				{
+					charsNum  = snprintf(formatBuffer,
+							FORMAT_BUFF_SIZE,
+							strTemp.substr(pos).c_str(),
+							*((double*)argsBufferPtr)
+					);
+
+					argsBufferPtr += sizeof(double);
+				}
+				else
+				{
+					charsNum  = snprintf(formatBuffer,
+							FORMAT_BUFF_SIZE,
+							strTemp.substr(pos).c_str(),
+							*((uint32_t*)argsBufferPtr)
+					);
+
+					argsBufferPtr += sizeof(uint32_t);
+				}
 
 				line += string(formatBuffer).substr(0, charsNum);
 				break;

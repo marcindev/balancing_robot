@@ -150,7 +150,9 @@ void handleGetLogs(uint16_t slot)
 	LogComponent logComponent;
 	const char* strPtr;
 	uint8_t argsNum;
+	uint8_t* argTypes;
 	uint8_t* argsBuffer;
+	uint8_t* argsBuffSize;
 
 	uint16_t totalLinesNum = getLinesNumber();
 
@@ -159,7 +161,7 @@ void handleGetLogs(uint16_t slot)
 	uint16_t lineNum = 1;
 
 	while(getNextLogLine(&timestamp, &logLevel, &logComponent,
-			(void*)&strPtr, &argsNum, (void*)&argsBuffer))
+			(void*)&strPtr, &argsNum, (void*)&argTypes, (void*)&argsBuffer, &argsBuffSize))
 	{
 		response.isMaster = msg->isMaster;
 		response.lineNum = lineNum++;
@@ -169,8 +171,8 @@ void handleGetLogs(uint16_t slot)
 		response.component = (uint8_t) logComponent;
 		strcpy(&response.strBuffer[0], strPtr);
 		response.argsNum = argsNum;
-		memcpy(&response.argsBuffer[0], argsBuffer, argsNum * sizeof(uint64_t));
-
+		memcpy(&response.argTypes[0], argTypes, argsNum);
+		memcpy(&response.argsBuffer[0], argsBuffer, argsBuffSize);
 		sendTcpMsg(slot, response.msgId, (void*) &response);
 	}
 }
