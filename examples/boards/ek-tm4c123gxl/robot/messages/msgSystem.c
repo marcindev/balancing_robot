@@ -8,6 +8,8 @@
 #define QUEUES_MAX_SIZE			20
 #define TASK_IDS_MAX_SIZE		20
 
+#define SENDER_OFFSET			2
+
 static xQueueHandle g_queues[QUEUES_MAX_SIZE] = {0};
 static MsgQueueId g_queuesByTasks[TASK_IDS_MAX_SIZE] = {0};
 static bool g_isTaskQueueRegistered[TASK_IDS_MAX_SIZE] = {0};
@@ -69,7 +71,7 @@ bool msgSend(MsgQueueId sender, MsgQueueId receiver, void** pMsg, uint16_t waitT
 		return false;
 
 	uint8_t* msgPtr = (uint8_t*) *pMsg;
-	++msgPtr;
+	msgPtr += SENDER_OFFSET;
 	*msgPtr = (uint8_t) sender;
 
 	if(xQueueSend(g_queues[receiver], pMsg, waitTicks) == pdTRUE)

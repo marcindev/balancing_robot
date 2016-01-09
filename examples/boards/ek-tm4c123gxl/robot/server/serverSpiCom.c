@@ -94,7 +94,7 @@ bool receiveSpiMsg(void** msg)
 //	GpioExpSetPin(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN5);
 #endif
 	UARTprintf("receiveSpiMsg msgId: %d\n", msgId);
-	uint32_t msgLen = getMsgSize(msgId);
+	uint32_t msgLen = getMsgSize(*msg);
 //	*msg = pvPortMalloc(msgLen);
 #ifdef _ROBOT_MASTER_BOARD
 	UARTprintf("receiveSpiMsg msgLen: %d\n", msgLen);
@@ -116,7 +116,7 @@ bool receiveSpiMsg(void** msg)
 
 bool sendSpiMsg(void* msg)
 {
-	uint32_t msgLen = getMsgSize(*((uint8_t*) msg));
+	uint32_t msgLen = getMsgSize(msg);
 	UARTprintf("sendSpiMsg\n");
 	printBuffer(msg, msgLen);
 	if(!SpiComSend(g_spiComInstServer, msg, msgLen))

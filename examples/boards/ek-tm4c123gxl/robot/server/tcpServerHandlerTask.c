@@ -34,7 +34,7 @@ static uint8_t g_buffer[TCP_BUFFER_SIZE]; // TODO: semaphore for the buffer
 static uint16_t reserveSlot(uint16_t socketId);
 static void freeSlot(uint16_t slot);
 static bool receiveTcpMsg(uint16_t slot);
-static void sendTcpMsg(uint16_t slot, uint8_t msgId, void* msg);
+static void sendTcpMsg(uint16_t slot, void* msg);
 static void handleMessages(uint16_t slot);
 static void handleSpiMessages(void* msg);
 static void handleGetLogs(uint16_t slot);
@@ -173,13 +173,13 @@ void handleGetLogs(uint16_t slot)
 		response.argsNum = argsNum;
 		memcpy(&response.argTypes[0], argTypes, argsNum);
 		memcpy(&response.argsBuffer[0], argsBuffer, argsBuffSize);
-		sendTcpMsg(slot, response.msgId, (void*) &response);
+		sendTcpMsg(slot, (void*) &response);
 	}
 }
 
 void handleGetLogsRsp(GetLogsMsgRsp* msg)
 {
-	sendTcpMsg(msg->slot, msg->msgId, (void*) msg);
+	sendTcpMsg(msg->slot, (void*) msg);
 
 	vPortFree(msg);
 	msg = NULL;
@@ -188,7 +188,7 @@ void handleGetLogsRsp(GetLogsMsgRsp* msg)
 void forwardMsgToSpi(uint16_t slot)
 {
 	TcpMsgHeader* tempMsgHdr = &g_buffer[0];
-	uint16_t msgLen = getMsgSize(tempMsgHdr->msgId);
+	uint16_t msgLen = getMsgSize(tempMsgHdr);
 	TcpMsgHeader* msgHdr = (TcpMsgHeader*) pvPortMalloc(sizeof(msgLen));
 	memcpy(tempMsgHdr, msgHdr, msgLen);
 	msgHdr->slot = slot;
@@ -198,13 +198,15 @@ void forwardMsgToSpi(uint16_t slot)
 void forwardMsgToTcp(void* msg)
 {
 	TcpMsgHeader* msgHdr = (TcpMsgHeader*) msg;
-	sendTcpMsg(msgHdr->slot, msgHdr->msgId, msg);
+	sendTcpMsg(msgHdr->slot, msg);
 
 	vPortFree(msg);
 }
 
 bool receiveTcpMsg(uint16_t slot)
 {
+	const int16_t MSG_LEN_OFFSET = 2;
+
 	int16_t bufferIndex = 0;
 	int16_t status = 0;
 	int16_t msgLen = 0;
@@ -228,33 +230,14 @@ bool receiveTcpMsg(uint16_t slot)
 	if (!FD_ISSET(socketFd, &input))
 	   return false;
 
-	// receive 1 byte to check msgId
-	status = sl_Recv(socketFd, &(g_buffer[bufferIndex++]), 1, 0);
-
-	if(status == 0)
-		return false;
-
-	if(status < 0)
-	{
-		logger(Error, Log_TcpServerHandler, "[receiveTcpMsg] Couldn't receive TCP message");
-		return false;
-	}
-
-	msgLen = getMsgSize((uint8_t) g_buffer[0]);
-
-	if(msgLen == 0)
-		return false;
-
-	leftToRcv = msgLen - 1;
-
-
+	leftToRcv = MSG_LEN_OFFSET;
 
 	while(leftToRcv > 0)
 	{
 		status = sl_Recv(socketFd, &(g_buffer[bufferIndex]), leftToRcv, 0);
 
 		if(status == 0)
-			return true;
+			return false;
 
 		if(status < 0)
 		{
@@ -264,12 +247,15 @@ bool receiveTcpMsg(uint16_t slot)
 
 		leftToRcv -= status;
 		bufferIndex += status;
+
+		if(bufferIndex == MSG_LEN_OFFSET)
+			leftToRcv = getMsgSize(&g_buffer[0]) - MSG_LEN_OFFSET;
 	}
 
 	return true;
 }
 
-void sendTcpMsg(uint16_t slot, uint8_t msgId, void* msg)
+void sendTcpMsg(uint16_t slot, void* msg)
 {
 	int16_t bufferIndex = 0;
 	int16_t status = 0;
@@ -278,7 +264,7 @@ void sendTcpMsg(uint16_t slot, uint8_t msgId, void* msg)
 
 	uint8_t* msgPtr = (uint8_t*) msg;
 
-	msgLen = getMsgSize(msgId);
+	msgLen = getMsgSize(msg);
 	leftToSend = msgLen;
 
 	while(leftToSend > 0)

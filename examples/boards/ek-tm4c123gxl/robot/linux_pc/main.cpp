@@ -31,7 +31,7 @@ const uint16_t PORT = 5001;
 
 bool establishConnection();
 bool receiveTcpMsg();
-void sendTcpMsg(uint8_t msgId, void* msg);
+void sendTcpMsg(void* msg);
 void handleMessages();
 bool sortLine(const string& str1, const string& str2);
 bool handleGetLogsRsp(GetLogsMsgRsp* response);
@@ -85,7 +85,7 @@ void getLogs(bool isMaster)
     GetLogsMsgReq request = INIT_GET_LOGS_MSG_REQ;
     request.isMaster = isMaster;
 
-    sendTcpMsg(request.msgId, (void*) &request);
+    sendTcpMsg((void*) &request);
 
 	while(true)
 	{
@@ -385,6 +385,7 @@ bool establishConnection()
 
 bool receiveTcpMsg()
 {
+	const int16_t MSG_LEN_OFFSET = 2;
 	int16_t bufferIndex = 0;
 	int16_t status = 0;
 	int16_t msgLen = 0;
@@ -406,33 +407,14 @@ bool receiveTcpMsg()
 	if (!FD_ISSET(sockfd, &input))
 	   return false;
 
-	// receive 1 byte to check msgId
-	status = read(sockfd, &(buffer[bufferIndex++]), 1);
-
-	if(status == 0)
-	{
-		return false;
-	}
-
-	if(status < 0)
-	{
-		cout << "Couldn't receive TCP message" << endl;
-		return false;
-	}
-
-	msgLen = getMsgSize((uint8_t) buffer[0]);
-
-	if(msgLen == 0)
-		return false;
-
-	leftToRcv = msgLen - 1;
+	leftToRcv = MSG_LEN_OFFSET;
 
 	while(leftToRcv > 0)
 	{
 		status = read(sockfd, &(buffer[bufferIndex]), leftToRcv);
 
 		if(status == 0)
-			return true;
+			return false;
 
 		if(status < 0)
 		{
@@ -443,13 +425,16 @@ bool receiveTcpMsg()
 
 		leftToRcv -= status;
 		bufferIndex += status;
+
+		if(bufferIndex == MSG_LEN_OFFSET)
+			leftToRcv = getMsgSize(&buffer[0]) - MSG_LEN_OFFSET;
 	}
 
 
 	return true;
 }
 
-void sendTcpMsg(uint8_t msgId, void* msg)
+void sendTcpMsg(void* msg)
 {
 	int16_t bufferIndex = 0;
 	int16_t status = 0;
@@ -458,8 +443,9 @@ void sendTcpMsg(uint8_t msgId, void* msg)
 
 	uint8_t* msgPtr = (uint8_t*) msg;
 
-	msgLen = getMsgSize(msgId);
+	msgLen = getMsgSize(msg);
 	leftToSend = msgLen;
+
 
 	while(leftToSend > 0)
 	{

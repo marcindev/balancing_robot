@@ -11,7 +11,7 @@
 #include <stdint.h>
 
 // Currently max message size is 255 bytes
-uint16_t getMsgSize(uint8_t msgId);
+uint16_t getMsgSize(void* msg);
 
 // Message ids
 
@@ -65,10 +65,18 @@ uint16_t getMsgSize(uint8_t msgId);
 // Local messages
 //***********************
 
+typedef struct
+{
+	uint8_t msgId;
+	uint8_t msgLen;
+	uint8_t sender;
+}MsgHeader;
+
 // i2c task messages
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 	uint8_t sender;
 	uint8_t slaveAddress;
 	uint32_t length;
@@ -79,6 +87,7 @@ extern const I2cSendMsgReq INIT_I2C_SEND_MSG_REQ;
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 	uint8_t status;
 }I2cSendMsgRsp;
 extern const I2cSendMsgRsp INIT_SEND_I2C_MSG_RSP;
@@ -86,6 +95,7 @@ extern const I2cSendMsgRsp INIT_SEND_I2C_MSG_RSP;
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 	uint8_t sender;
 	uint8_t slaveAddress;
 	uint32_t length;
@@ -95,6 +105,7 @@ extern const I2cReceiveMsgReq INIT_I2C_RECEIVE_MSG_REQ;
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 	uint32_t length;
 	uint8_t* data;
 	uint8_t status;
@@ -104,6 +115,7 @@ extern const I2cReceiveMsgRsp INIT_I2C_RECEIVE_MSG_RSP;
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 	uint8_t sender;
 	uint8_t slaveAddress;
 	uint32_t sentLength;
@@ -115,6 +127,7 @@ extern const I2cSendAndReceiveMsgReq INIT_I2C_SEND_N_RECEIVE_MSG_REQ;
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 	uint32_t length;
 	uint8_t* data;
 	uint8_t status;
@@ -125,6 +138,7 @@ extern const I2cSendAndReceiveMsgRsp INIT_I2C_SEND_N_RECEIVE_MSG_RSP;
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 	uint8_t sender;
 	uint8_t motorId;
 	uint8_t dutyCycle;
@@ -134,6 +148,7 @@ extern const MotorSetDutyCycleMsgReq INIT_MOTOR_SET_DUTY_CYCLE_MSG_REQ;
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 	uint8_t status;
 }MotorSetDutyCycleMsgRsp;
 extern const MotorSetDutyCycleMsgRsp INIT_MOTOR_SET_DUTY_CYCLE_MSG_RSP;
@@ -141,6 +156,7 @@ extern const MotorSetDutyCycleMsgRsp INIT_MOTOR_SET_DUTY_CYCLE_MSG_RSP;
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 	uint8_t sender;
 	uint8_t motorId;
 	uint8_t direction;
@@ -150,6 +166,7 @@ extern const MotorSetDirectionMsgReq INIT_MOTOR_SET_DIRECTION_MSG_REQ;
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 	uint8_t status;
 }MotorSetDirectionMsgRsp;
 extern const MotorSetDirectionMsgRsp INIT_MOTOR_SET_DIRECTION_MSG_RSP;
@@ -157,6 +174,7 @@ extern const MotorSetDirectionMsgRsp INIT_MOTOR_SET_DIRECTION_MSG_RSP;
 typedef struct
 {
 	uint8_t msgId;
+	uint16_t msgLen;
 	uint8_t sender;
 	uint8_t motorId;
 }MotorStartMsgReq;
@@ -165,6 +183,7 @@ extern const MotorStartMsgReq INIT_MOTOR_START_MSG_REQ;
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 	uint8_t status;
 }MotorStartMsgRsp;
 extern const MotorStartMsgRsp INIT_MOTOR_START_MSG_RSP;
@@ -172,6 +191,7 @@ extern const MotorStartMsgRsp INIT_MOTOR_START_MSG_RSP;
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 	uint8_t sender;
 	uint8_t motorId;
 }MotorStopMsgReq;
@@ -180,6 +200,7 @@ extern const MotorStopMsgReq INIT_MOTOR_STOP_MSG_REQ;
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 	uint8_t status;
 }MotorStopMsgRsp;
 extern const MotorStopMsgRsp INIT_MOTOR_STOP_MSG_RSP;
@@ -189,6 +210,7 @@ extern const MotorStopMsgRsp INIT_MOTOR_STOP_MSG_RSP;
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 	uint8_t sender;
 	uint8_t encoderId;
 }EncoderGetCounterMsgReq;
@@ -197,6 +219,7 @@ extern const EncoderGetCounterMsgReq INIT_ENCODER_GET_COUNTER_MSG_REQ;
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 	int64_t counterVal;
 }EncoderGetCounterMsgRsp;
 extern const EncoderGetCounterMsgRsp INIT_ENCODER_GET_COUNTER_MSG_RSP;
@@ -204,6 +227,7 @@ extern const EncoderGetCounterMsgRsp INIT_ENCODER_GET_COUNTER_MSG_RSP;
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 	uint8_t sender;
 	uint8_t encoderId;
 }EncoderGetSpeedMsgReq;
@@ -212,6 +236,7 @@ extern const EncoderGetSpeedMsgReq INIT_ENCODER_GET_SPEED_MSG_REQ;
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 	uint64_t speed;
 }EncoderGetSpeedMsgRsp;
 extern const EncoderGetSpeedMsgRsp INIT_ENCODER_GET_SPEED_MSG_RSP;
@@ -219,6 +244,7 @@ extern const EncoderGetSpeedMsgRsp INIT_ENCODER_GET_SPEED_MSG_RSP;
 typedef struct
 {
 	uint8_t msgId;
+	uint16_t msgLen;
 	uint8_t sender;
 	uint8_t encoderId;
 	uint8_t direction;
@@ -229,6 +255,7 @@ extern const EncoderNotifyAfterRotationsMsgReq INIT_ENCODER_NOTIFY_AFTER_ROTATIO
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 	uint8_t encoderId;
 	int64_t actualRotations;
 }EncoderNotifyAfterRotationsMsgRsp;
@@ -237,6 +264,7 @@ extern const EncoderNotifyAfterRotationsMsgRsp INIT_ENCODER_NOTIFY_AFTER_ROTATIO
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 	uint8_t sender;
 	uint8_t encoderId;
 	uint64_t speed;
@@ -246,6 +274,7 @@ extern const EncoderNotifyAfterSpeedMsgReq INIT_ENCODER_NOTIFY_AFTER_SPEED_MSG_R
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 	uint8_t encoderId;
 	uint64_t actualSpeed;
 }EncoderNotifyAfterSpeedMsgRsp;
@@ -256,6 +285,7 @@ extern const EncoderNotifyAfterSpeedMsgRsp INIT_ENCODER_NOTIFY_AFTER_SPEED_MSG_R
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 	uint8_t sender;
 	uint8_t wheelId;
 	float speed; // angular
@@ -265,6 +295,7 @@ extern const WheelSetSpeedMsgReq INIT_WHEEL_SET_SPEED_MSG_REQ;
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 	uint8_t status;
 }WheelSetSpeedMsgRsp;
 extern const WheelSetSpeedMsgRsp INIT_WHEEL_SET_SPEED_MSG_RSP;
@@ -272,6 +303,7 @@ extern const WheelSetSpeedMsgRsp INIT_WHEEL_SET_SPEED_MSG_RSP;
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 	uint8_t sender;
 	uint8_t wheelId;
 }WheelGetSpeedMsgReq;
@@ -280,6 +312,7 @@ extern const WheelGetSpeedMsgReq INIT_WHEEL_GET_SPEED_MSG_REQ;
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 	float speed; // angular
 	uint8_t status;
 }WheelGetSpeedMsgRsp;
@@ -288,6 +321,7 @@ extern const WheelGetSpeedMsgRsp INIT_WHEEL_GET_SPEED_MSG_RSP;
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 	uint8_t sender;
 	uint8_t wheelId;
 	float speed; // angular
@@ -297,6 +331,7 @@ extern const WheelSetAccelerationMsgReq INIT_WHEEL_SET_ACCELERATION_MSG_REQ;
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 	uint8_t status;
 }WheelSetAccelerationMsgRsp;
 extern const WheelSetAccelerationMsgRsp INIT_WHEEL_SET_ACCELERATION_MSG_RSP;
@@ -305,6 +340,7 @@ extern const WheelSetAccelerationMsgRsp INIT_WHEEL_SET_ACCELERATION_MSG_RSP;
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 	uint8_t sender;
 	uint8_t wheelId;
 }WheelGetAccelerationMsgReq;
@@ -313,6 +349,7 @@ extern const WheelGetAccelerationMsgReq INIT_WHEEL_GET_ACCELERATION_MSG_REQ;
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 	uint8_t status;
 	float speed; // angular
 }WheelGetAccelerationMsgRsp;
@@ -321,6 +358,7 @@ extern const WheelGetAccelerationMsgRsp INIT_WHEEL_GET_ACCELERATION_MSG_RSP;
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 	uint8_t sender;
 	uint8_t wheelId;
 	uint8_t direction;
@@ -331,6 +369,7 @@ extern const WheelRunMsgReq INIT_WHEEL_RUN_MSG_REQ;
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 	uint8_t status;
 }WheelRunMsgRsp;
 extern const WheelRunMsgRsp INIT_WHEEL_RUN_MSG_RSP;
@@ -340,6 +379,7 @@ extern const WheelRunMsgRsp INIT_WHEEL_RUN_MSG_RSP;
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 	uint8_t sender;
 }StartTaskMsgReq;
 extern const StartTaskMsgReq INIT_START_TASK_MSG_REQ;
@@ -347,6 +387,7 @@ extern const StartTaskMsgReq INIT_START_TASK_MSG_REQ;
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 	uint8_t status;
 }StartTaskMsgRsp;
 extern const StartTaskMsgRsp INIT_START_TASK_MSG_RSP;
@@ -359,6 +400,7 @@ extern const StartTaskMsgRsp INIT_START_TASK_MSG_RSP;
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 	uint8_t sender;
 	uint8_t slot;
 }TcpMsgHeader;
@@ -367,6 +409,7 @@ typedef struct
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 	uint8_t sender;
 	uint8_t slot;
 	uint8_t isMaster;
@@ -376,6 +419,7 @@ extern const GetLogsMsgReq INIT_GET_LOGS_MSG_REQ;
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 	uint8_t sender;
 	uint8_t slot;
 	uint8_t isMaster;
@@ -385,7 +429,7 @@ typedef struct
 	uint8_t logLevel;
 	uint8_t component;
 	uint8_t argsNum;
-	uint8_t argTypes[9]; // to keep alignment
+	uint8_t argTypes[12]; // to keep alignment
 	uint64_t argsBuffer[10];
 	uint8_t strBuffer[100];
 }GetLogsMsgRsp;
@@ -394,12 +438,14 @@ extern const GetLogsMsgRsp INIT_GET_LOGS_MSG_RSP;
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 }GetTasksInfoMsgReq;
 extern const GetTasksInfoMsgReq INIT_GET_TASKS_INFO_MSG_REQ;
 
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t msgLen;
 	uint16_t lineNum;
 	uint16_t totalLineNum;
 	uint32_t timestamp;
