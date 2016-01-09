@@ -57,7 +57,7 @@ inline void logger(LogLevel level, LogComponent component, const char* string, .
 
 		for(int j = 0; j != argsNum; ++j)
 		{
-			uint64_t arg = (uint64_t) va_arg(arguments, uint64_t);
+			uint64_t arg = (uint64_t) va_arg(arguments, uint64_t); // TODO differentiate between double and int
 			uint8_t* bytePtr = (uint8_t*) &arg;
 
 			for(int k = 0; k != doubleWordSize; ++k)

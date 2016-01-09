@@ -59,15 +59,15 @@ static void serverSpiComTask()
 #endif
 			if(receiveSpiMsg(&msg)){
 #ifdef _ROBOT_MASTER_BOARD
-				I2cManager* i2cManager = (I2cManager*) pvPortMalloc(sizeof(I2cManager));
-				GpioExpander* gpioExpander = (GpioExpander*) pvPortMalloc(sizeof(GpioExpander));
-				//
-				ZeroBuffer(gpioExpander, sizeof(GpioExpander));
-				gpioExpander->i2cManager = i2cManager;
-				gpioExpander->hwAddress		= 0x21;
-				GpioExpInit(gpioExpander);
-				GpioExpSetPinDirOut(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN3);
-				GpioExpSetPin(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN3);
+//				I2cManager* i2cManager = (I2cManager*) pvPortMalloc(sizeof(I2cManager));
+//				GpioExpander* gpioExpander = (GpioExpander*) pvPortMalloc(sizeof(GpioExpander));
+//				//
+//				ZeroBuffer(gpioExpander, sizeof(GpioExpander));
+//				gpioExpander->i2cManager = i2cManager;
+//				gpioExpander->hwAddress		= 0x21;
+//				GpioExpInit(gpioExpander);
+//				GpioExpSetPinDirOut(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN3);
+//				GpioExpSetPin(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN3);
 //				GetLogsMsgReq getLogsReq = INIT_GET_LOGS_MSG_REQ;
 //				getLogsReq.slot = 1;
 //				msg = &getLogsReq;  // TODO delete ??
@@ -138,6 +138,8 @@ void handleMessages(void* msg)
 
 	default:
 		sendSpiMsg(msg);
+		vPortFree(msg);
+		msg = NULL;
 		break;
 #endif
 	}
@@ -166,16 +168,16 @@ void handleStartTask(StartTaskMsgReq* request)
 void handleGetLogs(void* msg)
 {
 #ifdef _ROBOT_MASTER_BOARD
-
-	I2cManager* i2cManager = (I2cManager*) pvPortMalloc(sizeof(I2cManager));
-	GpioExpander* gpioExpander = (GpioExpander*) pvPortMalloc(sizeof(GpioExpander));
-	//
-	ZeroBuffer(gpioExpander, sizeof(GpioExpander));
-	gpioExpander->i2cManager = i2cManager;
-	gpioExpander->hwAddress		= 0x21;
-	GpioExpInit(gpioExpander);
-	GpioExpSetPinDirOut(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN4);
-	GpioExpSetPin(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN4);
+//
+//	I2cManager* i2cManager = (I2cManager*) pvPortMalloc(sizeof(I2cManager));
+//	GpioExpander* gpioExpander = (GpioExpander*) pvPortMalloc(sizeof(GpioExpander));
+//	//
+//	ZeroBuffer(gpioExpander, sizeof(GpioExpander));
+//	gpioExpander->i2cManager = i2cManager;
+//	gpioExpander->hwAddress		= 0x21;
+//	GpioExpInit(gpioExpander);
+//	GpioExpSetPinDirOut(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN4);
+//	GpioExpSetPin(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN4);
 
 
 
@@ -195,6 +197,7 @@ void handleGetLogs(void* msg)
 	while(getNextLogLine(&timestamp, &logLevel, &logComponent,
 			(void*)&strPtr, &argsNum, (void*)&argsBuffer))
 	{
+		response.sender = ((GetLogsMsgReq*)msg)->sender;
 		response.slot = ((GetLogsMsgReq*)msg)->slot;
 		response.isMaster = 1;
 		response.lineNum = lineNum++;
@@ -209,7 +212,7 @@ void handleGetLogs(void* msg)
 		sendSpiMsg(&response);
 	}
 #else
-	logger(Info, Log_ServerSpiCom, "[handleGetLogs] forwarding msg to master; msgId: %d", *((uint8_t*)msg));
+	logger(Info, Log_ServerSpiCom, "[handleGetLogs] forwarding msg to master; msgId: %d",12);// *((uint8_t*)msg));
 	sendSpiMsg(msg);
 #endif
 
@@ -223,12 +226,9 @@ void handleGetLogs(void* msg)
 
 void handleGetLogsRsp(void* msg)
 {
-	// TODO memory leak
 	UARTprintf("handleGetLogsRsp: response received\n");
-//	GetLogsMsgRsp* getLogsRsp = (GetLogsMsgRsp*) pvPortMalloc(sizeof(GetLogsMsgRsp));
-//	*getLogsRsp = *((GetLogsMsgRsp*) msg);
-//	UARTprintf("handleGetLogsRsp: response received: %s\n", getLogsRsp->strBuffer);
-	msgSend(g_serverSpiComQueue, getQueueIdFromTaskId(MSG_TcpServerHandlerID), &msg, MSG_WAIT_LONG_TIME);
+
+	msgRespond(((GetLogsMsgRsp*)msg)->sender, &msg, MSG_WAIT_LONG_TIME);
 	logger(Info, Log_ServerSpiCom, "[handleGetLogsRsp] response received");
 
 }

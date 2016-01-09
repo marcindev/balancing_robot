@@ -19,7 +19,7 @@
 #include "MCP23017.h"
 
 SpiComInstance* g_spiComInstServer = NULL;
-#define SPI_BUFFER_SIZE		1000
+#define SPI_BUFFER_SIZE		4096
 #define UDMA_RX_READ_SIZE	16
 
 
@@ -75,21 +75,23 @@ bool receiveSpiMsg(void** msg)
 {
 	uint8_t msgId = 0;
 	uint32_t len = 0;
-	if(!SpiComReceive(g_spiComInstServer, msg, len))
+	if(!SpiComReceive(g_spiComInstServer, msg, &len))
 		return false;
+	UARTprintf("receiveSpiMsg\n");
+	printBuffer(*msg, len);
 
 	msgId = *((uint8_t*)*msg);
 
 #ifdef _ROBOT_MASTER_BOARD
-	I2cManager* i2cManager = (I2cManager*) pvPortMalloc(sizeof(I2cManager));
-	GpioExpander* gpioExpander = (GpioExpander*) pvPortMalloc(sizeof(GpioExpander));
-	//
-	ZeroBuffer(gpioExpander, sizeof(GpioExpander));
-	gpioExpander->i2cManager = i2cManager;
-	gpioExpander->hwAddress		= 0x21;
-	GpioExpInit(gpioExpander);
-	GpioExpSetPinDirOut(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN5);
-	GpioExpSetPin(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN5);
+//	I2cManager* i2cManager = (I2cManager*) pvPortMalloc(sizeof(I2cManager));
+//	GpioExpander* gpioExpander = (GpioExpander*) pvPortMalloc(sizeof(GpioExpander));
+//	//
+//	ZeroBuffer(gpioExpander, sizeof(GpioExpander));
+//	gpioExpander->i2cManager = i2cManager;
+//	gpioExpander->hwAddress		= 0x21;
+//	GpioExpInit(gpioExpander);
+//	GpioExpSetPinDirOut(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN5);
+//	GpioExpSetPin(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN5);
 #endif
 	UARTprintf("receiveSpiMsg msgId: %d\n", msgId);
 	uint32_t msgLen = getMsgSize(msgId);
@@ -115,10 +117,11 @@ bool receiveSpiMsg(void** msg)
 bool sendSpiMsg(void* msg)
 {
 	uint32_t msgLen = getMsgSize(*((uint8_t*) msg));
-
+	UARTprintf("sendSpiMsg\n");
+	printBuffer(msg, msgLen);
 	if(!SpiComSend(g_spiComInstServer, msg, msgLen))
 		return false;
-	logger(Info, Log_ServerSpiCom, "[sendSpiMsg] Message sent");
+//	logger(Info, Log_ServerSpiCom, "[sendSpiMsg] Message sent");
 	return true;
 }
 

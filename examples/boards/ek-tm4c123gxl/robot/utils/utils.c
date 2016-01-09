@@ -30,6 +30,18 @@ void ZeroBuffer(void* buffer, int len)
 	}
 }
 
+void printBuffer(void* buffer, int len)
+{
+	UARTprintf("Buffer:");
+	unsigned char* uchPtr = (unsigned char*) buffer;
+
+	for(int i = 0; i < len; ++i)
+	{
+		UARTprintf(" 0x%02X", *uchPtr++);
+	}
+	UARTprintf("\n");
+}
+
 void
 ConfigureUART(void)
 {

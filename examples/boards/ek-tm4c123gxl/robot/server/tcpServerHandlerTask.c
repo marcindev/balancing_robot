@@ -92,6 +92,7 @@ bool tcpServerHandlerTaskInit(uint16_t socketID)
                    tskIDLE_PRIORITY + PRIORITY_TCP_SERVER_HANDLER_TASK, NULL) != pdTRUE)
     {
     	freeSlot(*slot);
+    	vPortFree(slot);
         return false;
     }
 
@@ -135,7 +136,7 @@ void handleGetLogs(uint16_t slot)
 
 	if(msg->isMaster)
 	{
-//		UARTprintf("handleGetLogs(uint16_t slot): slot: %d", slot);
+		UARTprintf("handleGetLogs(uint16_t slot): slot: %d", slot);
 		GetLogsMsgReq* getLogsReq = (GetLogsMsgReq*) pvPortMalloc(sizeof(GetLogsMsgReq));
 		*getLogsReq = INIT_GET_LOGS_MSG_REQ;
 		getLogsReq->slot = slot;
@@ -187,6 +188,7 @@ void forwardMsgToSpi(uint16_t slot)
 	TcpMsgHeader* tempMsgHdr = &g_buffer[0];
 	uint16_t msgLen = getMsgSize(tempMsgHdr->msgId);
 	TcpMsgHeader* msgHdr = (TcpMsgHeader*) pvPortMalloc(sizeof(msgLen));
+	memcpy(tempMsgHdr, msgHdr, msgLen);
 	msgHdr->slot = slot;
 	msgSend(g_serverHandlerQueue, getQueueIdFromTaskId(Msg_ServerSpiComTaskID), &msgHdr, MSG_WAIT_LONG_TIME);
 }

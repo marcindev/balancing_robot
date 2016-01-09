@@ -359,6 +359,7 @@ extern const StartTaskMsgRsp INIT_START_TASK_MSG_RSP;
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t sender;
 	uint8_t slot;
 }TcpMsgHeader;
 
@@ -366,6 +367,7 @@ typedef struct
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t sender;
 	uint8_t slot;
 	uint8_t isMaster;
 }GetLogsMsgReq;
@@ -374,6 +376,7 @@ extern const GetLogsMsgReq INIT_GET_LOGS_MSG_REQ;
 typedef struct
 {
 	uint8_t msgId;
+	uint8_t sender;
 	uint8_t slot;
 	uint8_t isMaster;
 	uint16_t lineNum;

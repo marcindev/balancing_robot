@@ -8,5 +8,6 @@
 
 void ZeroBuffer(void* buffer, int len);
 void ConfigureUART();
+void printBuffer(void* buffer, int len);
 
 #endif // UTILS_H

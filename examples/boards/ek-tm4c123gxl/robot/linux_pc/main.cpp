@@ -184,6 +184,9 @@ bool handleGetLogsRsp(GetLogsMsgRsp* response)
 	case 9:
 		ss << "Log_Wheels";
 		break;
+	case 10:
+		ss << "Log_ServerSpiCom";
+		break;
 	default:
 	ss << "Unknown flag( " << static_cast<int>(response->component) << " )";
 	}
@@ -241,6 +244,7 @@ bool handleGetLogsRsp(GetLogsMsgRsp* response)
 	}
 
 	vecLogs.push_back(line);
+
 
 	if(vecLogs.size() == totalLineNumber)
 	{

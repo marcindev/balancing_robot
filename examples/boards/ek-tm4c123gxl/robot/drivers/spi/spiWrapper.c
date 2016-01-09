@@ -21,7 +21,7 @@
 
 static uint8_t g_dummyFrame[SPI_DUMMY_FRAME_LEN] = {SPI_START_FRAME,
 													SPI_DUMMY_FRAME_ID,
-													SPI_DUMMY_FRAME_LEN - 2
+													SPI_DUMMY_FRAME_LEN - 3
 };
 
 static void SpiEmptyRxFifo(SpiComInstance* spiComInst);
@@ -153,12 +153,13 @@ bool SpiComSend(SpiComInstance* spiComInst, const uint8_t* data, uint32_t length
 										   length
 
 	};
-
+// --> not safe, make it atomic
 	if(!CB_pushData(spiComInst->circBufferTx, frameHeader, SPI_HEADER_LEN))
 		return false;
 
 	if(!CB_pushData(spiComInst->circBufferTx, data, length))
 		return false;
+// <--
 
 	if(!isDMAtransactionOngoingTx(spiComInst))
 		startDmaTransactionTx(spiComInst);
@@ -185,23 +186,33 @@ bool SpiComReceive(SpiComInstance* spiComInst, void** data, uint32_t* length)
 
 		byte = 0;
 
-		if(!CB_popData(spiComInst->circBufferRx, &byte, 1))
-			return false;
+		while(!CB_popData(spiComInst->circBufferRx, &byte, 1))
+		{
+			if(!isDMAtransactionOngoingRx(spiComInst))
+				startDmaTransactionRx(spiComInst);
+		}
 
 		switch(byte)
 		{
 		case SPI_DUMMY_FRAME_ID:
 		{
 			uint8_t len = 0;
-			if(!CB_popData(spiComInst->circBufferRx, &len, 1))
-				return false;
+			while(!CB_popData(spiComInst->circBufferRx, &len, 1))
+			{
+				if(!isDMAtransactionOngoingRx(spiComInst))
+					startDmaTransactionRx(spiComInst);
+			}
 
 			if(!len)
 				return false;
 
 			uint8_t dummyData[len];
-			if(!CB_popData(spiComInst->circBufferRx, dummyData, len))
-				return false;
+			while(!CB_popData(spiComInst->circBufferRx, dummyData, len))
+			{
+				if(!isDMAtransactionOngoingRx(spiComInst))
+					startDmaTransactionRx(spiComInst);
+			}
+
 			break;
 		}
 		case SPI_DATA_FRAME_ID:
@@ -220,15 +231,26 @@ bool SpiComReceive(SpiComInstance* spiComInst, void** data, uint32_t* length)
 
 	uint8_t len = 0;
 
-	if(!CB_popData(spiComInst->circBufferRx, &len, 1))
-		return false;
+	while(!CB_popData(spiComInst->circBufferRx, &len, 1))
+	{
+		if(!isDMAtransactionOngoingRx(spiComInst))
+			startDmaTransactionRx(spiComInst);
+	}
 
 	*data = pvPortMalloc(len);
 
-	if(!CB_popData(spiComInst->circBufferRx, *data, len))
-	{
-		vPortFree(*data);
+	if(!(*data))
 		return false;
+
+	uint32_t leftToPop = len;
+
+	while(leftToPop > 0)
+	{
+		leftToPop -= CB_popData(spiComInst->circBufferRx, *data + len - leftToPop, leftToPop);
+
+		if(!isDMAtransactionOngoingRx(spiComInst))
+			startDmaTransactionRx(spiComInst);
+
 	}
 
 	*length = len;
@@ -252,7 +274,7 @@ bool isDMAtransactionOngoingTx(SpiComInstance* spiComInst)
 bool startDmaTransactionRx(SpiComInstance* spiComInst)
 {
 
-	if(CB_isFull(spiComInst->circBufferRx))
+	if(CB_isFull(spiComInst->circBufferRx)) // TODO: consider loop
 		return false;
 
 	uint8_t* head = spiComInst->circBufferRx->head;
@@ -263,9 +285,10 @@ bool startDmaTransactionRx(SpiComInstance* spiComInst)
     uint8_t* bufferPtr = 0;
     uint32_t bufferSize = 0;
 
+    bufferPtr = head;
+
     if(head >= tail)
     {
-    	bufferPtr = head;
 
     	if((head + spiComInst->uDmaRxReadSize) >= circBuffEnd)
     	{
