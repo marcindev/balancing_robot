@@ -13,21 +13,38 @@
 static xQueueHandle g_queues[QUEUES_MAX_SIZE] = {0};
 static MsgQueueId g_queuesByTasks[TASK_IDS_MAX_SIZE] = {0};
 static bool g_isTaskQueueRegistered[TASK_IDS_MAX_SIZE] = {0};
-static uint16_t g_nextQueueId = 0;
 
 MsgQueueId registerMsgQueue(uint16_t queueSize)
 {
-	if(g_nextQueueId > QUEUES_MAX_SIZE)
-		return -1;
+	for(MsgQueueId queueId = 0; queueId != QUEUES_MAX_SIZE; queueId++)
+	{
+		if(g_queues[queueId])
+		{
+			g_queues[queueId] = xQueueCreate(queueSize, QUEUE_ITEM_SIZE);
+			return queueId;
+		}
+	}
 
-	g_queues[g_nextQueueId] = xQueueCreate(queueSize, QUEUE_ITEM_SIZE);
+	return -1;
+}
 
-	return g_nextQueueId++;
+bool deregisterMsgQueue(MsgQueueId queueId)
+{
+	if(queueId > QUEUES_MAX_SIZE || queueId <= 0)
+		return false;
+
+	if(g_queues[queueId] == NULL)
+		return false;
+
+	vQueueDelete(g_queues[queueId]);
+	g_queues[queueId] = 0;
+
+	return true;
 }
 
 MsgQueueId registerMainMsgQueue(uint8_t taskId, uint16_t queueSize)
 {
-	if(g_nextQueueId > QUEUES_MAX_SIZE || taskId >= TASK_IDS_MAX_SIZE)
+	if(taskId >= TASK_IDS_MAX_SIZE)
 		return -1;
 
 	if(g_isTaskQueueRegistered[taskId])
@@ -38,6 +55,23 @@ MsgQueueId registerMainMsgQueue(uint8_t taskId, uint16_t queueSize)
 	g_isTaskQueueRegistered[taskId] = true;
 
 	return newQueueId;
+}
+
+MsgQueueId deregisterMainMsgQueue(uint8_t taskId)
+{
+	if(taskId >= TASK_IDS_MAX_SIZE)
+		return false;
+
+	if(!g_isTaskQueueRegistered[taskId])
+		return false;
+
+	MsgQueueId queueId = getQueueIdFromTaskId(taskId);
+
+	deregisterMsgQueue(queueId);
+	g_queuesByTasks[taskId] = 0;
+	g_isTaskQueueRegistered[taskId] = false;
+
+	return true;
 }
 
 MsgQueueId getQueueIdFromTaskId(uint8_t taskId)
@@ -53,7 +87,10 @@ MsgQueueId getQueueIdFromTaskId(uint8_t taskId)
 
 bool msgReceive(MsgQueueId receiver, void** pMsg, uint16_t waitTicks)
 {
-	if(receiver < 0 || receiver >= g_nextQueueId)
+	if(receiver < 0 || receiver >= QUEUES_MAX_SIZE)
+		return false;
+
+	if(g_queues[receiver] == NULL)
 		return false;
 
 	if(xQueueReceive(g_queues[receiver], pMsg, waitTicks) == pdPASS)
@@ -64,10 +101,13 @@ bool msgReceive(MsgQueueId receiver, void** pMsg, uint16_t waitTicks)
 
 bool msgSend(MsgQueueId sender, MsgQueueId receiver, void** pMsg, uint16_t waitTicks)
 {
-	if(receiver < 0 || receiver >= g_nextQueueId)
+	if(receiver < 0 || receiver >= QUEUES_MAX_SIZE)
 		return false;
 
-	if(sender < 0 || sender >= g_nextQueueId)
+	if(sender < 0 || sender >= QUEUES_MAX_SIZE)
+		return false;
+
+	if(g_queues[receiver] == NULL || g_queues[sender] == NULL)
 		return false;
 
 	uint8_t* msgPtr = (uint8_t*) *pMsg;
@@ -82,7 +122,10 @@ bool msgSend(MsgQueueId sender, MsgQueueId receiver, void** pMsg, uint16_t waitT
 
 bool msgRespond(MsgQueueId receiver, void** pMsg, uint16_t waitTicks)
 {
-	if(receiver < 0 || receiver >= g_nextQueueId)
+	if(receiver < 0 || receiver >= QUEUES_MAX_SIZE)
+		return false;
+
+	if(g_queues[receiver] == NULL)
 		return false;
 
 	if(xQueueSend(g_queues[receiver], pMsg, waitTicks) == pdTRUE)
