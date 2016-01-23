@@ -1,4 +1,5 @@
 #include "connection.h"
+
 #include "../messages/messages.h"
 #include <sstream>
 
@@ -22,8 +23,8 @@ Connection::Connection(const std::string& _ipAdress) :
 		startTime(0),
 		sendTime(0),
 		sockfd(0),
-		ipAdress(_ipAdress),
-		server(nullptr)
+		server(nullptr),
+		ipAdress(_ipAdress)
 {
 
 }
@@ -45,8 +46,8 @@ void Connection::run()
 
 		sendNextMsg();
 		receiveNextMsg();
-//		sendHandShake();
-//		checkConnection();
+		sendHandShake();
+		checkConnection();
 	}
 }
 
@@ -123,6 +124,23 @@ bool Connection::tryConnect(const std::string& strIp)
     return true;
 }
 
+void Connection::wait()
+{
+	if(!_thread)
+		return;
+
+	_thread->join();
+
+}
+
+void Connection::disconnect()
+{
+	close(sockfd);
+	_isConnected = false;
+
+	wait();
+}
+
 void Connection::checkConnection()
 {
 	time_t currTime;
@@ -166,8 +184,6 @@ void Connection::sendHandShake()
 	if(difftime(currTime, sendTime) <= CONN_HANDSHAKE_PERIOD)
 		return;
 
-//	cout << "Sending handshake" << endl;
-
 	HandshakeMsgReq* handShakeReq = new HandshakeMsgReq;
 	*handShakeReq = INIT_HANDSHAKE_MSG_REQ;
 	shared_ptr<void> payload(handShakeReq);
@@ -183,9 +199,8 @@ bool Connection::receiveHandShake()
 {
 	uint8_t msgId = buffer[0];
 
-	if(buffer[0] == HANDSHAKE_MSG_RSP)
+	if(msgId == HANDSHAKE_MSG_RSP)
 	{
-		cout << "receiveHandShake" << endl;
 		time(&startTime);
 		return true;
 	}
@@ -204,7 +219,6 @@ bool Connection::sendNextMsg()
 
 		msg = txMessages.front();
 		txMessages.pop();
-		cout << "sendNextMsg: msg sent" << endl;
 	}
 
 	sendTcpMsg(msg.getRawPayload());
@@ -225,7 +239,7 @@ bool Connection::receiveNextMsg()
 		Message msg(payload);
 
 		{
-			lock_guard<mutex> txLock(txMutex);
+			lock_guard<mutex> rxLock(rxMutex);
 			rxMessages.push(msg);
 		}
 
@@ -240,7 +254,6 @@ bool Connection::receiveTcpMsg()
 	const int16_t MSG_LEN_OFFSET = 2;
 	int16_t bufferIndex = 0;
 	int16_t status = 0;
-	int16_t msgLen = 0;
 	int16_t leftToRcv = 0;
 
 	fd_set         input;
@@ -297,12 +310,10 @@ void Connection::sendTcpMsg(void* msg)
 
 	msgLen = getMsgSize(msg);
 	leftToSend = msgLen;
-	cout << "sendTcpMsg: msgLen=" << msgLen << endl;
 
 	while(leftToSend > 0)
 	{
 		status = write(sockfd, &(msgPtr[bufferIndex]), leftToSend);
-		write(sockfd,buffer,strlen(buffer));
 
 		if(status == 0)
 			return;
@@ -315,10 +326,7 @@ void Connection::sendTcpMsg(void* msg)
 
 		leftToSend -= status;
 		bufferIndex += status;
-		cout << "sendTcpMsg: status=" << status << endl;
 	}
-	cout << "sendTcpMsg: end" << endl;
-
 
 }
 

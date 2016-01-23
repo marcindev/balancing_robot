@@ -187,7 +187,7 @@ void initializeSpeedTimer()
 		logger(Error, Log_Encoders, "[initializeSpeedTimer] Couldn't create timer");
 	}
 
-	logger(Error, Log_Encoders, "[initializeSpeedTimer] timer created");
+	logger(Info, Log_Encoders, "[initializeSpeedTimer] timer created");
 }
 
 

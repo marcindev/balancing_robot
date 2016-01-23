@@ -85,10 +85,10 @@ void runRobot()
 		while(1){ }
 	}
 
-//	if(!wheelsTaskInit())
-//	{
-//		while(1){ }
-//	}
+	if(!wheelsTaskInit())
+	{
+		while(1){ }
+	}
 
 #endif
 
@@ -130,6 +130,9 @@ void initializeRobot()
 
 static void robotTask(void *pvParameters)
 {
+	portTickType ui32WakeTime;
+	ui32WakeTime = xTaskGetTickCount();
+
 	if(!startSpiServerCom())
 	{
 		while(1){}
@@ -142,17 +145,21 @@ static void robotTask(void *pvParameters)
 		while(1){}
 	}
 
-	while(1) {}
+	while(1) {
+		vTaskDelayUntil(&ui32WakeTime, pdMS_TO_TICKS(2000));
+	}
 
 #else
 
-	while(1){}
-/*
 	if(!startWheels())
 	{
 		while(1){}
 	}
 
+	while(1){
+		vTaskDelayUntil(&ui32WakeTime, pdMS_TO_TICKS(2000));
+	}
+/*
 	I2cManager* i2cManager = (I2cManager*) pvPortMalloc(sizeof(I2cManager));
 	GpioExpander* gpioExpander = (GpioExpander*) pvPortMalloc(sizeof(GpioExpander));
 //
@@ -420,3 +427,13 @@ bool startTcpServer()
 	return result;
 }
 #endif
+
+
+// workaround for linking errors (relates to getTaskList FreeRTOS)
+char * _sbrk( size_t x )
+{
+    /* Just to remove compiler warning. */
+    ( void ) x;
+    return NULL;
+}
+

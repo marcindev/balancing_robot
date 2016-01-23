@@ -204,7 +204,9 @@ void doWheelsJob()
 
 void handleMessages(void* msg)
 {
-	switch(*((uint8_t*)msg))
+	uint8_t msgId = *((uint8_t*)msg);
+
+	switch(msgId)
 	{
 	case START_TASK_MSG_REQ:
 		handleStartTask((StartTaskMsgReq*) msg);
@@ -222,7 +224,7 @@ void handleMessages(void* msg)
 		handleNotifyAfterSpeed((EncoderNotifyAfterSpeedMsgRsp*) msg);
 		break;
 	default:
-		logger(Warning, Log_Wheels, "[handleMessages] Received not recognized message");
+		logger(Warning, Log_Wheels, "[handleMessages] Received not recognized message %d", msgId);
 		break;
 	}
 }
@@ -331,16 +333,6 @@ void handleSetSpeed(WheelSetSpeedMsgReq* request)
 
 void handleNotifyAfterRotations(EncoderNotifyAfterRotationsMsgRsp* response)
 {
-	I2cManager* i2cManager = (I2cManager*) pvPortMalloc(sizeof(I2cManager));
-	GpioExpander* gpioExpander = (GpioExpander*) pvPortMalloc(sizeof(GpioExpander));
-//
-	ZeroBuffer(gpioExpander, sizeof(GpioExpander));
-	gpioExpander->i2cManager = i2cManager;
-	gpioExpander->hwAddress		= 0x21;
-	GpioExpInit(gpioExpander);
-	GpioExpSetPinDirOut(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN6);
-	GpioExpSetPin(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN6);
-	size_t leftHeap = xPortGetFreeHeapSize();
 	logger(Debug, Log_Wheels, "[handleNotifyAfterRotations] rotations reached (actual rotations = %f)",
 			((float)response->actualRotations)/WHEEL_ROTATION);
 	wheelsData[response->encoderId].isRotationsReached = true;
@@ -349,15 +341,6 @@ void handleNotifyAfterRotations(EncoderNotifyAfterRotationsMsgRsp* response)
 
 void handleNotifyAfterSpeed(EncoderNotifyAfterSpeedMsgRsp* response)
 {
-	I2cManager* i2cManager = (I2cManager*) pvPortMalloc(sizeof(I2cManager));
-	GpioExpander* gpioExpander = (GpioExpander*) pvPortMalloc(sizeof(GpioExpander));
-//
-	ZeroBuffer(gpioExpander, sizeof(GpioExpander));
-	gpioExpander->i2cManager = i2cManager;
-	gpioExpander->hwAddress		= 0x21;
-	GpioExpInit(gpioExpander);
-	GpioExpSetPinDirOut(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN7);
-	GpioExpSetPin(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN7);
 	logger(Debug, Log_Wheels, "[handleNotifyAfterSpeed] speed reached (actual speed = %f)",
 			((float)response->actualSpeed)/WHEEL_ROTATION);
 	wheelsData[response->encoderId].isSpeedReached = true;

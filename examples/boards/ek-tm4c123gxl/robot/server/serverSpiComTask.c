@@ -17,11 +17,12 @@
 #include "serverSpiComTask.h"
 #include "serverSpiCom.h"
 #include "logger.h"
+#include "led.h"
 
 #include "MCP23017.h"
 #include "spiWrapper.h"
 
-#define SERVER_SPI_TASK_STACK_SIZE		200        // Stack size in words
+#define SERVER_SPI_TASK_STACK_SIZE		300        // Stack size in words
 #define SERVER_SPI_QUEUE_SIZE			5
 #define SERVER_SPI_ITEM_SIZE			4			// bytes
 
@@ -35,6 +36,15 @@ static bool isSpiComInitialized = false;
 static void handleMessages(void* msg);
 static void handleGetLogs(void* msg);
 static void handleGetLogsRsp(void* msg);
+static void handleGetFreeHeapSize(void* msg);
+static void handleGetFreeHeapSizeRsp(void* msg);
+static void handleGetTaskList(void* msg);
+static void handleGetTaskListRsp(void* msg);
+static void handleWheelSetSpeed(void* msg);
+static void handleWheelRun(void* msg);
+static void handleSetTaskPriority(void* msg);
+static void handleServerStartedNotif(void* msg);
+static void sendConnStatusNotif(void* msg);
 
 
 extern SpiComInstance* g_spiComInstServer;
@@ -116,26 +126,52 @@ bool serverSpiComTaskInit()
 
 void handleMessages(void* msg)
 {
-	switch(*((uint8_t*)msg))
+	uint8_t msgId = *((uint8_t*)msg);
+
+	switch(msgId)
 	{
 	case START_TASK_MSG_REQ:
 		handleStartTask((StartTaskMsgReq*) msg);
 		break;
-
 	case GET_LOGS_MSG_REQ:
 		handleGetLogs(msg);
 		break;
+	case GET_FREE_HEAP_SIZE_MSG_REQ:
+		handleGetFreeHeapSize(msg);
+		break;
+	case GET_TASK_LIST_MSG_REQ:
+		handleGetTaskList(msg);
+		break;
+
 #ifdef _ROBOT_MASTER_BOARD
-
-
+	case SERVER_STARTED_NOTIF_MSG_REQ:
+		handleServerStartedNotif(msg);
+		break;
+	case CONNECTION_STATUS_MSG_REQ:
+		sendConnStatusNotif(msg);
+		break;
+	case WHEEL_SET_SPEED_TCP_MSG_REQ:
+		handleWheelSetSpeed(msg);
+		break;
+	case WHEEL_RUN_TCP_MSG_REQ:
+		handleWheelRun(msg);
+		break;
+	case SET_TASK_PRIORITY_MSG_REQ:
+		handleSetTaskPriority(msg);
+		break;
 	default:
-		logger(Warning, Log_ServerSpiCom, "[handleMessages] Received not recognized message");
+		logger(Warning, Log_ServerSpiCom, "[handleMessages] Received not recognized message %d", msgId);
 		break;
 #else
 	case GET_LOGS_MSG_RSP:
 		handleGetLogsRsp(msg);
 		break;
-
+	case GET_FREE_HEAP_SIZE_MSG_RSP:
+		handleGetFreeHeapSizeRsp(msg);
+		break;
+	case GET_TASK_LIST_MSG_RSP:
+		handleGetTaskListRsp(msg);
+		break;
 	default:
 		sendSpiMsg(msg);
 		vPortFree(msg);
@@ -188,7 +224,7 @@ void handleGetLogs(void* msg)
 	uint8_t argsNum;
 	uint8_t* argTypes;
 	uint8_t* argsBuffer;
-	uint8_t* argsBuffSize;
+	uint8_t argsBuffSize;
 
 	uint16_t totalLinesNum = getLinesNumber();
 
@@ -215,7 +251,71 @@ void handleGetLogs(void* msg)
 		sendSpiMsg(&response);
 	}
 #else
-	logger(Info, Log_ServerSpiCom, "[handleGetLogs] forwarding msg to master; msgId: %d,%f,%d,%f,%f",2, 3.0, 4, 5.0, 6.0);// *((uint8_t*)msg));
+	logger(Info, Log_ServerSpiCom, "[handleGetLogs] forwarding msg to master; msgId: %d",*((uint8_t*)msg));
+	sendSpiMsg(msg);
+#endif
+
+	vPortFree(msg);
+	msg = NULL;
+}
+
+void handleGetFreeHeapSize(void* msg)
+{
+#ifdef _ROBOT_MASTER_BOARD
+	GetFreeHeapSizeRsp response = INIT_GET_FREE_HEAP_SIZE_MSG_RSP;
+	response.sender = ((GetFreeHeapSizeReq*)msg)->sender;
+	response.slot = ((GetFreeHeapSizeReq*)msg)->slot;
+	response.isMaster = 1;
+	response.heapSize = xPortGetFreeHeapSize();
+	sendSpiMsg(&response);
+
+#else
+	logger(Info, Log_ServerSpiCom, "[handleGetFreeHeapSize] forwarding msg to master; msgId: %d",*((uint8_t*)msg));
+	sendSpiMsg(msg);
+#endif
+
+	vPortFree(msg);
+	msg = NULL;
+}
+
+void handleGetTaskList(void* msg)
+{
+#ifdef _ROBOT_MASTER_BOARD
+	const uint32_t REPORT_BUFFER_SIZE = 1000;
+	const uint32_t MSG_BUFFER_SIZE = 200;
+
+	char* reportBuffer = (char*) pvPortMalloc(REPORT_BUFFER_SIZE);
+
+	vTaskList(reportBuffer);
+
+	char* reportPtr = reportBuffer;
+	int32_t leftToSend = strlen(reportBuffer);
+
+	GetTaskListRsp response = INIT_GET_TASK_LIST_MSG_RSP;
+	response.isMaster = 1;
+	response.sender = ((GetTaskListReq*)msg)->sender;
+	response.slot = ((GetTaskListReq*)msg)->slot;
+	response.totalParts = leftToSend / (MSG_BUFFER_SIZE - 1)
+			+ ((leftToSend % (MSG_BUFFER_SIZE - 1)) ? 1 : 0);
+
+	response.partId = 0;
+
+	while(leftToSend > 0)
+	{
+		strncpy(&response.strBuffer[0], reportPtr, MSG_BUFFER_SIZE - 1);
+		response.strBuffer[MSG_BUFFER_SIZE - 1] = '\0';
+		reportPtr += MSG_BUFFER_SIZE - 1;
+		leftToSend -= MSG_BUFFER_SIZE - 1;
+
+		sendSpiMsg(&response);
+
+		++response.partId;
+	}
+
+	vPortFree(reportBuffer);
+
+#else
+	logger(Info, Log_ServerSpiCom, "[handleGetTaskList] forwarding msg to master; msgId: %d",*((uint8_t*)msg));
 	sendSpiMsg(msg);
 #endif
 
@@ -224,6 +324,74 @@ void handleGetLogs(void* msg)
 }
 
 #ifdef _ROBOT_MASTER_BOARD
+void handleServerStartedNotif(void* msg)
+{
+	LedBlinkStart(LED1, 1);
+	vPortFree(msg);
+	msg = NULL;
+}
+
+void sendConnStatusNotif(void* msg)
+{
+	bool state = ((ConnectionStatusMsgReq*)msg)->state;
+
+	if(state)
+	{
+		LedBlinkStop(LED1);
+		LedTurnOn(LED1);
+	}
+	else
+	{
+		LedBlinkStart(LED1, 1);
+	}
+
+	vPortFree(msg);
+	msg = NULL;
+}
+
+void handleWheelSetSpeed(void* msg)
+{
+	WheelSetSpeedTcpMsgReq* spiMsg = (WheelSetSpeedTcpMsgReq*) msg;
+
+	WheelSetSpeedMsgReq* request = (WheelSetSpeedMsgReq*) pvPortMalloc(sizeof(WheelSetSpeedMsgReq));
+	*request = INIT_WHEEL_SET_SPEED_MSG_REQ;
+	request->wheelId = spiMsg->wheelId;
+	request->speed = spiMsg->speed;
+
+	msgSend(g_serverSpiComQueue, getQueueIdFromTaskId(Msg_WheelsTaskID), &request, portMAX_DELAY);
+
+	vPortFree(msg);
+	msg = NULL;
+}
+
+void handleWheelRun(void* msg)
+{
+	WheelRunTcpMsgReq* spiMsg = (WheelRunTcpMsgReq*) msg;
+
+	WheelRunMsgReq* request = (WheelRunMsgReq*) pvPortMalloc(sizeof(WheelRunMsgReq));
+	*request = INIT_WHEEL_RUN_MSG_REQ;
+	request->wheelId = spiMsg->wheelId;
+	request->direction = spiMsg->direction;
+	request->rotations = spiMsg->rotations;
+
+	msgSend(g_serverSpiComQueue, getQueueIdFromTaskId(Msg_WheelsTaskID), &request, portMAX_DELAY);
+
+	vPortFree(msg);
+	msg = NULL;
+}
+
+void handleSetTaskPriority(void* msg)
+{
+	SetTaskPriorityMsgReq* spiMsg = (SetTaskPriorityMsgReq*) msg;
+	TaskHandle_t taskHandle = getTaskHandleByNum(spiMsg->taskId);
+	if(taskHandle)
+	{
+		vTaskPrioritySet(taskHandle, tskIDLE_PRIORITY + spiMsg->priority);
+	}
+
+	vPortFree(msg);
+	msg = NULL;
+}
 
 #else
 
@@ -232,8 +400,20 @@ void handleGetLogsRsp(void* msg)
 	UARTprintf("handleGetLogsRsp: response received\n");
 
 	msgRespond(((GetLogsMsgRsp*)msg)->sender, &msg, MSG_WAIT_LONG_TIME);
-	logger(Info, Log_ServerSpiCom, "[handleGetLogsRsp] response received");
+	logger(Debug, Log_ServerSpiCom, "[handleGetLogsRsp] response received");
 
+}
+
+void handleGetFreeHeapSizeRsp(void* msg)
+{
+	msgRespond(((GetFreeHeapSizeRsp*)msg)->sender, &msg, MSG_WAIT_LONG_TIME);
+	logger(Debug, Log_ServerSpiCom, "[handleGetFreeHeapSizeRsp] response received");
+}
+
+void handleGetTaskListRsp(void* msg)
+{
+	msgRespond(((GetTaskListRsp*)msg)->sender, &msg, MSG_WAIT_LONG_TIME);
+	logger(Debug, Log_ServerSpiCom, "[handleGetTaskListRsp] response received");
 }
 
 #endif

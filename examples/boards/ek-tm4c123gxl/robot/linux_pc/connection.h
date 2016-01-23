@@ -14,6 +14,7 @@
 #include <mutex>
 #include <thread>
 #include <time.h>
+
 #include "message.h"
 
 
@@ -24,7 +25,9 @@ public:
 	Connection(const std::string& _ipAdress);
 	~Connection(){}
 	void start();
+	void wait();
 	bool establishConnection();
+	void disconnect();
 	void send(const Message& msg);
 	bool receive(Message& msg);
 	bool isConnected() { return _isConnected; }

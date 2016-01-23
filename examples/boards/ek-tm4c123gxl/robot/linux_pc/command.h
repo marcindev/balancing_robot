@@ -1,11 +1,12 @@
 #ifndef COMMAND_H
 #define COMMAND_H
 
-#include "connection.h"
 #include <iostream>
 #include <thread>
 #include <memory>
 #include <vector>
+
+#include "connection.h"
 
 class Command
 {

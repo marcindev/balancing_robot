@@ -37,6 +37,23 @@ const WheelRunMsgReq INIT_WHEEL_RUN_MSG_REQ = {WHEEL_RUN_MSG_REQ, sizeof(WheelRu
 const WheelRunMsgRsp INIT_WHEEL_RUN_MSG_RSP = {WHEEL_RUN_MSG_RSP, sizeof(WheelRunMsgRsp)};
 const StartTaskMsgReq INIT_START_TASK_MSG_REQ = {START_TASK_MSG_REQ, sizeof(StartTaskMsgReq)};
 const StartTaskMsgRsp INIT_START_TASK_MSG_RSP = {START_TASK_MSG_RSP, sizeof(StartTaskMsgRsp)};
+const ServerStartedNotifMsgReq INIT_SERVER_STARTED_NOTIF_MSG_REQ = {SERVER_STARTED_NOTIF_MSG_REQ, sizeof(ServerStartedNotifMsgReq)};
+const ServerStartedNotifMsgRsp INIT_SERVER_STARTED_NOTIF_MSG_RSP = {SERVER_STARTED_NOTIF_MSG_RSP, sizeof(ServerStartedNotifMsgRsp)};
+const ConnectionStatusMsgReq INIT_CONNECTION_STATUS_MSG_REQ = {CONNECTION_STATUS_MSG_REQ, sizeof(ConnectionStatusMsgReq)};
+const ConnectionStatusMsgRsp INIT_CONNECTION_STATUS_MSG_RSP = {CONNECTION_STATUS_MSG_RSP, sizeof(ConnectionStatusMsgRsp)};
+const HandshakeMsgReq INIT_HANDSHAKE_MSG_REQ = {HANDSHAKE_MSG_REQ, sizeof(HandshakeMsgReq)};
+const HandshakeMsgRsp INIT_HANDSHAKE_MSG_RSP = {HANDSHAKE_MSG_RSP, sizeof(HandshakeMsgRsp)};
+const GetFreeHeapSizeReq INIT_GET_FREE_HEAP_SIZE_MSG_REQ = {GET_FREE_HEAP_SIZE_MSG_REQ, sizeof(GetFreeHeapSizeReq)};
+const GetFreeHeapSizeRsp INIT_GET_FREE_HEAP_SIZE_MSG_RSP = {GET_FREE_HEAP_SIZE_MSG_RSP, sizeof(GetFreeHeapSizeRsp)};
+const GetTaskListReq INIT_GET_TASK_LIST_MSG_REQ = {GET_TASK_LIST_MSG_REQ, sizeof(GetTaskListReq)};
+const GetTaskListRsp INIT_GET_TASK_LIST_MSG_RSP = {GET_TASK_LIST_MSG_RSP, sizeof(GetTaskListRsp)};
+const WheelSetSpeedTcpMsgReq INIT_WHEEL_SET_SPEED_TCP_MSG_REQ = {WHEEL_SET_SPEED_TCP_MSG_REQ, sizeof(WheelSetSpeedTcpMsgReq)};
+const WheelSetSpeedTcpMsgRsp INIT_WHEEL_SET_SPEED_TCP_MSG_RSP = {WHEEL_SET_SPEED_TCP_MSG_RSP, sizeof(WheelSetSpeedTcpMsgRsp)};
+const WheelRunTcpMsgReq INIT_WHEEL_RUN_TCP_MSG_REQ = {WHEEL_RUN_TCP_MSG_REQ, sizeof(WheelRunTcpMsgReq)};
+const WheelRunTcpMsgRsp INIT_WHEEL_RUN_TCP_MSG_RSP = {WHEEL_RUN_TCP_MSG_RSP, sizeof(WheelRunTcpMsgRsp)};
+const SetTaskPriorityMsgReq INIT_SET_TASK_PRIORITY_MSG_REQ = {SET_TASK_PRIORITY_MSG_REQ, sizeof(SetTaskPriorityMsgReq)};
+const SetTaskPriorityMsgRsp INIT_SET_TASK_PRIORITY_MSG_RSP = {SET_TASK_PRIORITY_MSG_RSP, sizeof(SetTaskPriorityMsgRsp)};
+
 
 
 uint16_t getMsgSize(void* msg)

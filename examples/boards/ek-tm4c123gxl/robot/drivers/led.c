@@ -3,9 +3,10 @@
 #include "FreeRTOS.h"
 #include "timers.h"
 #include "global_defs.h"
+#include "logger.h"
 
 #define LEDS_NUM			10
-#define LEDS_TIMER_PERIOD	1000
+#define LEDS_TIMER_PERIOD	500
 
 typedef struct
 {
@@ -109,7 +110,6 @@ void LedTurnOn(Led led)
 	if(!g_leds[led].initialized)
 		LedInit(led);
 
-	g_leds[led].period = 0;
 	GpioExpSetPin(g_leds[led].gpioExpander, g_leds[led].gpioPort, g_leds[led].gpioPin);
 }
 
@@ -118,7 +118,6 @@ void LedTurnOff(Led led)
 	if(!g_leds[led].initialized)
 		LedInit(led);
 
-	g_leds[led].period = 0;
 	GpioExpClearPin(g_leds[led].gpioExpander, g_leds[led].gpioPort, g_leds[led].gpioPin);
 }
 
@@ -155,11 +154,11 @@ void initializeLedTimer()
 
 	if(g_ledsTimer == NULL)
 	{
-		logger(Error, Log_Leds, "[initializeSpeedTimer] Couldn't create timer");
+		logger(Error, Log_Leds, "[initializeLedTimer] Couldn't create timer");
 		return;
 	}
 
-	logger(Error, Log_Leds, "[initializeSpeedTimer] timer created");
+	logger(Debug, Log_Leds, "[initializeLedTimer] timer created");
 
 	if( xTimerStart( g_ledsTimer, 0 ) != pdPASS )
 	{

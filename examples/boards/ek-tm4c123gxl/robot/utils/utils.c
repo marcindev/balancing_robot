@@ -18,6 +18,8 @@
 #include "driverlib/systick.h"
 #include "driverlib/uart.h"
 #include "utils/uartstdio.h"
+#include "FreeRTOS.h"
+#include "task.h"
 
 
 void ZeroBuffer(void* buffer, int len)
@@ -71,4 +73,37 @@ ConfigureUART(void)
     // Initialize the UART for console I/O.
     //
     UARTStdioConfig(0, 115200, 16000000);
+}
+
+
+void* getTaskHandleByNum(int taskNumber)
+{
+	TaskStatus_t *pxTaskStatusArray;
+	volatile UBaseType_t uxArraySize;
+	unsigned long ulTotalRunTime;
+	TaskHandle_t taskHandle = NULL;
+
+	uxArraySize = uxTaskGetNumberOfTasks();
+
+	pxTaskStatusArray = pvPortMalloc( uxArraySize * sizeof( TaskStatus_t ) );
+
+	if(!pxTaskStatusArray)
+		return NULL;
+
+	uxArraySize = uxTaskGetSystemState( pxTaskStatusArray,
+										uxArraySize,
+										&ulTotalRunTime );
+
+	for(int i = 0; i != uxArraySize; ++i)
+	{
+		if(pxTaskStatusArray[i].xTaskNumber == taskNumber)
+		{
+			taskHandle = pxTaskStatusArray[i].xHandle;
+			break;
+		}
+	}
+
+	vPortFree( pxTaskStatusArray );
+
+	return taskHandle;
 }

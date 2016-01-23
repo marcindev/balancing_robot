@@ -1,9 +1,10 @@
 #ifndef GET_LOGS_COMMAND_H
 #define GET_LOGS_COMMAND_H
 
-#include "command.h"
 #include "../messages/messages.h"
 #include <memory>
+
+#include "command.h"
 
 class GetLogsCommand : public Command
 {
@@ -18,6 +19,8 @@ private:
 	static bool sortLine(const std::string& str1, const std::string& str2);
 	std::string millisToTimeString(uint32_t milliseconds);
 	std::vector<std::string> vecLogs;
+
+	static const double CONN_TIMEOUT;
 };
 
 #endif // GET_LOGS_COMMAND_H

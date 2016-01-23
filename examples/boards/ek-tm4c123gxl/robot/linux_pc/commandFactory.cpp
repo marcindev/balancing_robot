@@ -1,5 +1,12 @@
+#include "getFreeHeapSizeCommand.h"
 #include "commandFactory.h"
+
+#include "getFreeHeapSizeCommand.h"
 #include "getLogsCommand.h"
+#include "getTaskListCmd.h"
+#include "setWheelSpeedCmd.h"
+#include "wheelRunCmd.h"
+#include "setTaskPriorityCmd.h"
 
 using namespace std;
 
@@ -22,6 +29,21 @@ shared_ptr<Command> CommandFactory::createCommand(const string& strCommand,
 
 	if(strCommand == "getLogs")
 		return shared_ptr<Command>(new GetLogsCommand(connection, args));
+
+	if(strCommand == "getFreeHeap")
+		return shared_ptr<Command>(new GetFreeHeapSizeCommand(connection, args));
+
+	if(strCommand == "getTaskList")
+		return shared_ptr<Command>(new GetTaskListCmd(connection, args));
+
+	if(strCommand == "setWheelSpeed")
+		return shared_ptr<Command>(new SetWheelSpeedCmd(connection, args));
+
+	if(strCommand == "wheelRun")
+		return shared_ptr<Command>(new WheelRunCmd(connection, args));
+
+	if(strCommand == "setTaskPriority")
+		return shared_ptr<Command>(new SetTaskPriorityCmd(connection, args));
 
 
 	cout << "Wrong command!" << endl;

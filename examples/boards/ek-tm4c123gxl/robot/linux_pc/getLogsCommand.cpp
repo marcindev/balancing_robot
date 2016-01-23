@@ -1,9 +1,12 @@
 #include "getLogsCommand.h"
+
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
 
 using namespace std;
+
+const double GetLogsCommand::CONN_TIMEOUT = 2.0;
 
 GetLogsCommand::GetLogsCommand(shared_ptr<Connection> conn) : Command(conn)
 {
@@ -43,18 +46,39 @@ void GetLogsCommand::run()
 	Message msg(payload);
 	connection->send(msg);
 
+	time_t startTime, currTime;
+	time(&startTime);
+
 	while(connection->isConnected())
 	{
 		Message msg;
 		if(connection->receive(msg))
 		{
-			unsigned msgId = *(reinterpret_cast<uint8_t*>(msg.getRawPayload()));
+			uint8_t msgId = *(reinterpret_cast<uint8_t*>(msg.getRawPayload()));
 
 			if(msgId != GET_LOGS_MSG_RSP)
 				cout << "GetLogsCommand: unrecognized msg " << hex << static_cast<int>(msgId) << endl;
 
-			if(!handleGetLogsRsp(reinterpret_cast<GetLogsMsgRsp*>(msg.getRawPayload())))
-				break;
+			time(&currTime);
+			double timeDiff = difftime(currTime, startTime);
+
+			if(!handleGetLogsRsp(reinterpret_cast<GetLogsMsgRsp*>(msg.getRawPayload()))
+				|| timeDiff > CONN_TIMEOUT)
+			{
+					sort(vecLogs.begin(), vecLogs.end(), sortLine);
+
+					for(auto it = vecLogs.begin(); it != vecLogs.end(); ++it)
+					{
+						if(it->empty())
+							continue;
+
+						cout << *it << endl;
+					}
+
+					vecLogs.clear();
+
+					break;
+			}
 		}
 
 	}
@@ -66,7 +90,6 @@ bool GetLogsCommand::handleGetLogsRsp(GetLogsMsgRsp* response)
 	string line;
 	stringstream ss;
 	uint16_t totalLineNumber = response->totalLineNum;
-
 	ss << response->lineNum;
 	line += ss.str() + " ";
 	ss.str("");
@@ -145,7 +168,6 @@ bool GetLogsCommand::handleGetLogsRsp(GetLogsMsgRsp* response)
 	char formatBuffer[FORMAT_BUFF_SIZE] = {0};
 	size_t charsNum = 0;
 
-	const uint8_t INT_ARG = 1;
 	const uint8_t DOUBLE_ARG = 2;
 
 	uint8_t* argsBufferPtr = argsBuffer;
@@ -226,21 +248,7 @@ bool GetLogsCommand::handleGetLogsRsp(GetLogsMsgRsp* response)
 	vecLogs.push_back(line);
 
 	if(vecLogs.size() == totalLineNumber)
-	{
-		sort(vecLogs.begin(), vecLogs.end(), sortLine);
-
-		for(auto it = vecLogs.begin(); it != vecLogs.end(); ++it)
-		{
-			if(it->empty())
-				return false;
-
-			cout << *it << endl;
-		}
-
-		vecLogs.clear();
-
 		return false;
-	}
 
 	return true;
 

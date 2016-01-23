@@ -1,4 +1,5 @@
 #include "message.h"
+
 #include "../messages/messages.h"
 
 Message::Message()

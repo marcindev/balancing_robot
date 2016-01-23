@@ -18,7 +18,7 @@ MsgQueueId registerMsgQueue(uint16_t queueSize)
 {
 	for(MsgQueueId queueId = 0; queueId != QUEUES_MAX_SIZE; queueId++)
 	{
-		if(g_queues[queueId])
+		if(!g_queues[queueId])
 		{
 			g_queues[queueId] = xQueueCreate(queueSize, QUEUE_ITEM_SIZE);
 			return queueId;

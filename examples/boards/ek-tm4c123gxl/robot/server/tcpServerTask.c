@@ -67,13 +67,15 @@ bool tcpServerTaskInit()
 
 void handleMessages(void* msg)
 {
-	switch(*((uint8_t*)msg))
+	uint8_t msgId = *((uint8_t*)msg);
+
+	switch(msgId)
 	{
 	case START_TASK_MSG_REQ:
 		handleStartTask((StartTaskMsgReq*) msg);
 		break;
 	default:
-		logger(Warning, Log_Wheels, "[handleMessages] Received not recognized message");
+		logger(Warning, Log_TcpServer, "[handleMessages] Received not recognized message %d", msgId);
 		break;
 	}
 }
@@ -82,6 +84,14 @@ void handleMessages(void* msg)
 void handleStartTask(StartTaskMsgReq* request)
 {
 	bool result = initTcpServer();
+
+	if(result)
+	{
+		ServerStartedNotifMsgReq*  serverStartedNotif =
+				(ServerStartedNotifMsgReq*) pvPortMalloc(sizeof(ServerStartedNotifMsgReq));
+		*serverStartedNotif = INIT_SERVER_STARTED_NOTIF_MSG_REQ;
+		msgSend(g_tcpServerMainQueue, getQueueIdFromTaskId(Msg_ServerSpiComTaskID), &serverStartedNotif, MSG_WAIT_LONG_TIME);
+	}
 
 	StartTaskMsgRsp* response = (StartTaskMsgRsp*) pvPortMalloc(sizeof(StartTaskMsgRsp));
 	*response = INIT_START_TASK_MSG_RSP;

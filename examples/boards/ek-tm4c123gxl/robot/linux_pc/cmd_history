@@ -1,0 +1,27 @@
+getLogs 1
+getTaskList 0
+getTaskList 0
+getTaskList 1
+getLogs 1
+getLogs 1
+getLogs 0
+getLogs 1
+getLogs 0
+getLogs 0
+getTaskList 1
+getTaskList 0
+getTaskList 0
+getFreeHeap 0
+getFreeHeap 1
+getFreeHeap 1
+getFreeHeap 1
+getFreeHeap 0
+getTaskList 0
+getFreeHeap 0
+getFreeHeap 1
+getLogs 0
+getLogs 1
+setWheelSpeed 0 0 1
+setWheelSpeed 0 3
+getLogs 1
+getLogs 0
