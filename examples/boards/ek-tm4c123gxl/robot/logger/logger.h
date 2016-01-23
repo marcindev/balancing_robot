@@ -25,7 +25,8 @@ typedef enum
 	Log_I2CManager,
 	Log_I2CTask,
 	Log_Wheels,
-	Log_ServerSpiCom
+	Log_ServerSpiCom,
+	Log_Leds
 } LogComponent;
 
 void logger(LogLevel level, LogComponent component, const char* string, ...);
@@ -38,6 +39,7 @@ bool getNextLogLine(uint32_t* timestamp,
 					void** argsBufferPtr,
 					uint8_t* argsBuffSize);
 uint16_t getLinesNumber();
+void resetLogLineGetter();
 
 
 #endif // LOGGER_H

@@ -5,7 +5,7 @@
 #include "logger.h"
 #include <stdarg.h>
 
-#define BUFFER_SIZE			50
+#define BUFFER_SIZE			30
 
 #define INT_ARG				1
 #define DOUBLE_ARG			2
@@ -189,11 +189,14 @@ bool getNextLogLine(uint32_t* timestamp, LogLevel* logLevel, LogComponent* compo
 
 	static isStart = true;
 	static uint16_t nextInd = 0;
+	static totalLinesNum = 0;
+	static lineNum = 0;
 
 	if(isStart)
 	{
 		nextInd = (isRollOver ? index : 0);
-		isStart = false;
+		totalLinesNum = getLinesNumber();
+		lineNum = 1;
 	}
 
 	if(nextInd == BUFFER_SIZE)
@@ -208,13 +211,18 @@ bool getNextLogLine(uint32_t* timestamp, LogLevel* logLevel, LogComponent* compo
 	*argsBufferPtr = g_buffer[nextInd].argsBuffer;
 	*argsBuffSize = g_buffer[nextInd].argsBuffSize;
 
-	if(nextInd == index)
+	if(!isStart && ((nextInd == index) || (lineNum > totalLinesNum)))
 	{
 		isStart = true;
 		return false;
 	}
+	else
+	{
+		isStart = false;
+	}
 
 	nextInd++;
+	lineNum++;
 
 	return true;
 }
@@ -223,3 +231,4 @@ uint16_t getLinesNumber()
 {
 	return (isRollOver ?  BUFFER_SIZE : index);
 }
+
