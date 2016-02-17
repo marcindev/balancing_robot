@@ -24,6 +24,7 @@
 #define PRIORITY_WHEELS_TASK						2
 #define PRIORITY_SIMPLE_LINK_TASK					6
 #define PRIORITY_SERVER_SPI_TASK					1
+#define PRIORITY_UPDATER_TASK						1
 
 
 #endif // PRIORITIES_H

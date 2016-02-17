@@ -52,9 +52,12 @@ static void handleGetLogs(uint16_t slot);
 static void handleGetLogsRsp(GetLogsMsgRsp* msg);
 static void handleGetFreeHeapSize(uint16_t slot);
 static void handleGetTaskList(uint16_t slot);
+static void handleSetTaskPriority(uint16_t slot);
 static void forwardMsgToSpi(uint16_t slot);
 static void forwardMsgToTcp(void* msg);
 static void handleHandShake(uint16_t slot);
+static void handleGetPostmortem(uint16_t slot);
+static void handleUpdaterCmd(uint16_t slot);
 
 
 
@@ -129,7 +132,7 @@ void initConnectionTimer()
 		return;
 	}
 
-	logger(Error, Log_TcpServerHandler, "[initConnectionTimer] timer created");
+	logger(Info, Log_TcpServerHandler, "[initConnectionTimer] timer created");
 
 	if( xTimerStart( g_connTimer, 0 ) != pdPASS )
 	{
@@ -146,7 +149,7 @@ void connTimerCallback(TimerHandle_t pxTimer)
 		if(!g_slots[slot] || !g_connected[slot])
 			continue;
 
-		UARTprintf("++g_counter[slot]: %d", g_counter[slot]);
+//		UARTprintf("++g_counter[slot]: %d", g_counter[slot]);
 		if(++g_counter[slot] > CONNECTION_TIMOUT)
 			g_connected[slot] = 0;
 	}
@@ -190,11 +193,20 @@ void handleMessages(uint16_t slot)
 	case GET_LOGS_MSG_REQ:
 		handleGetLogs(slot);
 		break;
+	case GET_POSTMORTEM_MSG_REQ:
+		handleGetPostmortem(slot);
+		break;
 	case GET_FREE_HEAP_SIZE_MSG_REQ:
 		handleGetFreeHeapSize(slot);
 		break;
 	case GET_TASK_LIST_MSG_REQ:
 		handleGetTaskList(slot);
+		break;
+	case SET_TASK_PRIORITY_MSG_REQ:
+		handleSetTaskPriority(slot);
+		break;
+	case UPDATER_CMD_MSG_REQ:
+		handleUpdaterCmd(slot);
 		break;
 	default:
 		forwardMsgToSpi(slot);
@@ -278,6 +290,67 @@ void handleGetLogs(uint16_t slot)
 	}
 }
 
+void handleGetPostmortem(uint16_t slot)
+{
+	GetPostmortemMsgReq* msg = &g_buffer[0];
+
+	logger(Info, Log_TcpServerHandler, "[handleGetPostmortem] slot: %d, isMaster: %d", slot, msg->isMaster);
+
+
+	if(msg->isMaster)
+	{
+		UARTprintf("handleGetPostmortem(uint16_t slot): slot: %d", slot);
+		GetPostmortemMsgReq* request = (GetPostmortemMsgReq*) pvPortMalloc(sizeof(GetPostmortemMsgReq));
+		*request = INIT_GET_POSTMORTEM_MSG_REQ;
+		request->slot = slot;
+		msgSend(g_serverHandlerQueues[slot], getQueueIdFromTaskId(Msg_ServerSpiComTaskID), &request, MSG_WAIT_LONG_TIME);
+		return;
+	}
+
+	const uint8_t NORMAL = 0x01,
+			      LAST   = 0x02,
+				  EMPTY  = 0x04;
+
+	uint32_t timestamp;
+	LogLevel logLevel;
+	LogComponent logComponent;
+	const char* strPtr;
+	uint8_t argsNum;
+	uint8_t* argTypes;
+	uint8_t* argsBuffer;
+	uint8_t argsBuffSize;
+
+	GetPostmortemMsgRsp response = INIT_GET_POSTMORTEM_MSG_RSP;
+	response.isMaster = msg->isMaster;
+
+	argTypes = response.argTypes;
+	argsBuffer = response.argsBuffer;
+
+	uint16_t lineNum = 1;
+
+
+	while(getNextPMLine(&timestamp, &logLevel, &logComponent,
+			(void*)&strPtr, &argsNum, argTypes, argsBuffer, &argsBuffSize))
+	{
+		response.ctrlByte = NORMAL;
+		response.lineNum = lineNum++;
+		response.timestamp = timestamp;
+		response.logLevel = (uint8_t) logLevel;
+		response.component = (uint8_t) logComponent;
+		strcpy(response.strBuffer, strPtr);
+		response.argsNum = argsNum;
+
+		sendTcpMsg(slot, (void*) &response);
+	}
+
+	if(lineNum == 1)
+		response.ctrlByte = EMPTY;
+	else
+		response.ctrlByte = LAST;
+
+	sendTcpMsg(slot, (void*) &response);
+}
+
 void handleGetLogsRsp(GetLogsMsgRsp* msg)
 {
 	sendTcpMsg(msg->slot, (void*) msg);
@@ -353,6 +426,47 @@ void handleGetTaskList(uint16_t slot)
 
 	vPortFree(reportBuffer);
 
+}
+
+void handleSetTaskPriority(uint16_t slot)
+{
+	SetTaskPriorityMsgReq* msg = &g_buffer[0];
+	logger(Info, Log_TcpServerHandler, "[handleSetTaskPriority] slot: %d, isMaster: %d", slot, msg->isMaster);
+
+	if(msg->isMaster)
+	{
+		SetTaskPriorityMsgReq* request = (SetTaskPriorityMsgReq*) pvPortMalloc(sizeof(SetTaskPriorityMsgReq));
+		*request = INIT_SET_TASK_PRIORITY_MSG_REQ;
+		request->slot = slot;
+		msgSend(g_serverHandlerQueues[slot], getQueueIdFromTaskId(Msg_ServerSpiComTaskID), &request, MSG_WAIT_LONG_TIME);
+		return;
+	}
+
+	TaskHandle_t taskHandle = getTaskHandleByNum(msg->taskId);
+	if(taskHandle)
+	{
+		vTaskPrioritySet(taskHandle, tskIDLE_PRIORITY + msg->priority);
+		logger(Info, Log_TcpServerHandler, "[handleSetTaskPriority] priority of task %d has been changed to %d"
+				, msg->taskId, msg->priority);
+	}
+}
+
+void handleUpdaterCmd(uint16_t slot)
+{
+	UpdaterCmdMsgReq* msg = &g_buffer[0];
+//	logger(Info, Log_TcpServerHandler, "[handleUpdaterCmd] slot: %d, isMaster: %d", slot, msg->isMaster);
+
+	UpdaterCmdMsgReq* request = (UpdaterCmdMsgReq*) pvPortMalloc(sizeof(UpdaterCmdMsgReq));
+	*request = *msg;
+	request->slot = slot;
+
+	if(request->isMaster)
+	{
+		msgSend(g_serverHandlerQueues[slot], getQueueIdFromTaskId(Msg_ServerSpiComTaskID), &request, MSG_WAIT_LONG_TIME);
+		return;
+	}
+
+	msgSend(g_serverHandlerQueues[slot], getQueueIdFromTaskId(Msg_UpdaterTaskID), &request, MSG_WAIT_LONG_TIME);
 }
 
 void forwardMsgToSpi(uint16_t slot)

@@ -2,6 +2,7 @@
 
 #include "../messages/messages.h"
 #include <sstream>
+#include <chrono>
 
 
 #include "command.h"
@@ -41,13 +42,13 @@ void Connection::run()
 
 	while(true)
 	{
-		if(!_isConnected)
+		if(!_isConnected && !isInReset)
 			return;
 
 		sendNextMsg();
 		receiveNextMsg();
 		sendHandShake();
-		checkConnection();
+//		checkConnection();
 	}
 }
 
@@ -82,6 +83,19 @@ bool Connection::establishConnection()
 
 	return true;
 
+}
+
+bool Connection::resetConnection()
+{
+	bool status = false;
+
+	isInReset = true;
+	disconnect();
+	this_thread::sleep_for(chrono::seconds(10));
+	status = establishConnection();
+	isInReset = false;
+
+	return status;
 }
 
 bool Connection::tryConnect(const std::string& strIp)
@@ -138,7 +152,6 @@ void Connection::disconnect()
 	close(sockfd);
 	_isConnected = false;
 
-	wait();
 }
 
 void Connection::checkConnection()
@@ -276,6 +289,9 @@ bool Connection::receiveTcpMsg()
 
 	while(leftToRcv > 0)
 	{
+		if(!_isConnected)
+			return false;
+
 		status = read(sockfd, &(buffer[bufferIndex]), leftToRcv);
 
 		if(status == 0)
@@ -313,6 +329,9 @@ void Connection::sendTcpMsg(void* msg)
 
 	while(leftToSend > 0)
 	{
+		if(!_isConnected)
+			return;
+
 		status = write(sockfd, &(msgPtr[bufferIndex]), leftToSend);
 
 		if(status == 0)

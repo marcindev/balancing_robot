@@ -28,6 +28,7 @@ public:
 	void wait();
 	bool establishConnection();
 	void disconnect();
+	bool resetConnection();
 	void send(const Message& msg);
 	bool receive(Message& msg);
 	bool isConnected() { return _isConnected; }
@@ -51,6 +52,7 @@ private:
 
 	time_t startTime, sendTime;
 	bool _isConnected = false;
+	bool isInReset = false;
 
 	int sockfd;
 	sockaddr_in serv_addr;

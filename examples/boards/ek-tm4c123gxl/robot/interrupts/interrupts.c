@@ -12,9 +12,11 @@
 #include "driverlib/pin_map.h"
 #include "driverlib/sysctl.h"
 #include "driverlib/ssi.h"
+#include "driverlib/watchdog.h"
 #include "interrupts.h"
 #include "spiWrapper.h"
 #include "utils.h"
+
 
 
 #define GPIOEXP1_PORTB_INT_PIN			GPIO_PIN_1
@@ -30,6 +32,7 @@
 SemaphoreHandle_t g_gpioExp1PortBIntSem  = NULL;
 SemaphoreHandle_t g_ssiRxIntSem  = NULL;
 extern SpiComInstance* g_spiComInstServer;
+extern bool isWdgLedOn;
 
 void initInterrupts()
 {
@@ -54,13 +57,14 @@ void initInterrupts()
 
 	{	// SSI0
 
-		IntPrioritySet(INT_UDMAERR, 5 << 5);	// priority 5 (3 top bits)
+		IntPrioritySet(INT_UDMAERR, 6 << 5);	// priority 5 (3 top bits)
 		IntEnable(INT_UDMAERR);
 
-		IntPrioritySet(INT_SSI0, 5 << 5);	// priority 5 (3 top bits)
+		IntPrioritySet(INT_SSI0, 3 << 5);	// priority 3 (3 top bits)
 		IntEnable(INT_SSI0);
 
 	}
+
 
 //	g_ssiRxIntSem = xSemaphoreCreateBinary();
 
@@ -105,6 +109,13 @@ void SSI0_intHandler(void)
   // Clear the asserted interrupts.
   SSIIntClear(SSI0_BASE, intStatus);
 
+
+//  if(intStatus & SSI_RXTO)
+// 	  UARTprintf("RX_FIFO_TIMEOUT!");
+//
+//  if(intStatus & SSI_RXOR)
+//	  UARTprintf("RX_FIFO_OVERRUN!");
+
   if(g_spiComInstServer)
   {
 	  onDmaTransactionRxEnd(g_spiComInstServer);
@@ -141,4 +152,10 @@ void uDMAErrorHandler(void)
         uDMAErrorStatusClear();
         //while(1);
     }
+}
+
+void WDG_intHandler(void)
+{
+	isWdgLedOn = ! isWdgLedOn;
+	WatchdogIntClear(WATCHDOG0_BASE);
 }

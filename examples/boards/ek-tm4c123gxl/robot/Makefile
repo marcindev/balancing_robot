@@ -59,6 +59,8 @@ VPATH+=./freertos
 VPATH+=./logger
 VPATH+=./server
 VPATH+=./interrupts
+VPATH+=./updater
+VPATH+=./config
 
 #
 # Where to find header files that do not live in the source directory.
@@ -87,6 +89,8 @@ IPATH+=./freertos
 IPATH+=./logger
 IPATH+=./server
 IPATH+=./interrupts
+IPATH+=./updater
+IPATH+=./config
 
 #
 # The default rule, which causes the CC3000 Basic WiFi Application to be built.
@@ -194,12 +198,15 @@ ${COMPILER}/robot_main.axf: ${COMPILER}/serverSpiComTask.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/interrupts.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/msgSystem.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/circularBuffer.o
+${COMPILER}/robot_main.axf: ${COMPILER}/updater.o
+${COMPILER}/robot_main.axf: ${COMPILER}/updaterTask.o
+${COMPILER}/robot_main.axf: ${COMPILER}/config.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/startup_${COMPILER}.o
 ${COMPILER}/robot_main.axf: ${ROOT}/driverlib/${COMPILER}/libdriver.a
 ${COMPILER}/robot_main.axf: robot_main.ld
 SCATTERgcc_robot_main=robot_main.ld
 ENTRY_robot_main=ResetISR
-CFLAGSgcc=-DTARGET_IS_TM4C123_RB1  -g -O0
+CFLAGSgcc=-DTARGET_IS_TM4C123_RB1  -g -O0 #-fPIC
 ifeq ($(MAKECMDGOALS),master)
 CFLAGSgcc+=-D_ROBOT_MASTER_BOARD
 endif

@@ -64,6 +64,7 @@ int main(int argc, char** argv)
 		if(line == "q" || line == "quit")
 		{
 			connection->disconnect();
+			connection->wait();
 			break;
 		}
 

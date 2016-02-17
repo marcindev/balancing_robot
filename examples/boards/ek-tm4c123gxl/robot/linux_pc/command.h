@@ -5,25 +5,45 @@
 #include <thread>
 #include <memory>
 #include <vector>
+#include <map>
+#include <string>
 
 #include "connection.h"
 
 class Command
 {
 public:
+	enum class ConfOption
+	{
+		make_exec,
+		makefile_dir,
+		binary_name,
+		last_partition,
+		last_target,
+		linker_filename
+	};
+
 	Command(std::shared_ptr<Connection> conn);
 	Command(std::shared_ptr<Connection> conn, const std::vector<std::string>& _args);
-	virtual ~Command() { }
+	virtual ~Command();
 
 	virtual void execute();
 	virtual void wait();
 protected:
 	virtual void run() = 0;
 
+	bool readConfig();
+	bool writeConfig();
+	bool executeProcess(const std::string& execFile, const std::vector<std::string>& args);
+	std::string getConfValue(ConfOption option);
+	void setConfValue(ConfOption option, const std::string& value);
 	std::shared_ptr<Connection> connection;
 	std::shared_ptr<std::thread> _thread;
 	std::vector<std::string> args;
-
+	std::map<ConfOption, std::string> confOptions;
+	bool isConfigRead = false;
+private:
+	std::map<std::string, ConfOption> stringToConfOption;
 };
 
 

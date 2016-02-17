@@ -15,6 +15,7 @@ typedef enum
 	Msg_EncoderTaskID,
 	Msg_WheelsTaskID,
 	Msg_ServerSpiComTaskID,
+	Msg_UpdaterTaskID,
 	MSG_TcpServerHandlerID
 }MsgTaskId;
 

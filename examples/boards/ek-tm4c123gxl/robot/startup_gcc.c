@@ -25,6 +25,7 @@
 #include <stdint.h>
 #include "inc/hw_nvic.h"
 #include "inc/hw_types.h"
+#include "logger.h"
 
 //*****************************************************************************
 //
@@ -50,6 +51,7 @@ extern void vPortSVCHandler(void);
 extern void xPortSysTickHandler(void);
 extern void SSI0_intHandler(void);
 extern void uDMAErrorHandler(void);
+extern void WDG_intHandler(void);
 
 #ifdef _ROBOT_MASTER_BOARD
 
@@ -125,7 +127,7 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // ADC Sequence 1
     IntDefaultHandler,                      // ADC Sequence 2
     IntDefaultHandler,                      // ADC Sequence 3
-    IntDefaultHandler,                      // Watchdog timer
+	WDG_intHandler,	                        // Watchdog timer
     IntDefaultHandler,                      // Timer 0 subtimer A
     IntDefaultHandler,                      // Timer 0 subtimer B
     IntDefaultHandler,                      // Timer 1 subtimer A
@@ -418,6 +420,14 @@ void prvGetRegistersFromStack( uint32_t *pulFaultStackAddress )
 	psr = pulFaultStackAddress[ 7 ];
 
 	/* When the following line is hit, the variables contain the register values. */
+
+	logger(Error, Log_Robot, "FaultISR! \n"
+			"Register values: \n"
+			"r0: %d\n, r1: %d\n, r2: %d\n, r3: %d\n,"
+			" r12: %d\n, lr: %d\n, pc: %d\n, psr: %d",
+			r0, r1, r2, r3, r12, lr, pc, psr);
+
+	dumpPostMortem();
 	for( ;; );
 }
 

@@ -33,9 +33,14 @@ extern SemaphoreHandle_t g_ssiRxIntSem;
 static MsgQueueId g_serverSpiComQueue;
 static bool isSpiComInitialized = false;
 
+static uint8_t g_updaterCmdSender;
+
+static void handleStartTask(StartTaskMsgReq* request);
 static void handleMessages(void* msg);
 static void handleGetLogs(void* msg);
 static void handleGetLogsRsp(void* msg);
+static void handleGetPostmortem(void* msg);
+static void handleGetPostmortemRsp(void* msg);
 static void handleGetFreeHeapSize(void* msg);
 static void handleGetFreeHeapSizeRsp(void* msg);
 static void handleGetTaskList(void* msg);
@@ -43,6 +48,8 @@ static void handleGetTaskListRsp(void* msg);
 static void handleWheelSetSpeed(void* msg);
 static void handleWheelRun(void* msg);
 static void handleSetTaskPriority(void* msg);
+static void handleUpdaterCmd(void* msg);
+static void handleUpdaterCmdRsp(void* msg);
 static void handleServerStartedNotif(void* msg);
 static void sendConnStatusNotif(void* msg);
 
@@ -63,6 +70,7 @@ static void serverSpiComTask()
 		if(isSpiComInitialized) //&& (xSemaphoreTake(g_ssiRxIntSem, SPI_SEM_WAIT_TIME) == pdTRUE))
 		{
 #ifdef _ROBOT_MASTER_BOARD
+//			size_t heapSize = xPortGetFreeHeapSize();
 			if(!(++counter % 100000UL))
 				UARTprintf("Ping\n");
 
@@ -136,11 +144,23 @@ void handleMessages(void* msg)
 	case GET_LOGS_MSG_REQ:
 		handleGetLogs(msg);
 		break;
+	case GET_POSTMORTEM_MSG_REQ:
+		handleGetPostmortem(msg);
+		break;
 	case GET_FREE_HEAP_SIZE_MSG_REQ:
 		handleGetFreeHeapSize(msg);
 		break;
 	case GET_TASK_LIST_MSG_REQ:
 		handleGetTaskList(msg);
+		break;
+	case SET_TASK_PRIORITY_MSG_REQ:
+		handleSetTaskPriority(msg);
+		break;
+	case UPDATER_CMD_MSG_REQ:
+		handleUpdaterCmd(msg);
+		break;
+	case UPDATER_CMD_MSG_RSP:
+		handleUpdaterCmdRsp(msg);
 		break;
 
 #ifdef _ROBOT_MASTER_BOARD
@@ -156,15 +176,15 @@ void handleMessages(void* msg)
 	case WHEEL_RUN_TCP_MSG_REQ:
 		handleWheelRun(msg);
 		break;
-	case SET_TASK_PRIORITY_MSG_REQ:
-		handleSetTaskPriority(msg);
-		break;
 	default:
 		logger(Warning, Log_ServerSpiCom, "[handleMessages] Received not recognized message %d", msgId);
 		break;
 #else
 	case GET_LOGS_MSG_RSP:
 		handleGetLogsRsp(msg);
+		break;
+	case GET_POSTMORTEM_MSG_RSP:
+		handleGetPostmortemRsp(msg);
 		break;
 	case GET_FREE_HEAP_SIZE_MSG_RSP:
 		handleGetFreeHeapSizeRsp(msg);
@@ -204,18 +224,6 @@ void handleStartTask(StartTaskMsgReq* request)
 void handleGetLogs(void* msg)
 {
 #ifdef _ROBOT_MASTER_BOARD
-//
-//	I2cManager* i2cManager = (I2cManager*) pvPortMalloc(sizeof(I2cManager));
-//	GpioExpander* gpioExpander = (GpioExpander*) pvPortMalloc(sizeof(GpioExpander));
-//	//
-//	ZeroBuffer(gpioExpander, sizeof(GpioExpander));
-//	gpioExpander->i2cManager = i2cManager;
-//	gpioExpander->hwAddress		= 0x21;
-//	GpioExpInit(gpioExpander);
-//	GpioExpSetPinDirOut(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN4);
-//	GpioExpSetPin(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN4);
-
-
 
 	uint32_t timestamp;
 	LogLevel logLevel;
@@ -259,6 +267,63 @@ void handleGetLogs(void* msg)
 	msg = NULL;
 }
 
+void handleGetPostmortem(void* msg)
+{
+#ifdef _ROBOT_MASTER_BOARD
+
+	const uint8_t NORMAL = 0x01,
+			      LAST   = 0x02,
+				  EMPTY  = 0x04;
+
+	uint32_t timestamp;
+	LogLevel logLevel;
+	LogComponent logComponent;
+	const char* strPtr;
+	uint8_t argsNum;
+	uint8_t* argTypes;
+	uint8_t* argsBuffer;
+	uint8_t argsBuffSize;
+
+	GetPostmortemMsgRsp response = INIT_GET_POSTMORTEM_MSG_RSP;
+	response.sender = ((GetLogsMsgReq*)msg)->sender;
+	response.slot = ((GetLogsMsgReq*)msg)->slot;
+	response.isMaster = 1;
+
+	argTypes = response.argTypes;
+	argsBuffer = response.argsBuffer;
+
+	uint16_t lineNum = 1;
+
+
+	while(getNextPMLine(&timestamp, &logLevel, &logComponent,
+			(void*)&strPtr, &argsNum, argTypes, argsBuffer, &argsBuffSize))
+	{
+		response.ctrlByte = NORMAL;
+		response.lineNum = lineNum++;
+		response.timestamp = timestamp;
+		response.logLevel = (uint8_t) logLevel;
+		response.component = (uint8_t) logComponent;
+		strcpy(response.strBuffer, strPtr);
+		response.argsNum = argsNum;
+		sendSpiMsg(&response);
+	}
+
+	if(lineNum == 1)
+		response.ctrlByte = EMPTY;
+	else
+		response.ctrlByte = LAST;
+
+	sendSpiMsg(&response);
+#else
+	logger(Info, Log_ServerSpiCom, "[handleGetPostmortem] forwarding msg to master; msgId: %d",*((uint8_t*)msg));
+	sendSpiMsg(msg);
+#endif
+
+	vPortFree(msg);
+	msg = NULL;
+}
+
+
 void handleGetFreeHeapSize(void* msg)
 {
 #ifdef _ROBOT_MASTER_BOARD
@@ -276,6 +341,35 @@ void handleGetFreeHeapSize(void* msg)
 
 	vPortFree(msg);
 	msg = NULL;
+}
+
+void handleUpdaterCmd(void* msg)
+{
+#ifdef _ROBOT_MASTER_BOARD
+	g_updaterCmdSender = ((UpdaterCmdMsgReq*) msg)->sender; // remember the sender for later response routing
+
+	msgSend(g_serverSpiComQueue, getQueueIdFromTaskId(Msg_UpdaterTaskID), &msg, MSG_WAIT_LONG_TIME);
+
+#else
+//	logger(Info, Log_ServerSpiCom, "[handleUpdaterCmd] forwarding msg to master; msgId: %d",*((uint8_t*)msg));
+	sendSpiMsg(msg);
+	vPortFree(msg);
+	msg = NULL;
+#endif
+
+}
+
+
+void handleUpdaterCmdRsp(void* msg)
+{
+#ifdef _ROBOT_MASTER_BOARD
+	((UpdaterCmdMsgRsp*)msg)->sender = g_updaterCmdSender;
+	sendSpiMsg(msg);
+	vPortFree(msg);
+	msg = NULL;
+#else
+	msgRespond(((UpdaterCmdMsgRsp*)msg)->sender, &msg, MSG_WAIT_LONG_TIME);
+#endif
 }
 
 void handleGetTaskList(void* msg)
@@ -322,6 +416,28 @@ void handleGetTaskList(void* msg)
 	vPortFree(msg);
 	msg = NULL;
 }
+
+void handleSetTaskPriority(void* msg)
+{
+#ifdef _ROBOT_MASTER_BOARD
+	SetTaskPriorityMsgReq* spiMsg = (SetTaskPriorityMsgReq*) msg;
+	TaskHandle_t taskHandle = getTaskHandleByNum(spiMsg->taskId);
+	if(taskHandle)
+	{
+		vTaskPrioritySet(taskHandle, tskIDLE_PRIORITY + spiMsg->priority);
+		logger(Info, Log_TcpServerHandler, "[handleSetTaskPriority] priority of task %d has been changed to %d"
+				, spiMsg->taskId, spiMsg->priority);
+	}
+
+#else
+	logger(Info, Log_ServerSpiCom, "[handleSetTaskPriority] forwarding msg to master; msgId: %d",*((uint8_t*)msg));
+	sendSpiMsg(msg);
+#endif
+
+	vPortFree(msg);
+	msg = NULL;
+}
+
 
 #ifdef _ROBOT_MASTER_BOARD
 void handleServerStartedNotif(void* msg)
@@ -380,28 +496,22 @@ void handleWheelRun(void* msg)
 	msg = NULL;
 }
 
-void handleSetTaskPriority(void* msg)
-{
-	SetTaskPriorityMsgReq* spiMsg = (SetTaskPriorityMsgReq*) msg;
-	TaskHandle_t taskHandle = getTaskHandleByNum(spiMsg->taskId);
-	if(taskHandle)
-	{
-		vTaskPrioritySet(taskHandle, tskIDLE_PRIORITY + spiMsg->priority);
-	}
-
-	vPortFree(msg);
-	msg = NULL;
-}
 
 #else
 
 void handleGetLogsRsp(void* msg)
 {
-	UARTprintf("handleGetLogsRsp: response received\n");
+//	UARTprintf("handleGetLogsRsp: response received\n");
 
 	msgRespond(((GetLogsMsgRsp*)msg)->sender, &msg, MSG_WAIT_LONG_TIME);
 	logger(Debug, Log_ServerSpiCom, "[handleGetLogsRsp] response received");
 
+}
+
+void handleGetPostmortemRsp(void* msg)
+{
+	msgRespond(((GetPostmortemMsgRsp*)msg)->sender, &msg, MSG_WAIT_LONG_TIME);
+	logger(Debug, Log_ServerSpiCom, "[handleGetPostmortemRsp] response received");
 }
 
 void handleGetFreeHeapSizeRsp(void* msg)

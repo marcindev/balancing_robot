@@ -9,6 +9,7 @@
 #include "spiWrapper.h"
 #include "inc/hw_ssi.h"
 #include "inc/hw_ints.h"
+#include "utils.h"
 
 
 #define SPI_START_FRAME 			0xF1
@@ -39,9 +40,9 @@ uint8_t ui8ControlTable[1024];
 uint8_t ui8ControlTable[1024];
 #else
 #ifdef _ROBOT_MASTER_BOARD
-uint8_t ui8ControlTable[256] __attribute__ ((aligned(256)));
+uint8_t ui8ControlTable[512] __attribute__ ((aligned(512)));
 #else
-uint8_t ui8ControlTable[256] __attribute__ ((aligned(256)));
+uint8_t ui8ControlTable[512] __attribute__ ((aligned(512)));
 #endif
 #endif
 
@@ -79,7 +80,7 @@ void SpiComInit(SpiComInstance* spiComInst)
 
     SSIDMAEnable(spiComInst->ssiBase, SSI_DMA_RX | SSI_DMA_TX);
 //    IntEnable(INT_SSI0);
-    SSIIntEnable(spiComInst->ssiBase, SSI_DMATX | SSI_DMARX);
+    SSIIntEnable(spiComInst->ssiBase, SSI_DMATX | SSI_DMARX | SSI_RXOR | SSI_RXTO);
 
     initInterrupts();
 
@@ -143,10 +144,14 @@ bool SpiComSend(SpiComInstance* spiComInst, const uint8_t* data, uint32_t length
 		return false;
 
 	if(CB_isFull(spiComInst->circBufferTx))
+	{
 		return false;
+	}
 
 	if(CB_getAvailableSpace(spiComInst) <= (SPI_HEADER_LEN + length))
+	{
 		return false;
+	}
 
 	uint8_t frameHeader[SPI_HEADER_LEN] = {SPI_START_FRAME,
 										   SPI_DATA_FRAME_ID,
@@ -154,11 +159,31 @@ bool SpiComSend(SpiComInstance* spiComInst, const uint8_t* data, uint32_t length
 
 	};
 // --> not safe, make it atomic
-	if(!CB_pushData(spiComInst->circBufferTx, frameHeader, SPI_HEADER_LEN))
-		return false;
 
-	if(!CB_pushData(spiComInst->circBufferTx, data, length))
+//	taskENTER_CRITICAL();
+//	if(!CB_pushData(spiComInst->circBufferTx, frameHeader, SPI_HEADER_LEN))
+//	{
+//		return false;
+//	}
+//
+//	if(!CB_pushData(spiComInst->circBufferTx, data, length))
+//	{
+//		return false;
+//	}
+//	taskEXIT_CRITICAL();
+
+	uint8_t message[SPI_HEADER_LEN + length];
+	message[0] = SPI_START_FRAME;
+	message[1] = SPI_DATA_FRAME_ID;
+	message[2] = length;
+
+
+	memcpy(message + SPI_HEADER_LEN, data, length);
+
+	if(!CB_pushData(spiComInst->circBufferTx, message, SPI_HEADER_LEN + length))
+	{
 		return false;
+	}
 // <--
 
 	if(!isDMAtransactionOngoingTx(spiComInst))
@@ -188,8 +213,8 @@ bool SpiComReceive(SpiComInstance* spiComInst, void** data, uint32_t* length)
 
 		while(!CB_popData(spiComInst->circBufferRx, &byte, 1))
 		{
-			if(!isDMAtransactionOngoingRx(spiComInst))
-				startDmaTransactionRx(spiComInst);
+//			if(!isDMAtransactionOngoingRx(spiComInst))
+//				startDmaTransactionRx(spiComInst);
 		}
 
 		switch(byte)
@@ -199,18 +224,20 @@ bool SpiComReceive(SpiComInstance* spiComInst, void** data, uint32_t* length)
 			uint8_t len = 0;
 			while(!CB_popData(spiComInst->circBufferRx, &len, 1))
 			{
-				if(!isDMAtransactionOngoingRx(spiComInst))
-					startDmaTransactionRx(spiComInst);
+//				if(!isDMAtransactionOngoingRx(spiComInst))
+//					startDmaTransactionRx(spiComInst);
 			}
 
 			if(!len)
 				return false;
 
 			uint8_t dummyData[len];
-			while(!CB_popData(spiComInst->circBufferRx, dummyData, len))
+			uint32_t leftToPop = len;
+			while(leftToPop > 0)
 			{
-				if(!isDMAtransactionOngoingRx(spiComInst))
-					startDmaTransactionRx(spiComInst);
+				leftToPop -= CB_popData(spiComInst->circBufferRx, dummyData + len - leftToPop, leftToPop);
+//				if(!isDMAtransactionOngoingRx(spiComInst))
+//					startDmaTransactionRx(spiComInst);
 			}
 
 			break;
@@ -233,14 +260,16 @@ bool SpiComReceive(SpiComInstance* spiComInst, void** data, uint32_t* length)
 
 	while(!CB_popData(spiComInst->circBufferRx, &len, 1))
 	{
-		if(!isDMAtransactionOngoingRx(spiComInst))
-			startDmaTransactionRx(spiComInst);
+//		if(!isDMAtransactionOngoingRx(spiComInst))
+//			startDmaTransactionRx(spiComInst);
 	}
 
 	*data = pvPortMalloc(len);
 
 	if(!(*data))
+	{
 		return false;
+	}
 
 	uint32_t leftToPop = len;
 
@@ -248,15 +277,15 @@ bool SpiComReceive(SpiComInstance* spiComInst, void** data, uint32_t* length)
 	{
 		leftToPop -= CB_popData(spiComInst->circBufferRx, *data + len - leftToPop, leftToPop);
 
-		if(!isDMAtransactionOngoingRx(spiComInst))
-			startDmaTransactionRx(spiComInst);
+//		if(!isDMAtransactionOngoingRx(spiComInst))
+//			startDmaTransactionRx(spiComInst);
 
 	}
 
 	*length = len;
 
-	if(!isDMAtransactionOngoingRx(spiComInst))
-		startDmaTransactionRx(spiComInst);
+//	if(!isDMAtransactionOngoingRx(spiComInst))
+//		startDmaTransactionRx(spiComInst);
 
 	return true;
 }
@@ -275,7 +304,16 @@ bool startDmaTransactionRx(SpiComInstance* spiComInst)
 {
 
 	if(CB_isFull(spiComInst->circBufferRx)) // TODO: consider loop
+	{
+		UARTprintf("startDmaTransactionRx:CB_isFull");
 		return false;
+	}
+
+	if(CB_getAvailableSpace(spiComInst) <= spiComInst->uDmaRxReadSize)
+	{
+		UARTprintf("startDmaTransactionRx:CB_getAvailableSpace");
+		return false;
+	}
 
 	uint8_t* head = spiComInst->circBufferRx->head;
 	uint8_t* tail = spiComInst->circBufferRx->tail;

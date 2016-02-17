@@ -7,6 +7,8 @@
 #include "setWheelSpeedCmd.h"
 #include "wheelRunCmd.h"
 #include "setTaskPriorityCmd.h"
+#include "getPostmortemCmd.h"
+#include "updaterCmd.h"
 
 using namespace std;
 
@@ -44,6 +46,12 @@ shared_ptr<Command> CommandFactory::createCommand(const string& strCommand,
 
 	if(strCommand == "setTaskPriority")
 		return shared_ptr<Command>(new SetTaskPriorityCmd(connection, args));
+
+	if(strCommand == "getPostmortem")
+		return shared_ptr<Command>(new GetPostmortemCmd(connection, args));
+
+	if(strCommand == "update")
+		return shared_ptr<Command>(new UpdaterCmd(connection, args));
 
 
 	cout << "Wrong command!" << endl;

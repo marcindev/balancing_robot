@@ -53,7 +53,10 @@ const WheelRunTcpMsgReq INIT_WHEEL_RUN_TCP_MSG_REQ = {WHEEL_RUN_TCP_MSG_REQ, siz
 const WheelRunTcpMsgRsp INIT_WHEEL_RUN_TCP_MSG_RSP = {WHEEL_RUN_TCP_MSG_RSP, sizeof(WheelRunTcpMsgRsp)};
 const SetTaskPriorityMsgReq INIT_SET_TASK_PRIORITY_MSG_REQ = {SET_TASK_PRIORITY_MSG_REQ, sizeof(SetTaskPriorityMsgReq)};
 const SetTaskPriorityMsgRsp INIT_SET_TASK_PRIORITY_MSG_RSP = {SET_TASK_PRIORITY_MSG_RSP, sizeof(SetTaskPriorityMsgRsp)};
-
+const GetPostmortemMsgReq INIT_GET_POSTMORTEM_MSG_REQ = {GET_POSTMORTEM_MSG_REQ, sizeof(GetPostmortemMsgReq)};
+const GetPostmortemMsgRsp INIT_GET_POSTMORTEM_MSG_RSP = {GET_POSTMORTEM_MSG_RSP, sizeof(GetPostmortemMsgRsp)};
+const UpdaterCmdMsgReq INIT_UPDATER_CMD_MSG_REQ = {UPDATER_CMD_MSG_REQ, sizeof(UpdaterCmdMsgReq)};
+const UpdaterCmdMsgRsp INIT_UPDATER_CMD_MSG_RSP = {UPDATER_CMD_MSG_RSP, sizeof(UpdaterCmdMsgRsp)};
 
 
 uint16_t getMsgSize(void* msg)

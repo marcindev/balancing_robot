@@ -8,12 +8,16 @@
 #include <stdint.h>
 #include "inc/hw_memmap.h"
 #include "inc/hw_types.h"
+#include "inc/hw_nvic.h"
 #include "driverlib/gpio.h"
 #include "driverlib/pin_map.h"
 #include "driverlib/rom.h"
 #include "driverlib/sysctl.h"
 #include "driverlib/interrupt.h"
 #include "driverlib/fpu.h"
+#include "driverlib/eeprom.h"
+#include "driverlib/watchdog.h"
+#include "inc/hw_ints.h"
 #include "FreeRTOS.h"
 #include "portable.h"
 #include "task.h"
@@ -25,6 +29,9 @@
 #include "priorities.h"
 #include "utils.h"
 #include "interrupts.h"
+#include "led.h"
+#include "logger.h"
+#include "updater/updaterTask.h"
 
 #ifdef _ROBOT_MASTER_BOARD
 #include "drivers/i2c/i2cTask.h"
@@ -44,12 +51,14 @@ extern void _bss;
 #define ROBOT_TASK_STACK_SIZE		100         // Stack size in words
 #define ROBOT_TASK_QUEUE_SIZE		 10
 
+#define WDG_PERIOD					 10
+
 //static I2cManager g_i2cManager;
 //static GpioExpander g_gpioExpander;
 
 const HeapRegion_t xHeapRegions[] =
 {
-	{ ( uint8_t * ) 0x20002000UL, 0x06000 },
+	{ ( uint8_t * ) 0x20002500UL, 0x05500 },
     { NULL, 0 } /* Terminates the array. */
 };
 
@@ -70,11 +79,17 @@ static void enableInterrupts();
 static void initializeFPU();
 static bool startTcpServer();
 static bool startSpiServerCom();
+static bool startUpdater();
 static bool startWheels();
+static bool initializeEEPROM();
+static void initWatchDog();
+static void onReset();
 
+bool isWdgLedOn = false;
 
 void runRobot()
 {
+	onReset();
 	initializeRobot();
 	ConfigureUART();
 	UARTprintf("Starting robot\n");
@@ -85,10 +100,10 @@ void runRobot()
 		while(1){ }
 	}
 
-	if(!wheelsTaskInit())
-	{
-		while(1){ }
-	}
+//	if(!wheelsTaskInit())
+//	{
+//		while(1){ }
+//	}
 
 #endif
 
@@ -100,6 +115,11 @@ void runRobot()
 	if(!serverSpiComTaskInit())
 	{
 		while(1){ }
+	}
+
+	if(!updaterTaskInit())
+	{
+		while(1) { }
 	}
 
 #ifndef _ROBOT_MASTER_BOARD
@@ -122,9 +142,10 @@ void initializeRobot()
 {
 	initializeFPU();
 	initializeSysClock();
+	if(!initializeEEPROM()) while(1){};
 	enableInterrupts();
 	initilizeFreeRTOS();
-
+//	initWatchDog();
 
 }
 
@@ -138,6 +159,11 @@ static void robotTask(void *pvParameters)
 		while(1){}
 	}
 
+	if(!startUpdater())
+	{
+		while(1) {}
+	}
+
 #ifndef _ROBOT_MASTER_BOARD
 
 	if(!startTcpServer())
@@ -145,19 +171,25 @@ static void robotTask(void *pvParameters)
 		while(1){}
 	}
 
+
 	while(1) {
 		vTaskDelayUntil(&ui32WakeTime, pdMS_TO_TICKS(2000));
 	}
 
 #else
 
-	if(!startWheels())
-	{
-		while(1){}
-	}
+//	if(!startWheels())
+//	{
+//		while(1){}
+//	}
+//	LedInit(LED2);
 
 	while(1){
-		vTaskDelayUntil(&ui32WakeTime, pdMS_TO_TICKS(2000));
+		vTaskDelayUntil(&ui32WakeTime, pdMS_TO_TICKS(1000));
+
+
+//		LedTurnOnOff(LED2, isWdgLedOn);
+
 	}
 /*
 	I2cManager* i2cManager = (I2cManager*) pvPortMalloc(sizeof(I2cManager));
@@ -365,6 +397,14 @@ void enableInterrupts()
 	IntMasterEnable();
 }
 
+bool initializeEEPROM()
+{
+	if(!SysCtlPeripheralReady(SYSCTL_PERIPH_EEPROM0))
+		SysCtlPeripheralEnable(SYSCTL_PERIPH_EEPROM0);
+
+	return EEPROMInit() == EEPROM_INIT_OK;
+}
+
 
 //void initializeGpioExpanders()
 //{
@@ -396,6 +436,22 @@ bool startSpiServerCom()
 	vPortFree(response);
 	return result;
 }
+
+bool startUpdater()
+{
+	StartTaskMsgReq* request = (StartTaskMsgReq*) pvPortMalloc(sizeof(StartTaskMsgReq));
+	*request = INIT_START_TASK_MSG_REQ;
+	msgSend(g_robotQueue, getQueueIdFromTaskId(Msg_UpdaterTaskID), &request, MSG_WAIT_LONG_TIME);
+
+	StartTaskMsgRsp* response;
+	if(!msgReceive(g_robotQueue, &response, MSG_WAIT_LONG_TIME))
+		return false;
+
+	bool result = response->status;
+	vPortFree(response);
+	return result;
+}
+
 #ifdef _ROBOT_MASTER_BOARD
 bool startWheels()
 {
@@ -427,6 +483,38 @@ bool startTcpServer()
 	return result;
 }
 #endif
+
+
+void initWatchDog()
+{
+	initInterrupts();
+	SysCtlPeripheralEnable(SYSCTL_PERIPH_WDOG0);
+	IntEnable(INT_WATCHDOG);
+	WatchdogReloadSet(WATCHDOG0_BASE, WDG_PERIOD * SysCtlClockGet());
+	WatchdogStallEnable(WATCHDOG0_BASE);
+//	WatchdogResetEnable(WATCHDOG0_BASE);
+	WatchdogEnable(WATCHDOG0_BASE);
+}
+
+void jumpToAddress( uint32_t address )
+{
+	__asm("    ldr     sp, [r0]\n"
+		  "    ldr     pc, [r0, #4]");
+}
+
+void onReset()
+{
+	uint32_t resetCause = SysCtlResetCauseGet();
+	SysCtlResetCauseClear(resetCause);
+
+	if(resetCause & SYSCTL_CAUSE_SW)
+	{
+		HWREG(NVIC_VTABLE) = 0;
+		jumpToAddress(0);
+
+	}
+}
+
 
 
 // workaround for linking errors (relates to getTaskList FreeRTOS)

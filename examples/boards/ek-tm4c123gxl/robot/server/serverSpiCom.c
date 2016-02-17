@@ -16,6 +16,7 @@
 #include "driverlib/uart.h"
 #include "utils/uartstdio.h"
 
+
 #include "MCP23017.h"
 
 SpiComInstance* g_spiComInstServer = NULL;
@@ -77,10 +78,10 @@ bool receiveSpiMsg(void** msg)
 	uint32_t len = 0;
 	if(!SpiComReceive(g_spiComInstServer, msg, &len))
 		return false;
-	UARTprintf("receiveSpiMsg\n");
-	printBuffer(*msg, len);
+//	UARTprintf("receiveSpiMsg\n");
+//	printBuffer(*msg, len);
 
-	msgId = *((uint8_t*)*msg);
+//	msgId = *((uint8_t*)*msg);
 
 #ifdef _ROBOT_MASTER_BOARD
 //	I2cManager* i2cManager = (I2cManager*) pvPortMalloc(sizeof(I2cManager));
@@ -93,23 +94,23 @@ bool receiveSpiMsg(void** msg)
 //	GpioExpSetPinDirOut(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN5);
 //	GpioExpSetPin(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN5);
 #endif
-	UARTprintf("receiveSpiMsg msgId: %d\n", msgId);
-	uint32_t msgLen = getMsgSize(*msg);
+//	UARTprintf("receiveSpiMsg msgId: %d\n", msgId);
+//	uint32_t msgLen = getMsgSize(*msg);
 //	*msg = pvPortMalloc(msgLen);
 #ifdef _ROBOT_MASTER_BOARD
-	UARTprintf("receiveSpiMsg msgLen: %d\n", msgLen);
+//	UARTprintf("receiveSpiMsg msgLen: %d\n", msgLen);
 #endif
 	if(*msg == NULL)
 		return false;
 
-	*((uint8_t*) *msg) = msgId;
+//	*((uint8_t*) *msg) = msgId;
 
 //	if(!SpiComReceive(g_spiComInstServer, ((uint8_t*)*msg) + 1, msgLen - 1))
 //		return false;
 #ifdef _ROBOT_MASTER_BOARD
-	uint8_t* m = (uint8_t*)*msg;
-	UARTprintf("receiveSpiMsg msg: %d %d %d\n", m[0], m[1], m[2]);
-	UARTprintf("receiveSpiMsg success ");
+//	uint8_t* m = (uint8_t*)*msg;
+//	UARTprintf("receiveSpiMsg msg: %d %d %d\n", m[0], m[1], m[2]);
+//	UARTprintf("receiveSpiMsg success ");
 #endif
 	return true;
 }
@@ -117,10 +118,17 @@ bool receiveSpiMsg(void** msg)
 bool sendSpiMsg(void* msg)
 {
 	uint32_t msgLen = getMsgSize(msg);
-	UARTprintf("sendSpiMsg\n");
-	printBuffer(msg, msgLen);
+
+//	printBuffer(msg, msgLen);
 	if(!SpiComSend(g_spiComInstServer, msg, msgLen))
+	{
+		logger(Error, Log_ServerSpiCom, "[sendSpiMsg] Couldn't send msg");
 		return false;
+	}
+	portTickType ui32WakeTime;
+	ui32WakeTime = xTaskGetTickCount();
+	vTaskDelayUntil(&ui32WakeTime, pdMS_TO_TICKS(2));
+//	UARTprintf("sendSpiMsg\n");
 //	logger(Info, Log_ServerSpiCom, "[sendSpiMsg] Message sent");
 	return true;
 }

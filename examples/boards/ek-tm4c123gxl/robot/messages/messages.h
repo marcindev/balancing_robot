@@ -71,6 +71,11 @@ uint16_t getMsgSize(void* msg);
 #define WHEEL_RUN_TCP_MSG_RSP							0x39
 #define SET_TASK_PRIORITY_MSG_REQ						0x3A
 #define SET_TASK_PRIORITY_MSG_RSP						0x3B
+#define GET_POSTMORTEM_MSG_REQ							0x3C
+#define GET_POSTMORTEM_MSG_RSP							0x3D
+#define UPDATER_CMD_MSG_REQ								0x3E
+#define UPDATER_CMD_MSG_RSP								0x3F
+
 
 
 // TODO: try with union messages or memcpy
@@ -479,7 +484,7 @@ typedef struct
 	uint8_t argsNum;
 	uint8_t argTypes[12]; // to keep alignment
 	uint64_t argsBuffer[10];
-	uint8_t strBuffer[100];
+	uint8_t strBuffer[128];
 }__attribute__((packed, aligned(1))) GetLogsMsgRsp;
 extern const GetLogsMsgRsp INIT_GET_LOGS_MSG_RSP;
 
@@ -596,6 +601,7 @@ typedef struct
 	uint8_t msgLen;
 	uint8_t sender;
 	uint8_t slot;
+	uint8_t isMaster;
 	uint8_t taskId;
 	uint8_t priority;
 }__attribute__((packed, aligned(1))) SetTaskPriorityMsgReq;
@@ -607,8 +613,65 @@ typedef struct
 	uint8_t msgLen;
 	uint8_t sender;
 	uint8_t slot;
+	uint8_t isMaster;
 	uint8_t status;
 }__attribute__((packed, aligned(1))) SetTaskPriorityMsgRsp;
 extern const SetTaskPriorityMsgRsp INIT_SET_TASK_PRIORITY_MSG_RSP;
+
+typedef struct
+{
+	uint8_t msgId;
+	uint8_t msgLen;
+	uint8_t sender;
+	uint8_t slot;
+	uint8_t isMaster;
+}__attribute__((packed, aligned(1))) GetPostmortemMsgReq;
+extern const GetPostmortemMsgReq INIT_GET_POSTMORTEM_MSG_REQ;
+
+typedef struct
+{
+	uint8_t msgId;
+	uint8_t msgLen;
+	uint8_t sender;
+	uint8_t slot;
+	uint8_t isMaster;
+	uint8_t ctrlByte;	// 0x01 - isNormal, 0x02 - isLast, 0x04 - isEmpty
+	uint16_t lineNum;
+	uint32_t timestamp;
+	uint8_t logLevel;
+	uint8_t component;
+	uint8_t argsNum;
+	uint8_t argTypes[10];
+	uint64_t argsBuffer[10];
+	uint8_t strBuffer[128];
+}__attribute__((packed, aligned(1))) GetPostmortemMsgRsp;
+extern const GetPostmortemMsgRsp INIT_GET_POSTMORTEM_MSG_RSP;
+
+
+typedef struct
+{
+	uint8_t msgId;
+	uint8_t msgLen;
+	uint8_t sender;
+	uint8_t slot;
+	uint8_t isMaster;
+	uint8_t command;
+	uint32_t data1;
+	uint32_t data2;
+	uint32_t data3;
+}__attribute__((packed, aligned(1))) UpdaterCmdMsgReq;
+extern const UpdaterCmdMsgReq INIT_UPDATER_CMD_MSG_REQ;
+
+typedef struct
+{
+	uint8_t msgId;
+	uint8_t msgLen;
+	uint8_t sender;
+	uint8_t slot;
+	uint8_t isMaster;
+	uint8_t status;
+}__attribute__((packed, aligned(1))) UpdaterCmdMsgRsp;
+extern const UpdaterCmdMsgRsp INIT_UPDATER_CMD_MSG_RSP;
+
 
 #endif // MESSAGES_H
