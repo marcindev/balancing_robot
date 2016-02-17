@@ -51,6 +51,12 @@ void GetLogsCommand::run()
 
 	while(connection->isConnected())
 	{
+		time(&currTime);
+		double timeDiff = difftime(currTime, startTime);
+
+		if(timeDiff > CONN_TIMEOUT)
+			break;
+
 		Message msg;
 		if(connection->receive(msg))
 		{
@@ -59,29 +65,24 @@ void GetLogsCommand::run()
 			if(msgId != GET_LOGS_MSG_RSP)
 				cout << "GetLogsCommand: unrecognized msg " << hex << static_cast<int>(msgId) << endl;
 
-			time(&currTime);
-			double timeDiff = difftime(currTime, startTime);
+			if(!handleGetLogsRsp(reinterpret_cast<GetLogsMsgRsp*>(msg.getRawPayload())))
+				break;
 
-			if(!handleGetLogsRsp(reinterpret_cast<GetLogsMsgRsp*>(msg.getRawPayload()))
-				|| timeDiff > CONN_TIMEOUT)
-			{
-					sort(vecLogs.begin(), vecLogs.end(), sortLine);
-
-					for(auto it = vecLogs.begin(); it != vecLogs.end(); ++it)
-					{
-						if(it->empty())
-							continue;
-
-						cout << *it << endl;
-					}
-
-					vecLogs.clear();
-
-					break;
-			}
 		}
 
 	}
+
+	sort(vecLogs.begin(), vecLogs.end(), sortLine);
+
+	for(auto it = vecLogs.begin(); it != vecLogs.end(); ++it)
+	{
+		if(it->empty())
+			continue;
+
+		cout << *it << endl;
+	}
+
+	vecLogs.clear();
 
 }
 
@@ -93,7 +94,6 @@ bool GetLogsCommand::handleGetLogsRsp(GetLogsMsgRsp* response)
 	ss << response->lineNum;
 	line += ss.str() + " ";
 	ss.str("");
-
 
 	line += millisToTimeString(response->timestamp) + " ";
 
@@ -154,6 +154,9 @@ bool GetLogsCommand::handleGetLogsRsp(GetLogsMsgRsp* response)
 		break;
 	case 11:
 		ss << "Log_Leds";
+		break;
+	case 12:
+		ss << "Log_Updater";
 		break;
 	default:
 	ss << "Unknown flag( " << static_cast<int>(response->component) << " )";
@@ -244,6 +247,7 @@ bool GetLogsCommand::handleGetLogsRsp(GetLogsMsgRsp* response)
 	{
 		line += strTemp;
 	}
+
 
 	vecLogs.push_back(line);
 

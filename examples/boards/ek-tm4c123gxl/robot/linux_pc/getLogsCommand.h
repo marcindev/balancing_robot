@@ -14,11 +14,11 @@ public:
 
 protected:
 	void run();
-private:
 	bool handleGetLogsRsp(GetLogsMsgRsp* response);
 	static bool sortLine(const std::string& str1, const std::string& str2);
-	std::string millisToTimeString(uint32_t milliseconds);
 	std::vector<std::string> vecLogs;
+private:
+	std::string millisToTimeString(uint32_t milliseconds);
 
 	static const double CONN_TIMEOUT;
 };

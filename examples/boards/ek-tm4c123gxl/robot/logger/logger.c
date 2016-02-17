@@ -4,6 +4,7 @@
 #include "portable.h"
 #include "logger.h"
 #include <stdarg.h>
+#include "driverlib/eeprom.h"
 
 #define BUFFER_SIZE			30
 
@@ -11,6 +12,11 @@
 #define DOUBLE_ARG			2
 
 #define MAX_ARGS_NUM		10
+
+#define PM_ELEM_BEG			0xF1
+#define PM_STOP_MARK		0xBF
+#define PM_LEN_OFFSET		1
+#define PM_BEG_BLOCK		2
 
 typedef struct
 {
@@ -28,7 +34,7 @@ static LogElem g_buffer[BUFFER_SIZE];
 static uint16_t index = 0;
 static bool isRollOver = false;
 
-inline void logger(LogLevel level, LogComponent component, const char* string, ...)
+void logger(LogLevel level, LogComponent component, const char* string, ...)
 {
 	va_list arguments;
 
@@ -230,5 +236,174 @@ bool getNextLogLine(uint32_t* timestamp, LogLevel* logLevel, LogComponent* compo
 uint16_t getLinesNumber()
 {
 	return (isRollOver ?  BUFFER_SIZE : index);
+}
+
+bool dumpPostMortem()
+{
+	const uint16_t MAX_ELEM_BUFF_SIZE = 30;
+	const uint16_t WORD_SIZE = sizeof(uint32_t);
+	uint32_t pmBuffer[MAX_ELEM_BUFF_SIZE];
+
+	memset(pmBuffer, 0, MAX_ELEM_BUFF_SIZE * WORD_SIZE);
+
+	int nextInd = index - 1;
+	uint32_t stopWord = 0;
+	*((uint8_t*)&stopWord) = PM_STOP_MARK;
+
+	uint32_t blockSize = EEPROMSizeGet() / EEPROMBlockCountGet();
+	int32_t leftFlashSpace = EEPROMSizeGet() - blockSize * PM_BEG_BLOCK;
+	uint32_t currFlashAddr = EEPROMAddrFromBlock(PM_BEG_BLOCK);
+
+	while(true)
+	{
+		uint8_t *pmBufferBeg = (uint8_t*)pmBuffer,
+				*pmBufferPtr = (uint8_t*)pmBuffer;
+
+		if(nextInd < 0)
+		{
+			if(isRollOver)
+			{
+				nextInd = BUFFER_SIZE - 1;
+			}
+			else
+			{
+				EEPROMProgram(&stopWord, currFlashAddr, WORD_SIZE);
+				break;
+			}
+		}
+
+		if(nextInd == index)
+		{
+			EEPROMProgram(&stopWord, currFlashAddr, WORD_SIZE);
+			break;
+		}
+
+		*pmBufferPtr++ = PM_ELEM_BEG;
+		pmBufferPtr++; // leave off for further length value
+		*pmBufferPtr++ = g_buffer[nextInd].logLevel;
+		*pmBufferPtr++ = g_buffer[nextInd].component;
+		*((uint32_t*)pmBufferPtr)= g_buffer[nextInd].timestampMilis;
+		pmBufferPtr += WORD_SIZE;
+		*((uint32_t*)pmBufferPtr) = g_buffer[nextInd].stringPtr;
+		pmBufferPtr += WORD_SIZE;
+		uint8_t argsNum = g_buffer[nextInd].argsNum;
+		*pmBufferPtr++ =  argsNum;
+		memcpy(pmBufferPtr, g_buffer[nextInd].argTypes, argsNum);
+		pmBufferPtr += argsNum;
+		uint8_t argsBuffSize = g_buffer[nextInd].argsBuffSize;
+		*pmBufferPtr++ = argsBuffSize;
+		memcpy(pmBufferPtr, g_buffer[nextInd].argsBuffer, argsBuffSize);
+		pmBufferPtr += argsBuffSize;
+
+		uint16_t u8WriteSize = pmBufferPtr - pmBufferBeg;
+		uint16_t u32WriteSize = u8WriteSize / WORD_SIZE;
+
+		if(u8WriteSize % WORD_SIZE)
+			u32WriteSize++;
+
+		u8WriteSize = u32WriteSize * WORD_SIZE;
+
+		*(pmBufferBeg + PM_LEN_OFFSET) = u8WriteSize;
+
+		leftFlashSpace -= u8WriteSize;
+
+		if(leftFlashSpace <= WORD_SIZE)
+		{
+			EEPROMProgram(&stopWord, currFlashAddr, WORD_SIZE);
+			break;
+		}
+
+		if(EEPROMProgram(pmBuffer, currFlashAddr, u8WriteSize))
+			return false;
+
+		currFlashAddr += u8WriteSize;
+		nextInd--;
+	}
+
+	return true;
+}
+
+bool getNextPMLine(uint32_t* timestamp, LogLevel* logLevel, LogComponent* component,
+					void** strPtr, uint8_t* argsNum, void* argTypes, void* argsBufferPtr,
+					uint8_t* argsBuffSize)
+{
+	const uint16_t MAX_ELEM_BUFF_SIZE = 30;
+	uint16_t WORD_SIZE = sizeof(uint32_t);
+	const uint8_t MAX_ARGS_BUFFER_SIZE = 64 * 10;
+	uint32_t pmBuffer[MAX_ELEM_BUFF_SIZE];
+
+	memset(pmBuffer, 0, MAX_ELEM_BUFF_SIZE * WORD_SIZE);
+
+	static uint32_t blockSize = 0;
+	static int32_t leftFlashSpace = 0;
+	static uint32_t currFlashAddr = 0;
+	static isStart = true;
+
+	blockSize = EEPROMSizeGet() / EEPROMBlockCountGet();
+
+	uint8_t* pmBufferPtr = (uint8_t*)pmBuffer;
+
+	if(isStart)
+	{
+		currFlashAddr = EEPROMAddrFromBlock(PM_BEG_BLOCK);
+		leftFlashSpace = EEPROMSizeGet() - blockSize * PM_BEG_BLOCK;
+		isStart = false;
+	}
+
+	while(true)
+	{
+		EEPROMRead(pmBufferPtr, currFlashAddr, WORD_SIZE);
+		leftFlashSpace -= WORD_SIZE;
+		currFlashAddr += WORD_SIZE;
+
+		if(*pmBufferPtr == PM_ELEM_BEG)
+			break;
+
+		if(*pmBufferPtr == PM_STOP_MARK || leftFlashSpace <= WORD_SIZE)
+		{
+			isStart = true;
+			return false;
+		}
+	}
+
+	pmBufferPtr++;
+
+	uint8_t elemLen = *pmBufferPtr++;
+
+	if(elemLen - WORD_SIZE > leftFlashSpace)
+	{
+		isStart = true;
+		return false;
+	}
+
+	*logLevel = *pmBufferPtr++;
+	*component = *pmBufferPtr++;
+
+	EEPROMRead(pmBufferPtr, currFlashAddr, elemLen - WORD_SIZE);
+	leftFlashSpace -= elemLen - WORD_SIZE;
+	currFlashAddr += elemLen - WORD_SIZE;
+
+	*timestamp = *((uint32_t*)pmBufferPtr);
+	pmBufferPtr += WORD_SIZE;
+	*strPtr = *((uint32_t*)pmBufferPtr);
+	pmBufferPtr += WORD_SIZE;
+	*argsNum = *pmBufferPtr++;
+
+	if(*argsNum > MAX_ARGS_NUM)
+		*argsNum = MAX_ARGS_NUM;
+
+	memcpy(argTypes, pmBufferPtr, *argsNum);
+	pmBufferPtr += *argsNum;
+
+	*argsBuffSize = *pmBufferPtr++;
+
+	if(*argsBuffSize > MAX_ARGS_BUFFER_SIZE)
+		*argsBuffSize = MAX_ARGS_BUFFER_SIZE;
+
+	memcpy(argsBufferPtr, pmBufferPtr, *argsBuffSize);
+	pmBufferPtr += *argsBuffSize;
+
+
+	return true;
 }
 
