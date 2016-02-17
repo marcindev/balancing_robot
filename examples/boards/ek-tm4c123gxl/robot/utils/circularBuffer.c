@@ -28,23 +28,25 @@ bool CB_pushData(CircularBuffer* circularBuffer, const void* data, uint32_t size
 
 	uint8_t* u8Data = (uint8_t*) data;
 
-	uint8_t* prevHead = circularBuffer->head;
+	uint8_t* tempHead = circularBuffer->head;
 
 	for(uint32_t i = 0; i < size; ++i)
 	{
-		*circularBuffer->head = *u8Data++;
+		*tempHead = *u8Data++;
 
-		if((circularBuffer->head + 1) == circularBuffer->bufferEnd)
-			circularBuffer->head = circularBuffer->bufferStart;
+		if((tempHead + 1) == circularBuffer->bufferEnd)
+			tempHead = circularBuffer->bufferStart;
 		else
-			circularBuffer->head++;
+			tempHead++;
 
-		if(circularBuffer->head == circularBuffer->tail)
+		if(tempHead == circularBuffer->tail)
 		{
-			circularBuffer->head = prevHead;
 			return false;
 		}
+
 	}
+
+	circularBuffer->head = tempHead;
 
 	return true;
 }
@@ -60,6 +62,7 @@ uint32_t CB_popData(CircularBuffer* circularBuffer, void* data, uint32_t size)
 			return popCnt;
 
 		*u8Data++ = *circularBuffer->tail;
+
 		circularBuffer->tail++;
 
 		if(circularBuffer->tail == circularBuffer->bufferEnd)
@@ -77,6 +80,6 @@ uint32_t CB_getAvailableSpace(CircularBuffer* circularBuffer)
 	if(circularBuffer->head < circularBuffer->tail)
 		return circularBuffer->tail - 1 - circularBuffer->head;
 
-	return ((circularBuffer->bufferEnd - 1) - circularBuffer->head)
-			+ (circularBuffer->tail - circularBuffer->bufferStart);
+	return (circularBuffer->bufferEnd - circularBuffer->head)
+			+ (circularBuffer->tail - 1 - circularBuffer->bufferStart);
 }
