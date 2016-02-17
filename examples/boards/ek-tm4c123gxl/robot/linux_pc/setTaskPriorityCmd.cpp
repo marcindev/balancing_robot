@@ -22,20 +22,30 @@ void SetTaskPriorityCmd::run()
 {
 	if(args.empty())
 	{
-		cout << "Usage: setTaskPriority <taskId> <priority>" << endl;
+		cout << "Usage: setTaskPriority <isMaster> <taskId> <priority>" << endl;
 		return;
 	}
 
-	if(args.size() != 2)
+	if(args.size() != 3)
 	{
-		cout << "Incorrect number of parameters required 2" << endl;
+		cout << "Incorrect number of parameters required 3" << endl;
 		return;
 	}
+
+	std::string argument(args.front());
+
+	if(argument != "0" && argument != "1")
+	{
+		cout << "GetTaskListCmd: improper master/slave parameter" << endl;
+		return;
+	}
+
+	bool isMaster = (argument == "0") ? false : true;
 
 	stringstream ss;
 	unsigned taskId, priority;
 
-	ss << args[0];
+	ss << args[1];
 	ss >> taskId;
 
 	if(ss.good())
@@ -47,7 +57,7 @@ void SetTaskPriorityCmd::run()
 	ss.str("");
 	ss.clear();
 
-	ss << args[1];
+	ss << args[2];
 	ss >> priority;
 
 	if(ss.good())
@@ -59,6 +69,7 @@ void SetTaskPriorityCmd::run()
 
 	SetTaskPriorityMsgReq* request = new SetTaskPriorityMsgReq;
 	*request = INIT_SET_TASK_PRIORITY_MSG_REQ;
+	request->isMaster = isMaster;
 	request->taskId = taskId;
 	request->priority = priority;
 
