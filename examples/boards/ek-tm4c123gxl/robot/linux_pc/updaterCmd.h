@@ -74,7 +74,16 @@ protected:
 	void run();
 private:
 
-	bool handleResponse(UpdaterCmdMsgRsp* response);
+	template <typename T>
+	bool handleResponse(T* response)
+	{
+		Status status = u8ToStatus(response->status);
+		statusHandlers[status]->execute();
+
+		return isGoOn;
+	}
+
+	void handleOptions();
 	uint8_t calcChecksum(uint8_t* data, uint32_t size);
 	uint32_t reflect(uint32_t ui32Ref, uint8_t ui8Ch);
 	void initCRC32Table();
@@ -82,6 +91,7 @@ private:
 	bool openFile();
 	Status u8ToStatus(uint8_t u8Status);
 	uint32_t fetchNextWord();
+	void fetchNext32Words(uint32_t* data);
 	void setToPrevWord();
 	bool buildBinary();
 	bool prepareLinkerFile(bool& isFileChanged);
@@ -99,6 +109,7 @@ private:
 	uint32_t packetsCnt = 0;
 	uint32_t totalPackets = 0;
 	bool isAwaitingReset = false;
+	bool isSend32Words = true;
 	Partitions currentPartition = Partitions::PARTITION_1;
 	Cmd lastCommand = Cmd::GET_AVAIL_PARTITION_UPD_CMD;
 
@@ -109,7 +120,7 @@ private:
 		virtual ~UpdaterCommand() { }
 		virtual void execute();
 	protected:
-		virtual void fillMessage(UpdaterCmdMsgReq* request) = 0;
+		virtual void fillMessage(std::shared_ptr<UpdaterCmdMsgReq> request) = 0;
 		Cmd command = Cmd::START_UPDATE_UPD_CMD;
 		UpdaterCmd& owner;
 	private:
@@ -121,7 +132,7 @@ private:
 	public:
 		StartUpdateCmd(UpdaterCmd& _owner);
 	protected:
-		virtual void fillMessage(UpdaterCmdMsgReq* request);
+		virtual void fillMessage(std::shared_ptr<UpdaterCmdMsgReq> request);
 	};
 
 	class EraseMemoryCmd : public UpdaterCommand
@@ -129,15 +140,16 @@ private:
 	public:
 		EraseMemoryCmd(UpdaterCmd& _owner);
 	protected:
-		virtual void fillMessage(UpdaterCmdMsgReq* request);
+		virtual void fillMessage(std::shared_ptr<UpdaterCmdMsgReq> request);
 	};
 
 	class SendDataCmd : public UpdaterCommand
 	{
 	public:
 		SendDataCmd(UpdaterCmd& _owner);
+		void execute();
 	protected:
-		virtual void fillMessage(UpdaterCmdMsgReq* request);
+		virtual void fillMessage(std::shared_ptr<UpdaterCmdMsgReq> request);
 	};
 
 	class FinishDataTransferCmd : public UpdaterCommand
@@ -145,7 +157,7 @@ private:
 	public:
 		FinishDataTransferCmd(UpdaterCmd& _owner);
 	protected:
-		virtual void fillMessage(UpdaterCmdMsgReq* request);
+		virtual void fillMessage(std::shared_ptr<UpdaterCmdMsgReq> request);
 	};
 
 	class FreeResourcesCmd : public UpdaterCommand
@@ -153,7 +165,7 @@ private:
 	public:
 		FreeResourcesCmd(UpdaterCmd& _owner);
 	protected:
-		virtual void fillMessage(UpdaterCmdMsgReq* request);
+		virtual void fillMessage(std::shared_ptr<UpdaterCmdMsgReq> request);
 	};
 
 	class ResetRobotCmd : public UpdaterCommand
@@ -161,7 +173,7 @@ private:
 	public:
 		ResetRobotCmd(UpdaterCmd& _owner);
 	protected:
-		virtual void fillMessage(UpdaterCmdMsgReq* request);
+		virtual void fillMessage(std::shared_ptr<UpdaterCmdMsgReq> request);
 	};
 
 	class AfterUpdCheckCmd : public UpdaterCommand
@@ -169,7 +181,7 @@ private:
 	public:
 		AfterUpdCheckCmd(UpdaterCmd& _owner);
 	protected:
-		virtual void fillMessage(UpdaterCmdMsgReq* request);
+		virtual void fillMessage(std::shared_ptr<UpdaterCmdMsgReq> request);
 	};
 
 	class MarkPartitionAsGoodCmd : public UpdaterCommand
@@ -177,7 +189,7 @@ private:
 	public:
 		MarkPartitionAsGoodCmd(UpdaterCmd& _owner);
 	protected:
-		virtual void fillMessage(UpdaterCmdMsgReq* request);
+		virtual void fillMessage(std::shared_ptr<UpdaterCmdMsgReq> request);
 	};
 
 	class GetAvailPartitionCmd : public UpdaterCommand
@@ -185,7 +197,7 @@ private:
 	public:
 		GetAvailPartitionCmd(UpdaterCmd& _owner);
 	protected:
-		virtual void fillMessage(UpdaterCmdMsgReq* request);
+		virtual void fillMessage(std::shared_ptr<UpdaterCmdMsgReq> request);
 	};
 
 	class StatusHandler

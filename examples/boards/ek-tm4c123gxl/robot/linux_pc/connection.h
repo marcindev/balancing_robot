@@ -29,8 +29,8 @@ public:
 	bool establishConnection();
 	void disconnect();
 	bool resetConnection();
-	void send(const Message& msg);
-	bool receive(Message& msg);
+	void send(std::shared_ptr<BaseMessage> msg);
+	bool receive(std::shared_ptr<BaseMessage>& msg);
 	bool isConnected() { return _isConnected; }
 private:
 	void run();
@@ -44,8 +44,8 @@ private:
 	bool receiveTcpMsg();
 	void sendTcpMsg(void* msg);
 
-	std::queue<Message> txMessages;
-	std::queue<Message> rxMessages;
+	std::queue<std::shared_ptr<BaseMessage>> txMessages;
+	std::queue<std::shared_ptr<BaseMessage>> rxMessages;
 
 	std::shared_ptr<std::thread> _thread;
 	std::mutex txMutex, rxMutex;

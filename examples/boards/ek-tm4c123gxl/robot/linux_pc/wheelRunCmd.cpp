@@ -72,16 +72,13 @@ void WheelRunCmd::run()
 	}
 
 
-	WheelRunTcpMsgReq* request = new WheelRunTcpMsgReq;
+	shared_ptr<WheelRunTcpMsgReq> request(new WheelRunTcpMsgReq);
 	*request = INIT_WHEEL_RUN_TCP_MSG_REQ;
 	request->wheelId = wheelId;
 	request->direction = direction;
 	request->rotations = rotations;
 
-	shared_ptr<void> payload(request);
-
-	Message msg(payload);
-	connection->send(msg);
+	connection->send(shared_ptr<BaseMessage>(new Message<WheelRunTcpMsgReq>(request)));
 
 	cout << "Wheel run request has been sent" << endl;
 }

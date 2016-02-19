@@ -67,16 +67,13 @@ void SetTaskPriorityCmd::run()
 	}
 
 
-	SetTaskPriorityMsgReq* request = new SetTaskPriorityMsgReq;
+	shared_ptr<SetTaskPriorityMsgReq> request(new SetTaskPriorityMsgReq);
 	*request = INIT_SET_TASK_PRIORITY_MSG_REQ;
 	request->isMaster = isMaster;
 	request->taskId = taskId;
 	request->priority = priority;
 
-	shared_ptr<void> payload(request);
-
-	Message msg(payload);
-	connection->send(msg);
+	connection->send(shared_ptr<BaseMessage>(new Message<SetTaskPriorityMsgReq>(request)));
 
 	cout << "Priority " << priority
 		 << " for task no. " << taskId

@@ -36,6 +36,7 @@ int main(int argc, char** argv)
 
 	CommandFactory commFactory(connection);
     char* input;
+    using_history();
     rl_bind_key('\t', rl_complete);
 	read_history(histFileName);
 
@@ -65,6 +66,7 @@ int main(int argc, char** argv)
 		{
 			connection->disconnect();
 			connection->wait();
+			free(input);
 			break;
 		}
 

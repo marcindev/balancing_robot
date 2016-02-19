@@ -36,20 +36,18 @@ void GetFreeHeapSizeCommand::run()
 
 	bool isMaster = (argument == "0") ? false : true;
 
-	GetFreeHeapSizeReq* request = new GetFreeHeapSizeReq;
+	shared_ptr<GetFreeHeapSizeReq> request(new GetFreeHeapSizeReq);
 	*request = INIT_GET_FREE_HEAP_SIZE_MSG_REQ;
 	request->isMaster = isMaster;
-	shared_ptr<void> payload(request);
 
-	Message msg(payload);
-	connection->send(msg);
+	connection->send(shared_ptr<BaseMessage>(new Message<GetFreeHeapSizeReq>(request)));
 
 	while(connection->isConnected())
 	{
-		Message msg;
+		shared_ptr<BaseMessage> msg;
 		if(connection->receive(msg))
 		{
-			uint8_t msgId = *(reinterpret_cast<uint8_t*>(msg.getRawPayload()));
+			uint8_t msgId = msg->getMsgId();
 
 			if(msgId != GET_FREE_HEAP_SIZE_MSG_RSP)
 			{
@@ -57,7 +55,7 @@ void GetFreeHeapSizeCommand::run()
 			}
 			else
 			{
-				handleResponse(reinterpret_cast<GetFreeHeapSizeRsp*>(msg.getRawPayload()));
+				handleResponse(reinterpret_cast<GetFreeHeapSizeRsp*>(msg->getRawPayload()));
 				return;
 			}
 		}

@@ -58,14 +58,17 @@ UpdaterCmd::UpdaterCmd(shared_ptr<Connection> conn, const std::vector<std::strin
 	partitions[Partitions::PARTITION_2]->length = 0x40000 - 0x1E000;
 
 
+	handleOptions();
 }
 
 
 void UpdaterCmd::run()
 {
-	if(args.size() != 1)
+	if(args.size() < 1 || args.size() > 2)
 	{
-		cout << "Usage: update <master/slave>" << endl;
+		cout << "Usage: update <master/slave> [options]" << endl;
+		cout << "Options:" << endl;
+		cout << "--single_word, -sw   : sends data word by word instead of 32-word packets" << endl;
 		return;
 	}
 
@@ -86,29 +89,46 @@ void UpdaterCmd::run()
 
 	while(connection->isConnected())
 	{
-		Message msg;
+		shared_ptr<BaseMessage> msg;
 		if(connection->receive(msg))
 		{
-			uint8_t msgId = *(reinterpret_cast<uint8_t*>(msg.getRawPayload()));
+			uint8_t msgId = *(reinterpret_cast<uint8_t*>(msg->getRawPayload()));
 
-			if(msgId != UPDATER_CMD_MSG_RSP)
+			if(msgId == UPDATER_CMD_MSG_RSP)
+			{
+				if(!handleResponse(reinterpret_cast<UpdaterCmdMsgRsp*>(msg->getRawPayload())))
+					break;
+			}
+			else if(msgId == UPDATER_SEND_DATA_MSG_RSP)
+			{
+				if(!handleResponse(reinterpret_cast<UpdaterSendDataMsgRsp*>(msg->getRawPayload())))
+					break;
+			}
+			else
+			{
 				cout << "UpdaterCmd: unrecognized msg " << hex << static_cast<int>(msgId) << endl;
-
-			if(!handleResponse(reinterpret_cast<UpdaterCmdMsgRsp*>(msg.getRawPayload())))
-				break;
+			}
 		}
 
 	}
 
 }
 
-bool UpdaterCmd::handleResponse(UpdaterCmdMsgRsp* response)
+void UpdaterCmd::handleOptions()
 {
-	Status status = u8ToStatus(response->status);
-	statusHandlers[status]->execute();
+	for(const auto& arg : args)
+	{
+		if(arg[0] == '-')
+		{
+			if(arg == "--single_word" || arg == "-sw")
+			{
+				isSend32Words = false;
+			}
 
-	return isGoOn;
+		}
+	}
 }
+
 
 bool UpdaterCmd::openFile()
 {
@@ -136,9 +156,13 @@ bool UpdaterCmd::openFile()
 	binary.reserve(size);
 	binary.assign(istreambuf_iterator<char>(file), istreambuf_iterator<char>());
 
-	totalPackets = binary.size() / sizeof(uint32_t);
+	uint32_t packetSize = isSend32Words ? 32 * sizeof(uint32_t) : sizeof(uint32_t);
+	uint32_t binarySize = binary.size();
+	totalPackets =  binarySize / packetSize;
 
-	cout << "Buffer read. Size: " << binary.size() << " bytes" << endl;
+	if(binarySize % packetSize) totalPackets++;
+
+	cout << "Buffer read. Size: " << binarySize << " bytes" << endl;
 
 	return true;
 }
@@ -324,6 +348,29 @@ uint32_t UpdaterCmd::fetchNextWord()
 	return word.u32Word;
 }
 
+void UpdaterCmd::fetchNext32Words(uint32_t* data)
+{
+	const uint32_t BLOCK_SIZE = 1024;
+
+	uint32_t index = packetsCnt * BLOCK_SIZE;
+
+	uint8_t* u8Data = reinterpret_cast<uint8_t*>(data);
+
+	for(int j = 0; j != BLOCK_SIZE; ++j, ++index)
+	{
+		if(index >= binary.size())
+		{
+			u8Data[j] = 0xFF;
+			continue;
+		}
+
+		u8Data[j] = binary[index];
+	}
+
+	++packetsCnt;
+
+}
+
 void UpdaterCmd::setToPrevWord()
 {
 	--packetsCnt;
@@ -338,7 +385,7 @@ UpdaterCmd::UpdaterCommand::UpdaterCommand(UpdaterCmd& _owner) : owner(_owner)
 
 void UpdaterCmd::UpdaterCommand::execute()
 {
-	UpdaterCmdMsgReq* request = new UpdaterCmdMsgReq;
+	shared_ptr<UpdaterCmdMsgReq> request(new UpdaterCmdMsgReq);
 	*request = INIT_UPDATER_CMD_MSG_REQ;
 	request->isMaster = owner.isMaster;
 	request->command = commandToU8();
@@ -347,9 +394,7 @@ void UpdaterCmd::UpdaterCommand::execute()
 
 	fillMessage(request);
 
-	shared_ptr<void> payload(request);
-	Message msg(payload);
-	owner.connection->send(msg);
+	owner.connection->send(shared_ptr<BaseMessage>(new Message<UpdaterCmdMsgReq>(request)));
 }
 
 uint8_t UpdaterCmd::UpdaterCommand::commandToU8()
@@ -363,7 +408,7 @@ UpdaterCmd::StartUpdateCmd::StartUpdateCmd(UpdaterCmd& _owner) :
 	command = Cmd::START_UPDATE_UPD_CMD;
 }
 
-void UpdaterCmd::StartUpdateCmd::fillMessage(UpdaterCmdMsgReq* request)
+void UpdaterCmd::StartUpdateCmd::fillMessage(std::shared_ptr<UpdaterCmdMsgReq> request)
 {
 	uint32_t binarySize = owner.binary.size();
 	request->data1 =  binarySize;
@@ -386,7 +431,7 @@ UpdaterCmd::EraseMemoryCmd::EraseMemoryCmd(UpdaterCmd& _owner) :
 	command = Cmd::ERASE_MEMORY_UPD_CMD;
 }
 
-void UpdaterCmd::EraseMemoryCmd::fillMessage(UpdaterCmdMsgReq* request)
+void UpdaterCmd::EraseMemoryCmd::fillMessage(std::shared_ptr<UpdaterCmdMsgReq> request)
 {
 
 }
@@ -397,11 +442,33 @@ UpdaterCmd::SendDataCmd::SendDataCmd(UpdaterCmd& _owner) :
 	command = Cmd::SEND_DATA_UPD_CMD;
 }
 
-void UpdaterCmd::SendDataCmd::fillMessage(UpdaterCmdMsgReq* request)
+void UpdaterCmd::SendDataCmd::fillMessage(std::shared_ptr<UpdaterCmdMsgReq> request)
 {
 	request->data1 = owner.fetchNextWord();
 	request->data2 = owner.calcChecksum(reinterpret_cast<uint8_t*>(&request->data1),sizeof(uint32_t));
 	request->data3 = owner.packetsCnt - 1;
+}
+
+void UpdaterCmd::SendDataCmd::execute()
+{
+	if(owner.isSend32Words)
+	{
+		shared_ptr<UpdaterSendDataMsgReq> request(new UpdaterSendDataMsgReq);
+		*request = INIT_UPDATER_SEND_DATA_MSG_REQ;
+		request->isMaster = owner.isMaster;
+		owner.fetchNext32Words(request->data);
+		cout << "void UpdaterCmd::SendDataCmd::execute()" << endl;
+		request->checksum = owner.calcChecksum(reinterpret_cast<uint8_t*>(request->data),1024);
+		request->partNum = owner.packetsCnt - 1;
+		owner.lastCommand = command;
+
+		owner.connection->send(shared_ptr<BaseMessage>(new Message<UpdaterSendDataMsgReq>(request)));
+	}
+	else
+	{
+		UpdaterCommand::execute();
+	}
+
 }
 
 UpdaterCmd::FinishDataTransferCmd::FinishDataTransferCmd(UpdaterCmd& _owner) :
@@ -411,7 +478,7 @@ UpdaterCmd::FinishDataTransferCmd::FinishDataTransferCmd(UpdaterCmd& _owner) :
 }
 
 
-void UpdaterCmd::FinishDataTransferCmd::fillMessage(UpdaterCmdMsgReq* request)
+void UpdaterCmd::FinishDataTransferCmd::fillMessage(std::shared_ptr<UpdaterCmdMsgReq> request)
 {
 
 }
@@ -423,7 +490,7 @@ UpdaterCmd::FreeResourcesCmd::FreeResourcesCmd(UpdaterCmd& _owner) :
 }
 
 
-void UpdaterCmd::FreeResourcesCmd::fillMessage(UpdaterCmdMsgReq* request)
+void UpdaterCmd::FreeResourcesCmd::fillMessage(std::shared_ptr<UpdaterCmdMsgReq> request)
 {
 
 }
@@ -435,7 +502,7 @@ UpdaterCmd::ResetRobotCmd::ResetRobotCmd(UpdaterCmd& _owner) :
 }
 
 
-void UpdaterCmd::ResetRobotCmd::fillMessage(UpdaterCmdMsgReq* request)
+void UpdaterCmd::ResetRobotCmd::fillMessage(std::shared_ptr<UpdaterCmdMsgReq> request)
 {
 
 }
@@ -446,7 +513,7 @@ UpdaterCmd::AfterUpdCheckCmd::AfterUpdCheckCmd(UpdaterCmd& _owner) :
 	command = Cmd::AFTER_UPD_CHECK_UPD_CMD;
 }
 
-void UpdaterCmd::AfterUpdCheckCmd::fillMessage(UpdaterCmdMsgReq* request)
+void UpdaterCmd::AfterUpdCheckCmd::fillMessage(std::shared_ptr<UpdaterCmdMsgReq> request)
 {
 
 }
@@ -457,7 +524,7 @@ UpdaterCmd::MarkPartitionAsGoodCmd::MarkPartitionAsGoodCmd(UpdaterCmd& _owner) :
 	command = Cmd::MARK_PARTITION_AS_GOOD_UPD_CMD;
 }
 
-void UpdaterCmd::MarkPartitionAsGoodCmd::fillMessage(UpdaterCmdMsgReq* request)
+void UpdaterCmd::MarkPartitionAsGoodCmd::fillMessage(std::shared_ptr<UpdaterCmdMsgReq> request)
 {
 
 }
@@ -468,7 +535,7 @@ UpdaterCmd::GetAvailPartitionCmd::GetAvailPartitionCmd(UpdaterCmd& _owner) :
 	command = Cmd::GET_AVAIL_PARTITION_UPD_CMD;
 }
 
-void UpdaterCmd::GetAvailPartitionCmd::fillMessage(UpdaterCmdMsgReq* request)
+void UpdaterCmd::GetAvailPartitionCmd::fillMessage(std::shared_ptr<UpdaterCmdMsgReq> request)
 {
 
 }

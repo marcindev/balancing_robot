@@ -57,15 +57,12 @@ void SetWheelSpeedCmd::run()
 	}
 
 
-	WheelSetSpeedTcpMsgReq* request = new WheelSetSpeedTcpMsgReq;
+	shared_ptr<WheelSetSpeedTcpMsgReq> request(new WheelSetSpeedTcpMsgReq);
 	*request = INIT_WHEEL_SET_SPEED_TCP_MSG_REQ;
 	request->wheelId = wheelId;
 	request->speed = speed;
 
-	shared_ptr<void> payload(request);
-
-	Message msg(payload);
-	connection->send(msg);
+	connection->send(shared_ptr<BaseMessage>(new Message<WheelSetSpeedTcpMsgReq>(request)));
 
 	cout << "Speed has been set" << endl;
 }

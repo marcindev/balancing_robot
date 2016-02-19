@@ -38,18 +38,16 @@ void GetPostmortemCmd::run()
 
 	bool isMaster = (argument == "0") ? false : true;
 
-	GetPostmortemMsgReq* request = new GetPostmortemMsgReq;
+	shared_ptr<GetPostmortemMsgReq> request(new GetPostmortemMsgReq);
 	*request = INIT_GET_POSTMORTEM_MSG_REQ;
 	request->isMaster = isMaster;
-	shared_ptr<void> payload(request);
 
-	Message msg(payload);
-	connection->send(msg);
+	connection->send(shared_ptr<BaseMessage>(new Message<GetPostmortemMsgReq>(request)));
 
 	time_t startTime, currTime;
 	time(&startTime);
 
-	vector<Message> msgVec;
+	vector<shared_ptr<BaseMessage>> msgVec;
 //	////////////////
 //	GetLogsMsgRsp getLogsRsp = INIT_GET_LOGS_MSG_RSP;
 //	getLogsRsp.totalLineNum = 30;
@@ -58,11 +56,11 @@ void GetPostmortemCmd::run()
 
 	while(connection->isConnected())
 	{
-		Message msg;
+		shared_ptr<BaseMessage> msg;
 		if(connection->receive(msg))
 		{
 
-			uint8_t msgId = *(reinterpret_cast<uint8_t*>(msg.getRawPayload()));
+			uint8_t msgId = msg->getMsgId();
 
 			if(msgId != GET_POSTMORTEM_MSG_RSP)
 			{
@@ -75,8 +73,8 @@ void GetPostmortemCmd::run()
 
 //			if(!handleResponse(reinterpret_cast<GetPostmortemMsgRsp*>(msg.getRawPayload()))
 //				|| timeDiff > CONN_TIMEOUT)
-			uint8_t ctrlByte = reinterpret_cast<GetPostmortemMsgRsp*>(msg.getRawPayload())->ctrlByte;
-			if(ctrlByte == EMPTY || ctrlByte == LAST)// || timeDiff > CONN_TIMEOUT)
+			uint8_t ctrlByte = reinterpret_cast<GetPostmortemMsgRsp*>(msg->getRawPayload())->ctrlByte;
+			if(ctrlByte == EMPTY || ctrlByte == LAST || timeDiff > CONN_TIMEOUT)
 				break;
 
 			msgVec.push_back(msg);
@@ -114,9 +112,9 @@ void GetPostmortemCmd::run()
 	}
 
 	sort(msgVec.begin(), msgVec.end(),
-			[](Message& msg1, Message& msg2)->bool
-			{return reinterpret_cast<GetPostmortemMsgRsp*>(msg1.getRawPayload())->lineNum
-			> reinterpret_cast<GetPostmortemMsgRsp*>(msg2.getRawPayload())->lineNum;});
+			[](shared_ptr<BaseMessage> msg1, shared_ptr<BaseMessage> msg2)->bool
+			{return reinterpret_cast<GetPostmortemMsgRsp*>(msg1->getRawPayload())->lineNum
+			> reinterpret_cast<GetPostmortemMsgRsp*>(msg2->getRawPayload())->lineNum;});
 
 	GetLogsMsgRsp getLogsRsp = INIT_GET_LOGS_MSG_RSP;
 	uint16_t lineNum = 1;
@@ -125,7 +123,7 @@ void GetPostmortemCmd::run()
 
 	for(auto& msg : msgVec)
 	{
-		GetPostmortemMsgRsp* pmResponse = reinterpret_cast<GetPostmortemMsgRsp*>(msg.getRawPayload());
+		GetPostmortemMsgRsp* pmResponse = reinterpret_cast<GetPostmortemMsgRsp*>(msg->getRawPayload());
 
 		getLogsRsp.lineNum = lineNum;
 		getLogsRsp.logLevel = pmResponse->logLevel;

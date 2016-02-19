@@ -41,25 +41,23 @@ void GetTaskListCmd::run()
 
 	bool isMaster = (argument == "0") ? false : true;
 
-	GetTaskListReq* request = new GetTaskListReq;
+	shared_ptr<GetTaskListReq> request(new GetTaskListReq);
 	*request = INIT_GET_TASK_LIST_MSG_REQ;
 	request->isMaster = isMaster;
-	shared_ptr<void> payload(request);
 
-	Message msg(payload);
-	connection->send(msg);
+	connection->send(shared_ptr<BaseMessage>(new Message<GetTaskListReq>(request)));
 
 	while(connection->isConnected())
 	{
-		Message msg;
+		shared_ptr<BaseMessage> msg;
 		if(connection->receive(msg))
 		{
-			uint8_t msgId = *(reinterpret_cast<uint8_t*>(msg.getRawPayload()));
+			uint8_t msgId = msg->getMsgId();
 
 			if(msgId != GET_TASK_LIST_MSG_RSP)
 				cout << "GetTaskListCmd: unrecognized msg " << hex << static_cast<int>(msgId) << endl;
 
-			if(!handleResponse(reinterpret_cast<GetTaskListRsp*>(msg.getRawPayload())))
+			if(!handleResponse(reinterpret_cast<GetTaskListRsp*>(msg->getRawPayload())))
 				break;
 		}
 

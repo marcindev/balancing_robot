@@ -3,17 +3,30 @@
 
 #include <memory>
 
-class Message
+class BaseMessage
 {
 public:
-	Message();
-	Message(std::shared_ptr<void> _payload);
+	static std::shared_ptr<BaseMessage> getMessageFromPayload(unsigned char* data);
+	BaseMessage() { }
+	virtual ~BaseMessage() { }
+	virtual size_t getSize() = 0;
+	virtual void* getRawPayload() = 0;
+	virtual unsigned char getMsgId() = 0;
+};
 
-	size_t getSize();
-	std::shared_ptr<void> getPayload();
-	void* getRawPayload();
+template <typename T>
+class Message : public BaseMessage
+{
+public:
+	Message() { }
+	Message(std::shared_ptr<T> _payload) : payload(_payload) { }
+
+	size_t getSize() { return getMsgSize(payload.get()); }
+	std::shared_ptr<T> getPayload() { return payload; }
+	void* getRawPayload() { return reinterpret_cast<void*>(payload.get()); }
+	unsigned char getMsgId() { return *(reinterpret_cast<unsigned char*>(payload.get())); }
 private:
-	std::shared_ptr<void> payload;
+	std::shared_ptr<T> payload;
 };
 
 

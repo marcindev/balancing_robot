@@ -169,13 +169,13 @@ void Connection::connectionLost()
 	cout << "Connection lost!" << endl;
 }
 
-void Connection::send(const Message& msg)
+void Connection::send(std::shared_ptr<BaseMessage> msg)
 {
 	lock_guard<mutex> txLock(txMutex);
 	txMessages.push(msg);
 }
 
-bool Connection::receive(Message& msg)
+bool Connection::receive(shared_ptr<BaseMessage>& msg)
 {
 	lock_guard<mutex> rxLock(rxMutex);
 
@@ -197,13 +197,10 @@ void Connection::sendHandShake()
 	if(difftime(currTime, sendTime) <= CONN_HANDSHAKE_PERIOD)
 		return;
 
-	HandshakeMsgReq* handShakeReq = new HandshakeMsgReq;
+	shared_ptr<HandshakeMsgReq> handShakeReq(new HandshakeMsgReq);
 	*handShakeReq = INIT_HANDSHAKE_MSG_REQ;
-	shared_ptr<void> payload(handShakeReq);
 
-	Message msg(payload);
-
-	send(msg);
+	send(shared_ptr<BaseMessage>(new Message<HandshakeMsgReq>(handShakeReq)));
 
 	time(&sendTime);
 }
@@ -223,7 +220,7 @@ bool Connection::receiveHandShake()
 
 bool Connection::sendNextMsg()
 {
-	Message msg;
+	shared_ptr<BaseMessage> msg;
 
 	{
 		lock_guard<mutex> txLock(txMutex);
@@ -234,7 +231,7 @@ bool Connection::sendNextMsg()
 		txMessages.pop();
 	}
 
-	sendTcpMsg(msg.getRawPayload());
+	sendTcpMsg(msg->getRawPayload());
 
 	return true;
 }
@@ -246,10 +243,7 @@ bool Connection::receiveNextMsg()
 		if(receiveHandShake())
 			return false;
 
-		size_t payloadSize = getMsgSize(&buffer[0]);
-		shared_ptr<void> payload(new char[payloadSize]);
-		memcpy(payload.get(), &buffer[0], payloadSize);
-		Message msg(payload);
+		shared_ptr<BaseMessage> msg(BaseMessage::getMessageFromPayload(reinterpret_cast<unsigned char*>(buffer)));
 
 		{
 			lock_guard<mutex> rxLock(rxMutex);

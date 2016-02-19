@@ -38,13 +38,11 @@ void GetLogsCommand::run()
 
 	bool isMaster = (argument == "0") ? false : true;
 
-	GetLogsMsgReq* getLogsMsgReq = new GetLogsMsgReq;
+	shared_ptr<GetLogsMsgReq> getLogsMsgReq(new GetLogsMsgReq);
 	*getLogsMsgReq = INIT_GET_LOGS_MSG_REQ;
 	getLogsMsgReq->isMaster = isMaster;
-	shared_ptr<void> payload(getLogsMsgReq);
 
-	Message msg(payload);
-	connection->send(msg);
+	connection->send(shared_ptr<BaseMessage>(new Message<GetLogsMsgReq>(getLogsMsgReq)));
 
 	time_t startTime, currTime;
 	time(&startTime);
@@ -57,15 +55,15 @@ void GetLogsCommand::run()
 		if(timeDiff > CONN_TIMEOUT)
 			break;
 
-		Message msg;
+		shared_ptr<BaseMessage> msg;
 		if(connection->receive(msg))
 		{
-			uint8_t msgId = *(reinterpret_cast<uint8_t*>(msg.getRawPayload()));
+			uint8_t msgId = *(reinterpret_cast<uint8_t*>(msg->getRawPayload()));
 
 			if(msgId != GET_LOGS_MSG_RSP)
 				cout << "GetLogsCommand: unrecognized msg " << hex << static_cast<int>(msgId) << endl;
 
-			if(!handleGetLogsRsp(reinterpret_cast<GetLogsMsgRsp*>(msg.getRawPayload())))
+			if(!handleGetLogsRsp(reinterpret_cast<GetLogsMsgRsp*>(msg->getRawPayload())))
 				break;
 
 		}
