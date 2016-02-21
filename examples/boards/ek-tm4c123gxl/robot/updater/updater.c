@@ -12,6 +12,8 @@
 #define FLASH_SIZE			0x00040000
 #define BLOCK_SIZE			1024
 #define WORD_SIZE			4
+#define _128_BYTES			128
+#define BLOCK_PARTS_NUM		8
 
 #define CRC_DIVISOR			0x09
 
@@ -61,10 +63,13 @@ static bool g_updaterInitialized;
 static uint32_t* g_CRC32Table;
 static uint32_t g_receivedCrc;
 
+static uint8_t* g_flashBlockBuffer;
+
 static TimerHandle_t g_updateCheckTimer;
 
 static bool erasePartition();
 static bool programNextWord(uint32_t word);
+static bool programNextBlock(uint32_t* data);
 static uint8_t calcChecksum(uint8_t* data, uint32_t size);
 static uint32_t calculateCRC32(uint8_t *data, uint32_t size, uint32_t ui32CRC);
 static void initCRC32Table();
@@ -109,10 +114,10 @@ void initUpdater()
 				initUpdateCheckTimer();
 			}
 		}
-		else
-		{
-			*isChecked2 = false;
-		}
+//		else
+//		{
+//			*isChecked2 = false;
+//		}
 	}
 	else
 	{
@@ -126,10 +131,10 @@ void initUpdater()
 				initUpdateCheckTimer();
 			}
 		}
-		else
-		{
-			*isChecked1 = false;
-		}
+//		else
+//		{
+//			*isChecked1 = false;
+//		}
 	}
 
 	g_nextAddress = g_partitionAddress;
@@ -220,6 +225,8 @@ uint8_t handleStartUpdate(uint32_t binarySize, uint32_t crc, uint32_t checksum)
 
 	g_CRC32Table = (uint32_t*) pvPortMalloc(256 * sizeof(uint32_t));
 
+	g_flashBlockBuffer = (uint8_t*) pvPortMalloc(BLOCK_SIZE * sizeof(uint8_t));
+
 	initCRC32Table();
 
 	g_binarySize = binarySize;
@@ -260,6 +267,38 @@ uint8_t handleSendData(uint32_t data, uint32_t checksum, uint32_t partNum)
 	{
 		logger(Error, Log_Updater, "[handleSendData] error while writing to flash");
 		return PROGRAM_DATA_ERR_UPD_STAT;
+	}
+
+	++g_nextPartNum;
+
+	return PROGRAM_DATA_OK_UPD_STAT;
+}
+
+uint8_t handleSendDataBlock(uint8_t* data, uint8_t checksum, uint32_t partNum)
+{
+	if(partNum != g_nextPartNum)
+	{
+		logger(Error, Log_Updater, "[handleSendData] missing packet");
+		return MISSING_PACKET_UPD_STAT;
+	}
+
+	if(calcChecksum(data, _128_BYTES) != checksum)
+	{
+		logger(Error, Log_Updater, "[handleSendData] checksum doesn't match");
+		return DATA_CHECKSUM_NOK_UPD_STAT;
+	}
+
+	uint8_t* nextBufferAddr = g_flashBlockBuffer + (g_nextPartNum % BLOCK_PARTS_NUM) * _128_BYTES;
+
+	memcpy(nextBufferAddr, data, _128_BYTES);
+
+	if(!((g_nextPartNum + 1) % BLOCK_PARTS_NUM))
+	{
+		if(!programNextBlock(g_flashBlockBuffer))
+		{
+			logger(Error, Log_Updater, "[handleSendData] error while writing to flash");
+			return PROGRAM_DATA_ERR_UPD_STAT;
+		}
 	}
 
 	++g_nextPartNum;
@@ -410,6 +449,16 @@ bool programNextWord(uint32_t word)
 		return false;
 
 	g_nextAddress += WORD_SIZE;
+
+	return true;
+}
+
+bool programNextBlock(uint32_t* data)
+{
+	if(FlashProgram(data, g_nextAddress, BLOCK_SIZE))
+		return false;
+
+	g_nextAddress += BLOCK_SIZE;
 
 	return true;
 }

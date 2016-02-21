@@ -25,6 +25,7 @@ static MsgQueueId g_updaterMainQueue;
 
 static void handleStartTask(StartTaskMsgReq* request);
 static void handleUpdaterCmd(UpdaterCmdMsgReq* request);
+static void handleUpdaterSendData(UpdaterSendDataMsgReq* request);
 static void handleMessages(void* msg);
 
 static void updaterTask()
@@ -73,6 +74,9 @@ void handleMessages(void* msg)
 	case UPDATER_CMD_MSG_REQ:
 		handleUpdaterCmd((UpdaterCmdMsgReq*) msg);
 		break;
+	case UPDATER_SEND_DATA_MSG_REQ:
+		handleUpdaterSendData((UpdaterSendDataMsgReq*) msg);
+		break;
 	default:
 		logger(Warning, Log_Updater, "[handleMessages] Received not recognized message %d", msgId);
 		break;
@@ -100,6 +104,18 @@ void handleUpdaterCmd(UpdaterCmdMsgReq* request)
 
 	UpdaterCmdMsgRsp* response = (UpdaterCmdMsgRsp*) pvPortMalloc(sizeof(UpdaterCmdMsgRsp));
 	*response = INIT_UPDATER_CMD_MSG_RSP;
+	response->slot = request->slot;
+	response->status = status;
+	msgRespond(request->sender, &response, MSG_WAIT_LONG_TIME);
+	vPortFree(request);
+}
+
+void handleUpdaterSendData(UpdaterSendDataMsgReq* request)
+{
+	uint8_t status = handleSendDataBlock(request->data, request->checksum, request->partNum);
+
+	UpdaterSendDataMsgRsp* response = (UpdaterSendDataMsgRsp*) pvPortMalloc(sizeof(UpdaterSendDataMsgRsp));
+	*response = INIT_UPDATER_SEND_DATA_MSG_RSP;
 	response->slot = request->slot;
 	response->status = status;
 	msgRespond(request->sender, &response, MSG_WAIT_LONG_TIME);

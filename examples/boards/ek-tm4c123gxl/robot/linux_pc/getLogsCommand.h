@@ -14,7 +14,7 @@ public:
 
 protected:
 	void run();
-	bool handleGetLogsRsp(GetLogsMsgRsp* response);
+	bool handleGetLogsRsp(const GetLogsMsgRsp& response);
 	static bool sortLine(const std::string& str1, const std::string& str2);
 	std::vector<std::string> vecLogs;
 private:

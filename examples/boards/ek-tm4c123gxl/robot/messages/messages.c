@@ -57,6 +57,9 @@ const GetPostmortemMsgReq INIT_GET_POSTMORTEM_MSG_REQ = {GET_POSTMORTEM_MSG_REQ,
 const GetPostmortemMsgRsp INIT_GET_POSTMORTEM_MSG_RSP = {GET_POSTMORTEM_MSG_RSP, sizeof(GetPostmortemMsgRsp)};
 const UpdaterCmdMsgReq INIT_UPDATER_CMD_MSG_REQ = {UPDATER_CMD_MSG_REQ, sizeof(UpdaterCmdMsgReq)};
 const UpdaterCmdMsgRsp INIT_UPDATER_CMD_MSG_RSP = {UPDATER_CMD_MSG_RSP, sizeof(UpdaterCmdMsgRsp)};
+const UpdaterSendDataMsgReq INIT_UPDATER_SEND_DATA_MSG_REQ = {UPDATER_SEND_DATA_MSG_REQ, sizeof(UpdaterSendDataMsgReq)};
+const UpdaterSendDataMsgRsp INIT_UPDATER_SEND_DATA_MSG_RSP = {UPDATER_SEND_DATA_MSG_RSP, sizeof(UpdaterSendDataMsgRsp)};
+
 
 
 uint16_t getMsgSize(void* msg)

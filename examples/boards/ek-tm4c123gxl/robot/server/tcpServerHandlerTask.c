@@ -58,6 +58,7 @@ static void forwardMsgToTcp(void* msg);
 static void handleHandShake(uint16_t slot);
 static void handleGetPostmortem(uint16_t slot);
 static void handleUpdaterCmd(uint16_t slot);
+static void handleUpdaterSendData(uint16_t slot);
 
 
 
@@ -207,6 +208,9 @@ void handleMessages(uint16_t slot)
 		break;
 	case UPDATER_CMD_MSG_REQ:
 		handleUpdaterCmd(slot);
+		break;
+	case UPDATER_SEND_DATA_MSG_REQ:
+		handleUpdaterSendData(slot);
 		break;
 	default:
 		forwardMsgToSpi(slot);
@@ -457,6 +461,24 @@ void handleUpdaterCmd(uint16_t slot)
 //	logger(Info, Log_TcpServerHandler, "[handleUpdaterCmd] slot: %d, isMaster: %d", slot, msg->isMaster);
 
 	UpdaterCmdMsgReq* request = (UpdaterCmdMsgReq*) pvPortMalloc(sizeof(UpdaterCmdMsgReq));
+	*request = *msg;
+	request->slot = slot;
+
+	if(request->isMaster)
+	{
+		msgSend(g_serverHandlerQueues[slot], getQueueIdFromTaskId(Msg_ServerSpiComTaskID), &request, MSG_WAIT_LONG_TIME);
+		return;
+	}
+
+	msgSend(g_serverHandlerQueues[slot], getQueueIdFromTaskId(Msg_UpdaterTaskID), &request, MSG_WAIT_LONG_TIME);
+}
+
+void handleUpdaterSendData(uint16_t slot)
+{
+	UpdaterSendDataMsgReq* msg = &g_buffer[0];
+//	logger(Info, Log_TcpServerHandler, "[handleUpdaterCmd] slot: %d, isMaster: %d", slot, msg->isMaster);
+
+	UpdaterSendDataMsgReq* request = (UpdaterSendDataMsgReq*) pvPortMalloc(sizeof(UpdaterSendDataMsgReq));
 	*request = *msg;
 	request->slot = slot;
 

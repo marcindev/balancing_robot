@@ -75,9 +75,9 @@ protected:
 private:
 
 	template <typename T>
-	bool handleResponse(T* response)
+	bool handleResponse(const T& response)
 	{
-		Status status = u8ToStatus(response->status);
+		Status status = u8ToStatus(response.status);
 		statusHandlers[status]->execute();
 
 		return isGoOn;
@@ -91,7 +91,7 @@ private:
 	bool openFile();
 	Status u8ToStatus(uint8_t u8Status);
 	uint32_t fetchNextWord();
-	void fetchNext32Words(uint32_t* data);
+	void fetchNext128Bytes(uint8_t* data);
 	void setToPrevWord();
 	bool buildBinary();
 	bool prepareLinkerFile(bool& isFileChanged);

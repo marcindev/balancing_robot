@@ -17,7 +17,7 @@ public:
 
 protected:
 	void run();
-	bool handleResponse(GetPostmortemMsgRsp* response);
+	bool handleResponse(const GetPostmortemMsgRsp& response);
 private:
 
 	static const double CONN_TIMEOUT;

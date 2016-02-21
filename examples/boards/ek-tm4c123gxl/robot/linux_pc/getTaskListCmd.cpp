@@ -57,7 +57,7 @@ void GetTaskListCmd::run()
 			if(msgId != GET_TASK_LIST_MSG_RSP)
 				cout << "GetTaskListCmd: unrecognized msg " << hex << static_cast<int>(msgId) << endl;
 
-			if(!handleResponse(reinterpret_cast<GetTaskListRsp*>(msg->getRawPayload())))
+			if(!handleResponse(*Message<GetTaskListRsp>(*msg).getPayload()))
 				break;
 		}
 
@@ -65,13 +65,13 @@ void GetTaskListCmd::run()
 
 }
 
-bool GetTaskListCmd::handleResponse(GetTaskListRsp* response)
+bool GetTaskListCmd::handleResponse(const GetTaskListRsp& response)
 {
-	size_t totalParts = response->totalParts;
+	size_t totalParts = response.totalParts;
 
 	Part part;
-	part.id = response->partId;
-	part.str = reinterpret_cast<const char*>(response->strBuffer);
+	part.id = response.partId;
+	part.str = reinterpret_cast<const char*>(response.strBuffer);
 	parts.push_back(part);
 
 	if(parts.size() == totalParts)

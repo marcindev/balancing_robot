@@ -63,7 +63,7 @@ void GetLogsCommand::run()
 			if(msgId != GET_LOGS_MSG_RSP)
 				cout << "GetLogsCommand: unrecognized msg " << hex << static_cast<int>(msgId) << endl;
 
-			if(!handleGetLogsRsp(reinterpret_cast<GetLogsMsgRsp*>(msg->getRawPayload())))
+			if(!handleGetLogsRsp(*Message<GetLogsMsgRsp>(*msg).getPayload()))
 				break;
 
 		}
@@ -84,18 +84,18 @@ void GetLogsCommand::run()
 
 }
 
-bool GetLogsCommand::handleGetLogsRsp(GetLogsMsgRsp* response)
+bool GetLogsCommand::handleGetLogsRsp(const GetLogsMsgRsp& response)
 {
 	string line;
 	stringstream ss;
-	uint16_t totalLineNumber = response->totalLineNum;
-	ss << response->lineNum;
+	uint16_t totalLineNumber = response.totalLineNum;
+	ss << response.lineNum;
 	line += ss.str() + " ";
 	ss.str("");
 
-	line += millisToTimeString(response->timestamp) + " ";
+	line += millisToTimeString(response.timestamp) + " ";
 
-	switch(response->logLevel)
+	switch(response.logLevel)
 	{
 	case 0x01:
 		ss << "Info";
@@ -110,12 +110,12 @@ bool GetLogsCommand::handleGetLogsRsp(GetLogsMsgRsp* response)
 		ss << "Debug";
 		break;
 	default:
-	ss << "Unknown flag( " << static_cast<int>(response->logLevel) << " )";
+	ss << "Unknown flag( " << static_cast<int>(response.logLevel) << " )";
 	}
 	line += ss.str() + " ";
 	ss.str("");
 	ss.clear();
-	switch(response->component)
+	switch(response.component)
 	{
 	case 0:
 		ss << "Log_Robot";
@@ -157,21 +157,21 @@ bool GetLogsCommand::handleGetLogsRsp(GetLogsMsgRsp* response)
 		ss << "Log_Updater";
 		break;
 	default:
-	ss << "Unknown flag( " << static_cast<int>(response->component) << " )";
+	ss << "Unknown flag( " << static_cast<int>(response.component) << " )";
 	}
 	line += ss.str() + " ";
 	ss.str("");
 	ss.clear();
 
-	string strTemp(reinterpret_cast<char*>(response->strBuffer));
-	uint8_t* argsBuffer = reinterpret_cast<uint8_t*>(&response->argsBuffer[0]);
+	string strTemp(reinterpret_cast<const char*>(response.strBuffer));
+	const uint8_t* argsBuffer = reinterpret_cast<const uint8_t*>(&response.argsBuffer[0]);
 	const size_t FORMAT_BUFF_SIZE = 200;
 	char formatBuffer[FORMAT_BUFF_SIZE] = {0};
 	size_t charsNum = 0;
 
 	const uint8_t DOUBLE_ARG = 2;
 
-	uint8_t* argsBufferPtr = argsBuffer;
+	const uint8_t* argsBufferPtr = argsBuffer;
 
 	size_t pos = strTemp.find('%');
 
@@ -179,7 +179,7 @@ bool GetLogsCommand::handleGetLogsRsp(GetLogsMsgRsp* response)
 	{
 		line += strTemp.substr(0, pos);
 
-		for(int i = 0; i != response->argsNum; ++i)
+		for(int i = 0; i != response.argsNum; ++i)
 		{
 			size_t tempPos = strTemp.find('%', pos + 1);
 
@@ -187,7 +187,7 @@ bool GetLogsCommand::handleGetLogsRsp(GetLogsMsgRsp* response)
 			{
 				if(tempPos - pos)
 				{
-					if(response->argTypes[i] == DOUBLE_ARG)
+					if(response.argTypes[i] == DOUBLE_ARG)
 					{
 						charsNum  = snprintf(formatBuffer,
 										FORMAT_BUFF_SIZE,
@@ -214,7 +214,7 @@ bool GetLogsCommand::handleGetLogsRsp(GetLogsMsgRsp* response)
 			}
 			else
 			{
-				if(response->argTypes[i] == DOUBLE_ARG)
+				if(response.argTypes[i] == DOUBLE_ARG)
 				{
 					charsNum  = snprintf(formatBuffer,
 							FORMAT_BUFF_SIZE,

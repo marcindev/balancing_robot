@@ -15,7 +15,7 @@ public:
 protected:
 	void run();
 private:
-	void handleResponse(GetFreeHeapSizeRsp* response);
+	void handleResponse(const GetFreeHeapSizeRsp& response);
 	std::vector<std::string> vecLogs;
 };
 

@@ -22,7 +22,7 @@
 #include "MCP23017.h"
 #include "spiWrapper.h"
 
-#define SERVER_SPI_TASK_STACK_SIZE		300        // Stack size in words
+#define SERVER_SPI_TASK_STACK_SIZE		200        // Stack size in words
 #define SERVER_SPI_QUEUE_SIZE			5
 #define SERVER_SPI_ITEM_SIZE			4			// bytes
 
@@ -50,6 +50,8 @@ static void handleWheelRun(void* msg);
 static void handleSetTaskPriority(void* msg);
 static void handleUpdaterCmd(void* msg);
 static void handleUpdaterCmdRsp(void* msg);
+static void handleUpdaterSendData(void* msg);
+static void handleUpdaterSendDataRsp(void* msg);
 static void handleServerStartedNotif(void* msg);
 static void sendConnStatusNotif(void* msg);
 
@@ -161,6 +163,12 @@ void handleMessages(void* msg)
 		break;
 	case UPDATER_CMD_MSG_RSP:
 		handleUpdaterCmdRsp(msg);
+		break;
+	case UPDATER_SEND_DATA_MSG_REQ:
+		handleUpdaterSendData(msg);
+		break;
+	case UPDATER_SEND_DATA_MSG_RSP:
+		handleUpdaterSendDataRsp(msg);
 		break;
 
 #ifdef _ROBOT_MASTER_BOARD
@@ -369,6 +377,34 @@ void handleUpdaterCmdRsp(void* msg)
 	msg = NULL;
 #else
 	msgRespond(((UpdaterCmdMsgRsp*)msg)->sender, &msg, MSG_WAIT_LONG_TIME);
+#endif
+}
+
+void handleUpdaterSendData(void* msg)
+{
+#ifdef _ROBOT_MASTER_BOARD
+	g_updaterCmdSender = ((UpdaterSendDataMsgReq*) msg)->sender; // remember the sender for later response routing
+
+	msgSend(g_serverSpiComQueue, getQueueIdFromTaskId(Msg_UpdaterTaskID), &msg, MSG_WAIT_LONG_TIME);
+
+#else
+//	logger(Info, Log_ServerSpiCom, "[handleUpdaterSendData] forwarding msg to master; msgId: %d",*((uint8_t*)msg));
+	sendSpiMsg(msg);
+	vPortFree(msg);
+	msg = NULL;
+#endif
+
+}
+
+void handleUpdaterSendDataRsp(void* msg)
+{
+#ifdef _ROBOT_MASTER_BOARD
+	((UpdaterSendDataMsgRsp*)msg)->sender = g_updaterCmdSender;
+	sendSpiMsg(msg);
+	vPortFree(msg);
+	msg = NULL;
+#else
+	msgRespond(((UpdaterSendDataMsgRsp*)msg)->sender, &msg, MSG_WAIT_LONG_TIME);
 #endif
 }
 

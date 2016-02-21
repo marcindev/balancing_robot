@@ -134,7 +134,7 @@ void GetPostmortemCmd::run()
 		memcpy(getLogsRsp.argsBuffer, pmResponse->argsBuffer, sizeof(pmResponse->argsBuffer));
 		memcpy(getLogsRsp.strBuffer, pmResponse->strBuffer, sizeof(pmResponse->strBuffer));
 
-		handleGetLogsRsp(&getLogsRsp);
+		handleGetLogsRsp(getLogsRsp);
 
 		++lineNum;
 	}

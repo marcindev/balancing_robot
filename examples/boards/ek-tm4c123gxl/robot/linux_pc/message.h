@@ -20,6 +20,12 @@ class Message : public BaseMessage
 public:
 	Message() { }
 	Message(std::shared_ptr<T> _payload) : payload(_payload) { }
+	Message(BaseMessage& baseMsg)
+	{
+		payload = dynamic_cast<Message<T>&>(baseMsg).payload;
+	}
+
+	&operator T() { return *payload; }
 
 	size_t getSize() { return getMsgSize(payload.get()); }
 	std::shared_ptr<T> getPayload() { return payload; }

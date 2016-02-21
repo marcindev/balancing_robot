@@ -23,7 +23,7 @@ private:
 		std::string str;
 	};
 
-	bool handleResponse(GetTaskListRsp* response);
+	bool handleResponse(const GetTaskListRsp& response);
 	std::vector<Part> parts;
 
 };

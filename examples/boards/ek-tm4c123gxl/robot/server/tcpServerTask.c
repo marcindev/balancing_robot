@@ -18,7 +18,7 @@
 #include "tcpServer.h"
 #include "logger.h"
 
-#define TCP_SERVER_TASK_STACK_SIZE		400        // Stack size in words
+#define TCP_SERVER_TASK_STACK_SIZE		300        // Stack size in words
 #define TCP_SERVER_QUEUE_SIZE			5
 
 static MsgQueueId g_tcpServerMainQueue;

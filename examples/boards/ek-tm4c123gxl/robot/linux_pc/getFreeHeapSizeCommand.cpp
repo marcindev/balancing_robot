@@ -55,7 +55,7 @@ void GetFreeHeapSizeCommand::run()
 			}
 			else
 			{
-				handleResponse(reinterpret_cast<GetFreeHeapSizeRsp*>(msg->getRawPayload()));
+				handleResponse(*Message<GetFreeHeapSizeRsp>(*msg).getPayload());
 				return;
 			}
 		}
@@ -64,8 +64,8 @@ void GetFreeHeapSizeCommand::run()
 
 }
 
-void GetFreeHeapSizeCommand::handleResponse(GetFreeHeapSizeRsp* response)
+void GetFreeHeapSizeCommand::handleResponse(const GetFreeHeapSizeRsp& response)
 {
-	cout << "Free heap size: " << response->heapSize << " words." << endl;
+	cout << "Free heap size: " << response.heapSize << " words." << endl;
 }
 

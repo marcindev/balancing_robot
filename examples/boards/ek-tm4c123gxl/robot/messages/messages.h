@@ -75,6 +75,8 @@ uint16_t getMsgSize(void* msg);
 #define GET_POSTMORTEM_MSG_RSP							0x3D
 #define UPDATER_CMD_MSG_REQ								0x3E
 #define UPDATER_CMD_MSG_RSP								0x3F
+#define UPDATER_SEND_DATA_MSG_REQ						0x40
+#define UPDATER_SEND_DATA_MSG_RSP						0x41
 
 
 
@@ -672,6 +674,30 @@ typedef struct
 	uint8_t status;
 }__attribute__((packed, aligned(1))) UpdaterCmdMsgRsp;
 extern const UpdaterCmdMsgRsp INIT_UPDATER_CMD_MSG_RSP;
+
+typedef struct
+{
+	uint8_t msgId;
+	uint8_t msgLen;
+	uint8_t sender;
+	uint8_t slot;
+	uint8_t isMaster;
+	uint8_t checksum;
+	uint8_t data[128];
+	uint32_t partNum;
+}__attribute__((packed, aligned(1))) UpdaterSendDataMsgReq;
+extern const UpdaterSendDataMsgReq INIT_UPDATER_SEND_DATA_MSG_REQ;
+
+typedef struct
+{
+	uint8_t msgId;
+	uint8_t msgLen;
+	uint8_t sender;
+	uint8_t slot;
+	uint8_t isMaster;
+	uint8_t status;
+}__attribute__((packed, aligned(1))) UpdaterSendDataMsgRsp;
+extern const UpdaterSendDataMsgRsp INIT_UPDATER_SEND_DATA_MSG_RSP;
 
 
 #endif // MESSAGES_H

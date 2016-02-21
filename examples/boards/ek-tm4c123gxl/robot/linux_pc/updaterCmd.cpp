@@ -57,7 +57,6 @@ UpdaterCmd::UpdaterCmd(shared_ptr<Connection> conn, const std::vector<std::strin
 	partitions[Partitions::PARTITION_2]->address = 0x1E000;
 	partitions[Partitions::PARTITION_2]->length = 0x40000 - 0x1E000;
 
-
 	handleOptions();
 }
 
@@ -96,12 +95,12 @@ void UpdaterCmd::run()
 
 			if(msgId == UPDATER_CMD_MSG_RSP)
 			{
-				if(!handleResponse(reinterpret_cast<UpdaterCmdMsgRsp*>(msg->getRawPayload())))
+				if(!handleResponse(*Message<UpdaterCmdMsgRsp>(*msg).getPayload()))
 					break;
 			}
 			else if(msgId == UPDATER_SEND_DATA_MSG_RSP)
 			{
-				if(!handleResponse(reinterpret_cast<UpdaterSendDataMsgRsp*>(msg->getRawPayload())))
+				if(!handleResponse(*Message<UpdaterSendDataMsgRsp>(*msg).getPayload()))
 					break;
 			}
 			else
@@ -132,6 +131,9 @@ void UpdaterCmd::handleOptions()
 
 bool UpdaterCmd::openFile()
 {
+	const uint32_t _128_BYTES = 128,
+				   _1024_BYTES = 1024;
+
 	string binary_name = getConfValue(ConfOption::binary_name);
 
 	cout << "Opening file " << binary_name << endl;
@@ -156,11 +158,20 @@ bool UpdaterCmd::openFile()
 	binary.reserve(size);
 	binary.assign(istreambuf_iterator<char>(file), istreambuf_iterator<char>());
 
-	uint32_t packetSize = isSend32Words ? 32 * sizeof(uint32_t) : sizeof(uint32_t);
 	uint32_t binarySize = binary.size();
-	totalPackets =  binarySize / packetSize;
 
-	if(binarySize % packetSize) totalPackets++;
+
+	if(isSend32Words)
+	{
+		totalPackets = binarySize / _1024_BYTES;
+		if(binarySize % _1024_BYTES) totalPackets++;
+		totalPackets *= _1024_BYTES / _128_BYTES;
+	}
+	else
+	{
+		totalPackets =  binarySize / sizeof(uint32_t);
+		if(binarySize % sizeof(uint32_t)) totalPackets++;
+	}
 
 	cout << "Buffer read. Size: " << binarySize << " bytes" << endl;
 
@@ -348,22 +359,21 @@ uint32_t UpdaterCmd::fetchNextWord()
 	return word.u32Word;
 }
 
-void UpdaterCmd::fetchNext32Words(uint32_t* data)
+void UpdaterCmd::fetchNext128Bytes(uint8_t* data)
 {
-	const uint32_t BLOCK_SIZE = 1024;
+	const uint32_t _128_BYTES = 128;
 
-	uint32_t index = packetsCnt * BLOCK_SIZE;
+	uint32_t index = packetsCnt * _128_BYTES;
 
-	uint8_t* u8Data = reinterpret_cast<uint8_t*>(data);
+	char* u8Data = reinterpret_cast<char*>(data);
 
-	for(int j = 0; j != BLOCK_SIZE; ++j, ++index)
+	for(int j = 0; j != _128_BYTES; ++j, ++index)
 	{
 		if(index >= binary.size())
 		{
 			u8Data[j] = 0xFF;
 			continue;
 		}
-
 		u8Data[j] = binary[index];
 	}
 
@@ -456,9 +466,8 @@ void UpdaterCmd::SendDataCmd::execute()
 		shared_ptr<UpdaterSendDataMsgReq> request(new UpdaterSendDataMsgReq);
 		*request = INIT_UPDATER_SEND_DATA_MSG_REQ;
 		request->isMaster = owner.isMaster;
-		owner.fetchNext32Words(request->data);
-		cout << "void UpdaterCmd::SendDataCmd::execute()" << endl;
-		request->checksum = owner.calcChecksum(reinterpret_cast<uint8_t*>(request->data),1024);
+		owner.fetchNext128Bytes(request->data);
+		request->checksum = owner.calcChecksum(reinterpret_cast<uint8_t*>(request->data),128);
 		request->partNum = owner.packetsCnt - 1;
 		owner.lastCommand = command;
 
@@ -667,15 +676,20 @@ void UpdaterCmd::FreeResourcesOkHandler::execute()
 
 		owner.commands[Cmd::RESET_ROBOT_UPD_CMD]->execute();
 		this_thread::sleep_for(chrono::seconds(1));
-		cout << "Resetting connection..." << endl;
-		if(!owner.connection->resetConnection())
-		{
-			cout << "ERR: Couldn't connect to robot!" << endl;
-			owner.isGoOn = false;
-			return;
-		}
 
-		cout << "Connection established" << endl;
+		if(!owner.isMaster)
+		{
+			cout << "Resetting connection..." << endl;
+
+			if(!owner.connection->resetConnection())
+			{
+				cout << "ERR: Couldn't connect to robot!" << endl;
+				owner.isGoOn = false;
+				return;
+			}
+
+			cout << "Connection established" << endl;
+		}
 		cout << "Performing after update check..." << endl;
 
 		owner.commands[Cmd::AFTER_UPD_CHECK_UPD_CMD]->execute();
@@ -758,14 +772,18 @@ void UpdaterCmd::MarkPartitionAsGoodOkHandler::execute()
 	owner.commands[Cmd::RESET_ROBOT_UPD_CMD]->execute();
 	this_thread::sleep_for(chrono::seconds(1));
 
-	cout << "Resetting connection..." << endl;
-	if(owner.connection->resetConnection())
+	if(!owner.isMaster)
 	{
-		cout << "Connection established" << endl;
-	}
-	else
-	{
-		cout << "ERR: Couldn't connect to robot!" << endl;
+		cout << "Resetting connection..." << endl;
+
+		if(owner.connection->resetConnection())
+		{
+			cout << "Connection established" << endl;
+		}
+		else
+		{
+			cout << "ERR: Couldn't connect to robot!" << endl;
+		}
 	}
 
 	owner.isGoOn = false;
