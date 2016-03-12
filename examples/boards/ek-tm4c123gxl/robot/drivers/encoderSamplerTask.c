@@ -9,6 +9,7 @@
 #include "task.h"
 #include "semphr.h"
 #include "utils.h"
+#include "wdg.h"
 #include "encoder.h"
 #include "encoderSamplerTask.h"
 
@@ -20,9 +21,13 @@ extern SemaphoreHandle_t g_gpioExp1PortBIntSem;
 
 static void encoderSamplerTask()
 {
+	uint8_t wdgTaskID = registerToWatchDog();
 	initInterrupts();
+
 	while(true)
 	{
+		feedWatchDog(wdgTaskID);
+
 		if(xSemaphoreTake(g_gpioExp1PortBIntSem, LONG_TIME) == pdTRUE)
 			doEncoderJob();
 	}

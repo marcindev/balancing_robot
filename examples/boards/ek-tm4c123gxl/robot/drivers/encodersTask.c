@@ -14,6 +14,7 @@
 #include "msgSystem.h"
 #include "utils.h"
 #include "global_defs.h"
+#include "wdg.h"
 #include "encoder.h"
 #include "encodersTask.h"
 #include "encoderSamplerTask.h"
@@ -76,9 +77,12 @@ static void handleNotifyAfterSpeed(EncoderNotifyAfterSpeedMsgReq* request);
 
 static void encodersTask()
 {
+	uint8_t wdgTaskID = registerToWatchDog();
 
 	while(true)
 	{
+		feedWatchDog(wdgTaskID);
+
 		void* msg;
 		if(msgReceive(g_encodersQueue, &msg, MSG_WAIT_LONG_TIME))
 		{

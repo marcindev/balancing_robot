@@ -29,7 +29,8 @@ public:
 		RESET_ROBOT_UPD_CMD				= 0x06,
 		AFTER_UPD_CHECK_UPD_CMD			= 0x07,
 		GET_AVAIL_PARTITION_UPD_CMD	    = 0x08,
-		MARK_PARTITION_AS_GOOD_UPD_CMD	= 0x09
+		MARK_PARTITION_AS_GOOD_UPD_CMD	= 0x09,
+		FORCE_NEWEST_SW_UPD_CMD			= 0x0A
 	};
 
 	enum class Status
@@ -50,7 +51,8 @@ public:
 		AVAIL_PARTITION_1_CMD_UPD_STAT	= 0x0E,
 		AVAIL_PARTITION_2_CMD_UPD_STAT	= 0x0F,
 		AFTER_UPD_CHECK_OK_UPD_STAT		= 0x10,
-		MARK_PARTITION_AS_GOOD_UPD_STAT = 0x11
+		MARK_PARTITION_AS_GOOD_UPD_STAT = 0x11,
+		FORCE_NEWEST_SW_OK_UPD_STAT 	= 0x12
 	};
 
 	enum class Partitions
@@ -83,6 +85,7 @@ private:
 		return isGoOn;
 	}
 
+	void printHelp();
 	void handleOptions();
 	uint8_t calcChecksum(uint8_t* data, uint32_t size);
 	uint32_t reflect(uint32_t ui32Ref, uint8_t ui8Ch);
@@ -95,6 +98,8 @@ private:
 	void setToPrevWord();
 	bool buildBinary();
 	bool prepareLinkerFile(bool& isFileChanged);
+	bool copyAxfFile();
+	bool resetRobot();
 
 	class StatusHandler;
 	class UpdaterCommand;
@@ -110,6 +115,7 @@ private:
 	uint32_t totalPackets = 0;
 	bool isAwaitingReset = false;
 	bool isSend32Words = true;
+	bool isForceNewest = false;
 	Partitions currentPartition = Partitions::PARTITION_1;
 	Cmd lastCommand = Cmd::GET_AVAIL_PARTITION_UPD_CMD;
 
@@ -196,6 +202,14 @@ private:
 	{
 	public:
 		GetAvailPartitionCmd(UpdaterCmd& _owner);
+	protected:
+		virtual void fillMessage(std::shared_ptr<UpdaterCmdMsgReq> request);
+	};
+
+	class ForceNewestSwCmd : public UpdaterCommand
+	{
+	public:
+		ForceNewestSwCmd(UpdaterCmd& _owner);
 	protected:
 		virtual void fillMessage(std::shared_ptr<UpdaterCmdMsgReq> request);
 	};
@@ -319,6 +333,13 @@ private:
 	{
 	public:
 		AfterUpdCheckOkHandler(UpdaterCmd& _owner) : StatusHandler(_owner) { }
+		virtual void execute();
+	};
+
+	class ForceNewestSwOkHandler : public StatusHandler
+	{
+	public:
+		ForceNewestSwOkHandler(UpdaterCmd& _owner) : StatusHandler(_owner) { }
 		virtual void execute();
 	};
 

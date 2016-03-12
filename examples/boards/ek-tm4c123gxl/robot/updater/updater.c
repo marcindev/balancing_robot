@@ -31,6 +31,7 @@
 #define AFTER_UPD_CHECK_UPD_CMD			0x07
 #define GET_AVAIL_PARTITION_UPD_CMD	    0x08
 #define MARK_PARTITION_AS_GOOD_UPD_CMD	0x09
+#define FORCE_NEWEST_SW_UPD_CMD			0x0A
 
 // statuses
 
@@ -51,6 +52,7 @@
 #define AVAIL_PARTITION_2_CMD_UPD_STAT	0x0F
 #define AFTER_UPD_CHECK_OK_UPD_STAT		0x10
 #define MARK_PARTITION_AS_GOOD_UPD_STAT 0x11
+#define FORCE_NEWEST_SW_OK_UPD_STAT 	0x12
 
 static uint32_t g_partitionAddress;
 static uint32_t g_partitionSize;
@@ -85,6 +87,7 @@ static uint8_t handleResetRobot();
 static uint8_t handleAfterUpdateCheck();
 static uint8_t handleMarkPartitionAsGood();
 static uint8_t handleGetAvailPartition();
+static uint8_t handleForceNewestSw();
 
 void initUpdater()
 {
@@ -189,6 +192,10 @@ uint8_t handleUpdateCommand(uint8_t command, uint32_t data1, uint32_t data2, uin
 	case GET_AVAIL_PARTITION_UPD_CMD:
 	{
 		return handleGetAvailPartition();
+	}
+	case FORCE_NEWEST_SW_UPD_CMD:
+	{
+		return handleForceNewestSw();
 	}
 	default:
 		logger(Warning, Log_Updater, "[handleUpdateCommand] received unrecognized command %d", command);
@@ -419,6 +426,24 @@ uint8_t handleGetAvailPartition()
 		return AVAIL_PARTITION_1_CMD_UPD_STAT;
 
 	return AVAIL_PARTITION_2_CMD_UPD_STAT;
+}
+
+uint8_t handleForceNewestSw()
+{
+	logger(Info, Log_Updater, "[handleForceNewestSw] forcing change to newest sw version partition");
+
+	if(config.binary1.version > config.binary2.version)
+	{
+		config.binary1.isGood = true;
+	}
+	else
+	{
+		config.binary2.isGood = true;
+	}
+
+	writeConfig();
+
+	return FORCE_NEWEST_SW_OK_UPD_STAT;
 }
 
 uint32_t getPartitionSize()

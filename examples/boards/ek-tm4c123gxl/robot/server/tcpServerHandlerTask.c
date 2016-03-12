@@ -14,6 +14,7 @@
 #include "messages.h"
 #include "msgSystem.h"
 #include "utils.h"
+#include "wdg.h"
 #include "global_defs.h"
 #include "tcpServerHandlerTask.h"
 #include "logger.h"
@@ -64,14 +65,21 @@ static void handleUpdaterSendData(uint16_t slot);
 
 static void tcpServerHandlerTask(void *pvParameters)
 {
+	uint8_t wdgTaskID = registerToWatchDog();
+
 	uint16_t slot = *((uint16_t*)pvParameters);
 	vPortFree(pvParameters);
 
 	sendConnStatusNotif(slot, true);
 	initConnectionTimer();
+	uint32_t counter = 0;
 
 	while(true)
 	{
+		if(!(++counter % 100000UL))
+		{
+			feedWatchDog(wdgTaskID);
+		}
 		//void* msg = NULL;
 		if(receiveTcpMsg(slot))
 		{

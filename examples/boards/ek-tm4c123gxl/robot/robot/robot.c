@@ -32,6 +32,7 @@
 #include "led.h"
 #include "logger.h"
 #include "updater/updaterTask.h"
+#include "wdg.h"
 
 #ifdef _ROBOT_MASTER_BOARD
 #include "drivers/i2c/i2cTask.h"
@@ -51,7 +52,7 @@ extern void _bss;
 #define ROBOT_TASK_STACK_SIZE		100         // Stack size in words
 #define ROBOT_TASK_QUEUE_SIZE		 10
 
-#define WDG_PERIOD					 10
+
 
 //static I2cManager g_i2cManager;
 //static GpioExpander g_gpioExpander;
@@ -64,6 +65,20 @@ const HeapRegion_t xHeapRegions[] =
 
 void vApplicationStackOverflowHook(xTaskHandle *pxTask, char *pcTaskName)
 {
+	char strLog[100];
+	char* strPtr = strLog;
+	const char* strPrefix = "[vApplicationStackOverflowHook] task: ";
+
+	size_t strLen = strlen(strPrefix);
+	memcpy(strPtr, strPrefix, strLen);
+	strPtr += strLen;
+
+	strLen = strlen(strPrefix);
+	memcpy(strPtr, strPrefix, strLen);
+	strPtr += strLen;
+	*strPtr = '\0';
+
+	logger(Error, Log_Robot, strPtr);
 
     while(1)
     {
@@ -82,16 +97,15 @@ static bool startSpiServerCom();
 static bool startUpdater();
 static bool startWheels();
 static bool initializeEEPROM();
-static void initWatchDog();
 static void onReset();
 
-bool isWdgLedOn = false;
+static bool g_isWdgReset = false;
 
 void runRobot()
 {
-	onReset();
 	initializeRobot();
 	ConfigureUART();
+	onReset();
 	UARTprintf("Starting robot\n");
 #ifdef _ROBOT_MASTER_BOARD
 
@@ -145,7 +159,7 @@ void initializeRobot()
 	if(!initializeEEPROM()) while(1){};
 	enableInterrupts();
 	initilizeFreeRTOS();
-//	initWatchDog();
+	initWatchDog();
 
 }
 
@@ -153,6 +167,10 @@ static void robotTask(void *pvParameters)
 {
 	portTickType ui32WakeTime;
 	ui32WakeTime = xTaskGetTickCount();
+
+	afterWdgReset();
+
+
 
 	if(!startSpiServerCom())
 	{
@@ -485,16 +503,6 @@ bool startTcpServer()
 #endif
 
 
-void initWatchDog()
-{
-	initInterrupts();
-	SysCtlPeripheralEnable(SYSCTL_PERIPH_WDOG0);
-	IntEnable(INT_WATCHDOG);
-	WatchdogReloadSet(WATCHDOG0_BASE, WDG_PERIOD * SysCtlClockGet());
-	WatchdogStallEnable(WATCHDOG0_BASE);
-//	WatchdogResetEnable(WATCHDOG0_BASE);
-	WatchdogEnable(WATCHDOG0_BASE);
-}
 
 void jumpToAddress( uint32_t address )
 {
@@ -513,8 +521,30 @@ void onReset()
 		jumpToAddress(0);
 
 	}
+	else if(resetCause & SYSCTL_CAUSE_WDOG0)
+	{
+		g_isWdgReset = true;
+	}
 }
 
+void afterWdgReset()
+{
+#ifdef _ROBOT_MASTER_BOARD
+	LedInit(LED6);
+	LedTurnOff(LED6);
+#endif
+
+	if(g_isWdgReset)
+	{
+		setIsDumpPM(false);
+
+#ifdef _ROBOT_MASTER_BOARD
+
+		LedBlinkStart(LED6, 2);
+#endif
+	}
+
+}
 
 
 // workaround for linking errors (relates to getTaskList FreeRTOS)

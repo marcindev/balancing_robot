@@ -14,6 +14,7 @@
 #include "msgSystem.h"
 #include "utils.h"
 #include "global_defs.h"
+#include "wdg.h"
 #include "motorsTask.h"
 #include "encodersTask.h"
 #include "wheelsTask.h"
@@ -79,9 +80,16 @@ static void handleNotifyAfterSpeed(EncoderNotifyAfterSpeedMsgRsp* response);
 
 static void wheelsTask()
 {
+	uint8_t wdgTaskID = registerToWatchDog();
+	uint32_t counter = 0;
 
 	while(true)
 	{
+		if(!(++counter % 10000UL))
+		{
+			feedWatchDog(wdgTaskID);
+		}
+
 		void* msg;
 		if(msgReceive(g_wheelsMainQueue, &msg, 10))
 		{

@@ -13,6 +13,7 @@
 #include "msgSystem.h"
 #include "utils.h"
 #include "global_defs.h"
+#include "wdg.h"
 #include "motor.h"
 #include "motorsTask.h"
 #include "logger.h"
@@ -52,9 +53,12 @@ static void handleSetDirection(MotorSetDirectionMsgReq* request);
 
 static void motorsTask()
 {
+	uint8_t wdgTaskID = registerToWatchDog();
 
 	while(true)
 	{
+		feedWatchDog(wdgTaskID);
+
 		void* msg;
 		if(msgReceive(g_motorsQueue, &msg, MSG_WAIT_LONG_TIME))
 		{

@@ -1,5 +1,6 @@
 #include "updaterCmd.h"
-
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
@@ -28,7 +29,7 @@ UpdaterCmd::UpdaterCmd(shared_ptr<Connection> conn, const std::vector<std::strin
 	commands[Cmd::AFTER_UPD_CHECK_UPD_CMD] = shared_ptr<UpdaterCommand>(new AfterUpdCheckCmd(*this));
 	commands[Cmd::GET_AVAIL_PARTITION_UPD_CMD] = shared_ptr<UpdaterCommand>(new GetAvailPartitionCmd(*this));
 	commands[Cmd::MARK_PARTITION_AS_GOOD_UPD_CMD] = shared_ptr<UpdaterCommand>(new MarkPartitionAsGoodCmd(*this));
-
+	commands[Cmd::FORCE_NEWEST_SW_UPD_CMD] = shared_ptr<UpdaterCommand>(new ForceNewestSwCmd(*this));
 
 	statusHandlers[Status::UPDATER_NOT_INIT_UPD_STAT] = shared_ptr<StatusHandler>(new UpdaterNotInitHandler(*this));
 	statusHandlers[Status::NOT_ENOUGH_SPACE_UPD_STAT] = shared_ptr<StatusHandler>(new NotEnoughSpaceHandler(*this));
@@ -47,7 +48,7 @@ UpdaterCmd::UpdaterCmd(shared_ptr<Connection> conn, const std::vector<std::strin
 	statusHandlers[Status::UNRECOGNIZED_CMD_UPD_STAT] = shared_ptr<StatusHandler>(new UnrecognizedCmdHandler(*this));
 	statusHandlers[Status::AFTER_UPD_CHECK_OK_UPD_STAT] = shared_ptr<StatusHandler>(new AfterUpdCheckOkHandler(*this));
 	statusHandlers[Status::MARK_PARTITION_AS_GOOD_UPD_STAT] = shared_ptr<StatusHandler>(new MarkPartitionAsGoodOkHandler(*this));
-
+	statusHandlers[Status::FORCE_NEWEST_SW_OK_UPD_STAT] = shared_ptr<StatusHandler>(new ForceNewestSwOkHandler(*this));
 
 
 	partitions[Partitions::PARTITION_1] = shared_ptr<Partition>(new Partition());
@@ -65,9 +66,7 @@ void UpdaterCmd::run()
 {
 	if(args.size() < 1 || args.size() > 2)
 	{
-		cout << "Usage: update <master/slave> [options]" << endl;
-		cout << "Options:" << endl;
-		cout << "--single_word, -sw   : sends data word by word instead of 32-word packets" << endl;
+		printHelp();
 		return;
 	}
 
@@ -84,14 +83,21 @@ void UpdaterCmd::run()
 
 	isMaster = (argument == "0") ? false : true;
 
-	commands[Cmd::GET_AVAIL_PARTITION_UPD_CMD]->execute();
+	if(isForceNewest)
+	{
+		commands[Cmd::FORCE_NEWEST_SW_UPD_CMD]->execute();
+	}
+	else
+	{
+		commands[Cmd::GET_AVAIL_PARTITION_UPD_CMD]->execute();
+	}
 
 	while(connection->isConnected())
 	{
 		shared_ptr<BaseMessage> msg;
 		if(connection->receive(msg))
 		{
-			uint8_t msgId = *(reinterpret_cast<uint8_t*>(msg->getRawPayload()));
+			uint8_t msgId = msg->getMsgId();
 
 			if(msgId == UPDATER_CMD_MSG_RSP)
 			{
@@ -113,6 +119,14 @@ void UpdaterCmd::run()
 
 }
 
+void UpdaterCmd::printHelp()
+{
+	cout << "Usage: update <master/slave> [options]" << endl;
+	cout << "Options:" << endl;
+	cout << "--single_word, -sw   : sends data word by word instead of 32-word packets" << endl;
+	cout << "--force_newest, -fn   : forces change active partition to the one with newest sw version" << endl;
+}
+
 void UpdaterCmd::handleOptions()
 {
 	for(const auto& arg : args)
@@ -122,6 +136,11 @@ void UpdaterCmd::handleOptions()
 			if(arg == "--single_word" || arg == "-sw")
 			{
 				isSend32Words = false;
+			}
+
+			if(arg == "--force_newest" || arg == "-fn")
+			{
+				isForceNewest = true;
 			}
 
 		}
@@ -232,7 +251,63 @@ bool UpdaterCmd::buildBinary()
 
 	setConfValue(ConfOption::last_target, target);
 
+	copyAxfFile();
+
 	cout << "Binary built successfully." << endl;
+	return true;
+}
+
+bool UpdaterCmd::copyAxfFile()
+{
+	string axf_file_name = getConfValue(ConfOption::axf_file_name);
+
+	string target, partition;
+
+	if(isMaster)
+		target = "master";
+	else
+		target = "slave";
+
+	if(currentPartition == Partitions::PARTITION_1)
+		partition = "partition_1";
+	else
+		partition = "partition_2";
+
+	if(chdir(target.c_str()) == -1)
+	{
+		if(mkdir(target.c_str(), S_IRWXU) == -1)
+		{
+			cout << "ERR: Couldn't crate a folder: " << target << endl;
+			return false;
+		}
+
+		chdir(target.c_str());
+	}
+
+	if(chdir(partition.c_str()) == -1)
+	{
+		if(mkdir(partition.c_str(), S_IRWXU) == -1)
+		{
+			cout << "ERR: Couldn't crate a folder: " << partition << endl;
+			return false;
+		}
+
+		chdir(partition.c_str());
+	}
+
+	chdir("../..");
+
+	string cp("/bin/cp");
+	vector<string> args;
+	args.push_back(axf_file_name);
+	args.push_back(string("./") + target + "/" + partition + "/");
+
+	if(!executeProcess(cp, args))
+	{
+		cout << "ERR: Couldn't copy axf file!" << endl;
+		return false;
+	}
+
 	return true;
 }
 
@@ -385,6 +460,31 @@ void UpdaterCmd::setToPrevWord()
 {
 	--packetsCnt;
 
+}
+
+bool UpdaterCmd::resetRobot()
+{
+	cout << "Resetting robot..." << endl;
+
+	commands[Cmd::RESET_ROBOT_UPD_CMD]->execute();
+	this_thread::sleep_for(chrono::seconds(1));
+
+	if(!isMaster)
+	{
+		cout << "Resetting connection..." << endl;
+
+		if(connection->resetConnection())
+		{
+			cout << "Connection established" << endl;
+		}
+		else
+		{
+			cout << "ERR: Couldn't connect to robot!" << endl;
+			return false;
+		}
+	}
+
+	return true;
 }
 
 
@@ -549,6 +649,16 @@ void UpdaterCmd::GetAvailPartitionCmd::fillMessage(std::shared_ptr<UpdaterCmdMsg
 
 }
 
+UpdaterCmd::ForceNewestSwCmd::ForceNewestSwCmd(UpdaterCmd& _owner) :
+		UpdaterCommand(_owner)
+{
+	command = Cmd::FORCE_NEWEST_SW_UPD_CMD;
+}
+
+void UpdaterCmd::ForceNewestSwCmd::fillMessage(std::shared_ptr<UpdaterCmdMsgReq> request)
+{
+
+}
 
 void UpdaterCmd::UpdaterNotInitHandler::execute()
 {
@@ -672,24 +782,12 @@ void UpdaterCmd::FreeResourcesOkHandler::execute()
 	{
 		owner.isAwaitingReset = false;
 
-		cout << "Resetting robot..." << endl;
-
-		owner.commands[Cmd::RESET_ROBOT_UPD_CMD]->execute();
-		this_thread::sleep_for(chrono::seconds(1));
-
-		if(!owner.isMaster)
+		if(!owner.resetRobot())
 		{
-			cout << "Resetting connection..." << endl;
-
-			if(!owner.connection->resetConnection())
-			{
-				cout << "ERR: Couldn't connect to robot!" << endl;
-				owner.isGoOn = false;
-				return;
-			}
-
-			cout << "Connection established" << endl;
+			owner.isGoOn = false;
+			return;
 		}
+
 		cout << "Performing after update check..." << endl;
 
 		owner.commands[Cmd::AFTER_UPD_CHECK_UPD_CMD]->execute();
@@ -766,26 +864,15 @@ void UpdaterCmd::MarkPartitionAsGoodOkHandler::execute()
 	cout << "Partition marked as good successfully." << endl;
 	cout << "Update finished successfully!" << endl;
 
+	owner.resetRobot();
 
-	cout << "Resetting robot..." << endl;
+	owner.isGoOn = false;
+}
 
-	owner.commands[Cmd::RESET_ROBOT_UPD_CMD]->execute();
-	this_thread::sleep_for(chrono::seconds(1));
-
-	if(!owner.isMaster)
-	{
-		cout << "Resetting connection..." << endl;
-
-		if(owner.connection->resetConnection())
-		{
-			cout << "Connection established" << endl;
-		}
-		else
-		{
-			cout << "ERR: Couldn't connect to robot!" << endl;
-		}
-	}
-
+void UpdaterCmd::ForceNewestSwOkHandler::execute()
+{
+	cout << "Force newest software successful." << endl;
+	owner.resetRobot();
 	owner.isGoOn = false;
 }
 

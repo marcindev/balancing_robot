@@ -13,6 +13,7 @@
 #include "messages.h"
 #include "utils.h"
 #include "i2cTask.h"
+#include "wdg.h"
 #include "logger.h"
 
 #define I2C_TASK_STACK_SIZE		100        // Stack size in words
@@ -34,10 +35,13 @@ static void i2cHandleSendAndReceive(I2cSendAndReceiveMsgReq* request);
 
 static void i2cTask(void *pvParameters)
 {
+	uint8_t wdgTaskID = registerToWatchDog();
 	initializeI2c();
 
 	while(true)
 	{
+		feedWatchDog(wdgTaskID);
+
 		void* msg;
         if(xQueueReceive(g_i2cTxQueue, &msg, I2C_MSG_WAIT_TIME) == pdPASS)
         {

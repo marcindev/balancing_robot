@@ -95,7 +95,7 @@
 #define configQUEUE_REGISTRY_SIZE           10
 
 /* Define to trap errors during development. */
-#define configASSERT( x )     if(x == 0 ) { taskDISABLE_INTERRUPTS(); for( ;; ); }
+#define configASSERT( x )     if(x == 0 ) { logStackTrace(); taskDISABLE_INTERRUPTS(); for( ;; ); }
 
 /* Set the following definitions to 1 to include the API function, or zero
 to exclude the API function. */
@@ -108,6 +108,9 @@ to exclude the API function. */
 #define INCLUDE_vTaskDelayUntil             1
 #define INCLUDE_vTaskDelay                  1
 #define INCLUDE_uxTaskGetStackHighWaterMark 1
+#define INCLUDE_eTaskGetState				1
+#define INCLUDE_xTaskGetCurrentTaskHandle	1
+#define INCLUDE_pcTaskGetTaskName			1
 
 /* Be ENORMOUSLY careful if you want to modify these two values and make sure
  * you read http://www.freertos.org/a00110.html#kernel_priority first!

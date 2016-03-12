@@ -14,6 +14,7 @@
 #include "msgSystem.h"
 #include "utils.h"
 #include "global_defs.h"
+#include "wdg.h"
 #include "serverSpiComTask.h"
 #include "serverSpiCom.h"
 #include "logger.h"
@@ -22,7 +23,11 @@
 #include "MCP23017.h"
 #include "spiWrapper.h"
 
+#ifdef _ROBOT_MASTER_BOARD
+#define SERVER_SPI_TASK_STACK_SIZE		300        // Stack size in words
+#else
 #define SERVER_SPI_TASK_STACK_SIZE		200        // Stack size in words
+#endif
 #define SERVER_SPI_QUEUE_SIZE			5
 #define SERVER_SPI_ITEM_SIZE			4			// bytes
 
@@ -60,51 +65,32 @@ extern SpiComInstance* g_spiComInstServer;
 
 static void serverSpiComTask()
 {
+	uint8_t wdgTaskID = registerToWatchDog();
 
-	 TickType_t xLastWakeTime;
-	 const TickType_t xFrequency = 10;
-	 xLastWakeTime = xTaskGetTickCount();
-	 uint32_t counter = 0;
+	TickType_t xLastWakeTime;
+	const TickType_t xFrequency = 10;
+	xLastWakeTime = xTaskGetTickCount();
+	uint32_t counter = 0;
+
 	while(true)
 	{
+		if(!(++counter % 100000UL))
+		{
+			UARTprintf("Ping\n");
+			feedWatchDog(wdgTaskID);
+		}
+
 		void* msg = NULL;
 
 		if(isSpiComInitialized) //&& (xSemaphoreTake(g_ssiRxIntSem, SPI_SEM_WAIT_TIME) == pdTRUE))
 		{
-#ifdef _ROBOT_MASTER_BOARD
-//			size_t heapSize = xPortGetFreeHeapSize();
-			if(!(++counter % 100000UL))
-				UARTprintf("Ping\n");
 
-#endif
 			if(receiveSpiMsg(&msg)){
-#ifdef _ROBOT_MASTER_BOARD
-//				I2cManager* i2cManager = (I2cManager*) pvPortMalloc(sizeof(I2cManager));
-//				GpioExpander* gpioExpander = (GpioExpander*) pvPortMalloc(sizeof(GpioExpander));
-//				//
-//				ZeroBuffer(gpioExpander, sizeof(GpioExpander));
-//				gpioExpander->i2cManager = i2cManager;
-//				gpioExpander->hwAddress		= 0x21;
-//				GpioExpInit(gpioExpander);
-//				GpioExpSetPinDirOut(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN3);
-//				GpioExpSetPin(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN3);
-//				GetLogsMsgReq getLogsReq = INIT_GET_LOGS_MSG_REQ;
-//				getLogsReq.slot = 1;
-//				msg = &getLogsReq;  // TODO delete ??
-#endif
 
 				handleMessages(msg);
-
 			}
 		}
-#ifndef _ROBOT_MASTER_BOARD
-//		vTaskDelayUntil( &xLastWakeTime, 1000 / portTICK_RATE_MS );
-		GetLogsMsgReq getLogsReq = INIT_GET_LOGS_MSG_REQ;
-		if(!(++counter % 100000UL))
-		{	UARTprintf("Ping\n");
-//			sendSpiMsg(&getLogsReq);
-		}
-#endif
+
 		if(msgReceive(g_serverSpiComQueue, &msg, 0))
 		{
 			handleMessages(msg);
@@ -129,6 +115,7 @@ bool serverSpiComTaskInit()
     {
         return false;
     }
+
 
     return true;
 }
@@ -216,6 +203,10 @@ void handleStartTask(StartTaskMsgReq* request)
 	initializeSpi();
 	bool result = true;
 
+#ifdef _ROBOT_MASTER_BOARD
+    LedTurnOff(LED1);
+#endif
+
 	StartTaskMsgRsp* response = (StartTaskMsgRsp*) pvPortMalloc(sizeof(StartTaskMsgRsp));
 	*response = INIT_START_TASK_MSG_RSP;
 	response->status = result;
@@ -263,6 +254,10 @@ void handleGetLogs(void* msg)
 		response.argsNum = argsNum;
 		memcpy(&response.argTypes[0], argTypes, argsNum);
 		memcpy(&response.argsBuffer[0], argsBuffer, argsBuffSize);
+
+		portTickType ui32WakeTime;
+		ui32WakeTime = xTaskGetTickCount();
+		vTaskDelayUntil(&ui32WakeTime, pdMS_TO_TICKS(2));
 
 		sendSpiMsg(&response);
 	}
@@ -313,6 +308,11 @@ void handleGetPostmortem(void* msg)
 		response.component = (uint8_t) logComponent;
 		strcpy(response.strBuffer, strPtr);
 		response.argsNum = argsNum;
+
+		portTickType ui32WakeTime;
+		ui32WakeTime = xTaskGetTickCount();
+		vTaskDelayUntil(&ui32WakeTime, pdMS_TO_TICKS(2));
+
 		sendSpiMsg(&response);
 	}
 

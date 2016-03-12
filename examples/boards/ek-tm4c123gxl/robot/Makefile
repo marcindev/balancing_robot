@@ -61,6 +61,7 @@ VPATH+=./server
 VPATH+=./interrupts
 VPATH+=./updater
 VPATH+=./config
+VPATH+=./watchdog
 
 #
 # Where to find header files that do not live in the source directory.
@@ -91,6 +92,7 @@ IPATH+=./server
 IPATH+=./interrupts
 IPATH+=./updater
 IPATH+=./config
+IPATH+=./watchdog
 
 #
 # The default rule, which causes the CC3000 Basic WiFi Application to be built.
@@ -201,12 +203,13 @@ ${COMPILER}/robot_main.axf: ${COMPILER}/circularBuffer.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/updater.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/updaterTask.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/config.o
+${COMPILER}/robot_main.axf: ${COMPILER}/wdg.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/startup_${COMPILER}.o
 ${COMPILER}/robot_main.axf: ${ROOT}/driverlib/${COMPILER}/libdriver.a
 ${COMPILER}/robot_main.axf: robot_main.ld
 SCATTERgcc_robot_main=robot_main.ld
 ENTRY_robot_main=ResetISR
-CFLAGSgcc=-DTARGET_IS_TM4C123_RB1  -g -O0 #-fPIC
+CFLAGSgcc=-DTARGET_IS_TM4C123_RB1  -g -O0 -funwind-tables #-fPIC
 ifeq ($(MAKECMDGOALS),master)
 CFLAGSgcc+=-D_ROBOT_MASTER_BOARD
 endif

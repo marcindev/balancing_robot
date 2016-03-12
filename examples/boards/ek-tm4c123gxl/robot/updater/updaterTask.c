@@ -13,6 +13,7 @@
 #include "messages.h"
 #include "msgSystem.h"
 #include "utils.h"
+#include "wdg.h"
 #include "global_defs.h"
 #include "logger.h"
 #include "updater.h"
@@ -30,8 +31,16 @@ static void handleMessages(void* msg);
 
 static void updaterTask()
 {
+	uint8_t wdgTaskID = registerToWatchDog();
+	uint32_t counter = 0;
+
 	while(true)
 	{
+		if(!(++counter % 10000UL))
+		{
+			feedWatchDog(wdgTaskID);
+		}
+
 		void* msg;
 		if(msgReceive(g_updaterMainQueue, &msg, UPDATER_MSG_WAIT_TIME))
 		{

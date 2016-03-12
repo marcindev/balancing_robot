@@ -16,6 +16,7 @@
 #include "interrupts.h"
 #include "spiWrapper.h"
 #include "utils.h"
+#include "wdg.h"
 
 
 
@@ -156,6 +157,7 @@ void uDMAErrorHandler(void)
 
 void WDG_intHandler(void)
 {
-	isWdgLedOn = ! isWdgLedOn;
 	WatchdogIntClear(WATCHDOG0_BASE);
+
+	onWatchDogTimeout();
 }
