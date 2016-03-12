@@ -73,7 +73,11 @@ extern int main(void);
 // Reserve space for the system stack.
 //
 //*****************************************************************************
-static uint32_t pui32Stack[128];
+#ifdef _ROBOT_MASTER_BOARD
+static uint32_t pui32Stack[512];
+#else
+static uint32_t pui32Stack[512];
+#endif
 
 //*****************************************************************************
 //
@@ -423,8 +427,8 @@ void prvGetRegistersFromStack( uint32_t *pulFaultStackAddress )
 
 	logger(Error, Log_Robot, "FaultISR! \n"
 			"Register values: \n"
-			"r0: %d\n, r1: %d\n, r2: %d\n, r3: %d\n,"
-			" r12: %d\n, lr: %d\n, pc: %d\n, psr: %d",
+			" r0: %#x\n r1: %#x\n r2: %#x\n r3: %#x\n"
+			" r12: %#x\n lr: %#x\n pc: %#x\n psr: %#x",
 			r0, r1, r2, r3, r12, lr, pc, psr);
 
 	dumpPostMortem();
