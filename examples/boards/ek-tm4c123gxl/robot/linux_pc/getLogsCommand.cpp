@@ -3,6 +3,7 @@
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
+#include "stackEncoder.h"
 
 using namespace std;
 
@@ -36,7 +37,7 @@ void GetLogsCommand::run()
 		return;
 	}
 
-	bool isMaster = (argument == "0") ? false : true;
+	isMaster = (argument == "0") ? false : true;
 
 	shared_ptr<GetLogsMsgReq> getLogsMsgReq(new GetLogsMsgReq);
 	*getLogsMsgReq = INIT_GET_LOGS_MSG_REQ;
@@ -58,7 +59,7 @@ void GetLogsCommand::run()
 		shared_ptr<BaseMessage> msg;
 		if(connection->receive(msg))
 		{
-			uint8_t msgId = *(reinterpret_cast<uint8_t*>(msg->getRawPayload()));
+			uint8_t msgId = msg->getMsgId();
 
 			if(msgId != GET_LOGS_MSG_RSP)
 				cout << "GetLogsCommand: unrecognized msg " << hex << static_cast<int>(msgId) << endl;
@@ -72,11 +73,16 @@ void GetLogsCommand::run()
 
 	sort(vecLogs.begin(), vecLogs.end(), sortLine);
 
+	uint8_t partition = getPartitionNum();
+
+	StackEncoder stackEncoder(isMaster, partition);
+
 	for(auto it = vecLogs.begin(); it != vecLogs.end(); ++it)
 	{
 		if(it->empty())
 			continue;
 
+		stackEncoder.decodeStacktrace(*it);
 		cout << *it << endl;
 	}
 
@@ -253,6 +259,49 @@ bool GetLogsCommand::handleGetLogsRsp(const GetLogsMsgRsp& response)
 		return false;
 
 	return true;
+
+}
+
+uint8_t GetLogsCommand::getPartitionNum()
+{
+	uint8_t partition = 1;
+
+	for(const auto& line : vecLogs)
+	{
+		if(line.find("Partition2") != string::npos)
+		{
+			size_t pos = line.find("=");
+
+			if(pos == string::npos)
+				break;
+
+			++pos;
+			if(line[pos] == '1')
+			{
+				partition = 2;
+				break;
+			}
+
+		}
+
+		if(line.find("Partition1") != string::npos)
+		{
+			size_t pos = line.find("=");
+
+			if(pos == string::npos)
+				break;
+
+			++pos;
+			if(line[pos] == '1')
+			{
+				partition = 1;
+				break;
+			}
+
+		}
+	}
+
+	return partition;
 
 }
 

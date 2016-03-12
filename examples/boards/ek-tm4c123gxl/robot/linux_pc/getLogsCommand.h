@@ -16,7 +16,10 @@ protected:
 	void run();
 	bool handleGetLogsRsp(const GetLogsMsgRsp& response);
 	static bool sortLine(const std::string& str1, const std::string& str2);
+	uint8_t getPartitionNum();
+
 	std::vector<std::string> vecLogs;
+	bool isMaster = false;
 private:
 	std::string millisToTimeString(uint32_t milliseconds);
 

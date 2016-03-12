@@ -9,6 +9,7 @@
 #include "setTaskPriorityCmd.h"
 #include "getPostmortemCmd.h"
 #include "updaterCmd.h"
+#include "getFuncNameCmd.h"
 
 using namespace std;
 
@@ -52,6 +53,9 @@ shared_ptr<Command> CommandFactory::createCommand(const string& strCommand,
 
 	if(strCommand == "update")
 		return shared_ptr<Command>(new UpdaterCmd(connection, args));
+
+	if(strCommand == "getFuncName")
+		return shared_ptr<Command>(new GetFuncNameCmd(connection, args));
 
 
 	cout << "Wrong command!" << endl;

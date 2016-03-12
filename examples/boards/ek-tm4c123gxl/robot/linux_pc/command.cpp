@@ -5,6 +5,7 @@
 #include <sys/wait.h>
 #include <fstream>
 #include <sstream>
+#include "processExec.h"
 
 using namespace std;
 
@@ -16,6 +17,8 @@ Command::Command(std::shared_ptr<Connection> conn) : connection(conn)
 	stringToConfOption["last_partition"] = ConfOption::last_partition;
 	stringToConfOption["linker_filename"] = ConfOption::linker_filename;
 	stringToConfOption["last_target"] = ConfOption::last_target;
+	stringToConfOption["axf_file_name"] = ConfOption::axf_file_name;
+
 
 	if(!readConfig())
 		cout << "ERR: Couldn't read config!" << endl;
@@ -33,6 +36,7 @@ Command::Command(std::shared_ptr<Connection> conn, const std::vector<std::string
 	stringToConfOption["last_partition"] = ConfOption::last_partition;
 	stringToConfOption["linker_filename"] = ConfOption::linker_filename;
 	stringToConfOption["last_target"] = ConfOption::last_target;
+	stringToConfOption["axf_file_name"] = ConfOption::axf_file_name;
 
 	if(!readConfig())
 		cout << "ERR: Couldn't read config!" << endl;
@@ -131,46 +135,7 @@ bool Command::writeConfig()
 
 bool Command::executeProcess(const string& execFile, const vector<string>& args)
 {
+	ProcessExec process(execFile);
 
-	char* chArgs[args.size() + 2];
-
-	chArgs[0] = const_cast<char*>(execFile.c_str());
-
-	int i = 1;
-
-	for(const auto& arg : args)
-	{
-		chArgs[i] = const_cast<char*>(arg.c_str());
-		++i;
-	}
-
-	chArgs[i] = NULL;
-
-	pid_t pid = fork();
-
-	switch(pid)
-	{
-	case -1:
-		cout << "ERR: Couldn't fork a process!" << endl;
-		return false;
-	case 0:
-		execv(execFile.c_str(), chArgs);
-		cout << "ERR: Execl failed!" << endl;
-		return false;
-	default:
-		int status;
-
-		while (!WIFEXITED(status)) {
-			waitpid(pid, &status, 0);
-		}
-
-		if(WEXITSTATUS(status))
-		{
-			cout << "ERR: Child process exited with status: " << WEXITSTATUS(status) << "!" << endl;
-			return false;
-		}
-
-	}
-
-	return true;
+	return process.execute(args);
 }

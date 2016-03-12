@@ -20,7 +20,8 @@ public:
 		binary_name,
 		last_partition,
 		last_target,
-		linker_filename
+		linker_filename,
+		axf_file_name
 	};
 
 	Command(std::shared_ptr<Connection> conn);

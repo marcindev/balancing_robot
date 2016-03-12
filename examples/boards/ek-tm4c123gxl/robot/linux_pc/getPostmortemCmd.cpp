@@ -3,6 +3,7 @@
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
+#include "stackEncoder.h"
 
 using namespace std;
 
@@ -139,12 +140,16 @@ void GetPostmortemCmd::run()
 		++lineNum;
 	}
 
+	uint8_t partition = getPartitionNum();
+
+	StackEncoder stackEncoder(isMaster, partition);
 
 	for(auto& line : vecLogs)
 	{
 		if(line.empty())
 			continue;
 
+		stackEncoder.decodeStacktrace(line);
 		cout << line << endl;
 	}
 

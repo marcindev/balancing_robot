@@ -51,6 +51,7 @@ bool getNextPMLine(uint32_t* timestamp,
 
 uint16_t getLinesNumber();
 void resetLogLineGetter();
+void logStackTrace();
 
 
 #endif // LOGGER_H

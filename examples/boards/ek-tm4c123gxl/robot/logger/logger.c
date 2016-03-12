@@ -5,6 +5,8 @@
 #include "logger.h"
 #include <stdarg.h>
 #include "driverlib/eeprom.h"
+#include "inc/hw_types.h"
+#include <unwind.h>
 
 #define BUFFER_SIZE			30
 
@@ -18,6 +20,8 @@
 #define PM_LEN_OFFSET		1
 #define PM_BEG_BLOCK		2
 
+#define ISR_BUFFERS_SIZE	4
+
 typedef struct
 {
 	uint32_t timestampMilis;
@@ -30,9 +34,25 @@ typedef struct
 	uint8_t argsBuffSize;
 }LogElem;
 
+typedef struct
+{
+	uint8_t isrArgTypesBuff[10];
+	uint8_t isrArgsBuff[80];
+}IsrBuffers;
+
 static LogElem g_buffer[BUFFER_SIZE];
 static uint16_t index = 0;
 static bool isRollOver = false;
+
+static IsrBuffers isrBuffers[ISR_BUFFERS_SIZE];
+static uint8_t isrBuffIndex = 0;
+static uint32_t g_framePointer;
+static uint8_t g_stackDepth;
+
+
+static void _logStackTrace(uint32_t* addresses, uint8_t num);
+static void getFramePointer() __attribute__( ( naked ) );
+static void _getFramePointer(uint32_t fp);
 
 void logger(LogLevel level, LogComponent component, const char* string, ...)
 {
@@ -100,10 +120,18 @@ void logger(LogLevel level, LogComponent component, const char* string, ...)
 	g_buffer[index].argsNum = argsNum;
 
 
+	bool isInIsr = (portNVIC_INT_CTRL_REG & 0xFFUL) != 0;
+
+
 	if(argsNum > 0)
 	{
 		uint32_t argsBuffSize = 0;
-		uint8_t* argTypesPtr = (uint8_t*) pvPortMalloc(argsNum);
+		uint8_t* argTypesPtr = 0;
+
+		if(isInIsr)
+			argTypesPtr = isrBuffers[isrBuffIndex].isrArgTypesBuff;
+		else
+			argTypesPtr = (uint8_t*) pvPortMalloc(argsNum);
 
 		for(int j = 0; j != argsNum; ++j)
 		{
@@ -117,7 +145,13 @@ void logger(LogLevel level, LogComponent component, const char* string, ...)
 		}
 		g_buffer[index].argsBuffSize = argsBuffSize;
 
-		uint8_t* argsBuff = (uint8_t*) pvPortMalloc(argsBuffSize);
+		uint8_t* argsBuff = 0;
+
+		if(isInIsr)
+			argsBuff = isrBuffers[isrBuffIndex].isrArgsBuff;
+		else
+			argsBuff = (uint8_t*) pvPortMalloc(argsBuffSize);
+
 		va_start(arguments, argsNum);
 		uint8_t* argsBuffPtr = argsBuff;
 
@@ -153,6 +187,8 @@ void logger(LogLevel level, LogComponent component, const char* string, ...)
 				}
 			}
 
+			if(isInIsr)
+				isrBuffIndex++;
 
 		}
 
@@ -160,10 +196,10 @@ void logger(LogLevel level, LogComponent component, const char* string, ...)
 
 		if(isRollOver)
 		{
-			if(g_buffer[index].argsBuffer)
+			if(!isInIsr && g_buffer[index].argsBuffer)
 				vPortFree(g_buffer[index].argsBuffer);
 
-			if(g_buffer[index].argTypes)
+			if(!isInIsr && g_buffer[index].argTypes)
 				vPortFree(g_buffer[index].argTypes);
 		}
 
@@ -172,15 +208,16 @@ void logger(LogLevel level, LogComponent component, const char* string, ...)
 	}
 	else
 	{
-		if(g_buffer[index].argsBuffer)
+		if(!isInIsr && g_buffer[index].argsBuffer)
 			vPortFree(g_buffer[index].argsBuffer);
 
-		if(g_buffer[index].argTypes)
+		if(!isInIsr && g_buffer[index].argTypes)
 			vPortFree(g_buffer[index].argTypes);
 
 		g_buffer[index].argsBuffer = 0;
 		g_buffer[index].argTypes = 0;
 	}
+
 
 
 	index++;
@@ -405,5 +442,161 @@ bool getNextPMLine(uint32_t* timestamp, LogLevel* logLevel, LogComponent* compon
 
 
 	return true;
+}
+
+_Unwind_Reason_Code backtraceCallback(_Unwind_Context *ctx, void* addresses)
+{
+
+	*((uint32_t*) addresses + g_stackDepth) = _Unwind_GetIP(ctx);
+    g_stackDepth++;
+    return _URC_NO_REASON;
+}
+
+void logStackTrace()
+{
+	const uint32_t RAM_START = 0x20000000;
+	const uint32_t RAM_END = 0x20008000;
+	const uint8_t DEPTH = 30;
+
+//	getFramePointer();
+//
+//	uint32_t fp = g_framePointer;
+//
+//	if(!fp)
+//		return;
+//
+//	uint32_t pc = 0, lr = 0;
+//	uint8_t depth = DEPTH;
+//
+//	if(fp < RAM_START || fp > RAM_END)
+//	{
+//		logger(Error, Log_Robot, "[logStackTrace]: fp out of range");
+//		return;
+//	}
+
+	uint32_t funcAddresses[DEPTH];
+	memset(funcAddresses, 0, DEPTH);
+
+	g_stackDepth = 0;
+
+	_Unwind_Backtrace(&backtraceCallback, funcAddresses);
+//	do
+//	{
+//		pc = HWREG(fp - 16);
+//		fp = HWREG(fp - 12);
+//
+//		funcAddresses[i++] = pc;
+//
+//		if(--depth == 0)
+//			break;
+//
+//		if(fp < RAM_START || fp > RAM_END)
+//			break;
+//
+//	}while(pc != (uint32_t) main || pc != (uint32_t) ResetISR);
+//
+
+	_logStackTrace(funcAddresses, g_stackDepth);
+}
+
+void getFramePointer()
+{
+    __asm volatile
+    (
+        " mov r0, r7                                               \n"
+        " ldr r1, handler                            				\n"
+        " bx r1                                                     \n"
+        " handler: .word _getFramePointer            				\n"
+    );
+}
+
+void _getFramePointer(uint32_t fp)
+{
+	g_framePointer = fp;
+}
+
+void _logStackTrace(uint32_t* addresses, uint8_t num)
+{
+	if(!num)
+		return;
+
+	if(index == BUFFER_SIZE)
+	{
+		index = 0;
+		isRollOver = true;
+	}
+
+	g_buffer[index].timestampMilis = xTaskGetTickCount() / portTICK_RATE_MS;
+	g_buffer[index].logLevel = Info;
+	g_buffer[index].component = Log_Robot;
+	g_buffer[index].argsNum = num;
+
+	bool isInIsr = (portNVIC_INT_CTRL_REG & 0xFFUL) != 0;
+
+	const char* strPrefix = "[_logStackTrace] Stacktrace: ";
+	const char* strElement = "[%#.8x]->";
+
+	size_t strPrefixLen = strlen(strPrefix);
+	size_t strElementLen = strlen(strElement);
+
+	size_t logStrLen = strPrefixLen + num * strElementLen + 1;
+
+	char* logStr = (char*) pvPortMalloc(logStrLen);
+	char* strPtr = logStr;
+
+	memcpy(strPtr, strPrefix, strPrefixLen);
+	strPtr += strPrefixLen;
+
+	for(uint8_t i = 0; i != num; ++i)
+	{
+		memcpy(strPtr, strElement, strElementLen);
+		strPtr += strElementLen;
+	}
+
+	*strPtr = '\0';
+	g_buffer[index].stringPtr = logStr;
+
+	uint8_t* argTypesPtr = 0;
+
+	if(isInIsr)
+		argTypesPtr = isrBuffers[isrBuffIndex].isrArgTypesBuff;
+	else
+		argTypesPtr = (uint8_t*) pvPortMalloc(num);
+
+	if(isRollOver)
+	{
+		if(!isInIsr && g_buffer[index].argsBuffer)
+			vPortFree(g_buffer[index].argsBuffer);
+
+		if(!isInIsr && g_buffer[index].argTypes)
+			vPortFree(g_buffer[index].argTypes);
+	}
+
+	memset(argTypesPtr, INT_ARG, num);
+	g_buffer[index].argTypes = argTypesPtr;
+	uint8_t argsBuffSize = num * sizeof(uint32_t);
+	g_buffer[index].argsBuffSize = argsBuffSize;
+
+	uint8_t* argsBufferPtr = 0;
+
+	if(isInIsr)
+		argsBufferPtr = isrBuffers[isrBuffIndex].isrArgsBuff;
+	else
+		argsBufferPtr = (uint8_t*) pvPortMalloc(argsBuffSize);
+
+	memcpy(argsBufferPtr, addresses, argsBuffSize);
+
+	g_buffer[index].argsBuffer = argsBufferPtr;
+
+	if(isInIsr)
+		isrBuffIndex++;
+
+	index++;
+
+}
+
+void abort(void)
+{
+  for (;;) { }
 }
 
