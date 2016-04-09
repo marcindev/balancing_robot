@@ -57,11 +57,12 @@ static void motorsTask()
 
 	while(true)
 	{
-		feedWatchDog(wdgTaskID);
-
 		void* msg;
+		feedWatchDog(wdgTaskID, WDG_ASLEEP);
+
 		if(msgReceive(g_motorsQueue, &msg, MSG_WAIT_LONG_TIME))
 		{
+			feedWatchDog(wdgTaskID, WDG_ALIVE);
 			handleMessages(msg);
 		}
 
@@ -138,7 +139,7 @@ void handleStartTask(StartTaskMsgReq* request)
 	StartTaskMsgRsp* response = (StartTaskMsgRsp*) pvPortMalloc(sizeof(StartTaskMsgRsp));
 	*response = INIT_START_TASK_MSG_RSP;
 	response->status = true;
-	msgRespond(request->sender, &response, MSG_WAIT_LONG_TIME);
+	msgRespond(msgGetAddress(request), &response, MSG_WAIT_LONG_TIME);
 	vPortFree(request);
 }
 

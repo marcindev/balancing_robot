@@ -38,6 +38,7 @@
 #include "drivers/i2c/i2cTask.h"
 #include "drivers/encoder.h"
 #include "drivers/wheelsTask.h"
+#include "drivers/MPU6050.h"
 #else
 #include "server/tcpServerTask.h"
 #endif
@@ -48,8 +49,11 @@ extern void _ebss;
 extern void _data;
 extern void _bss;
 // local globals
-
+#ifdef _ROBOT_MASTER_BOARD
+#define ROBOT_TASK_STACK_SIZE		150         // Stack size in words
+#else
 #define ROBOT_TASK_STACK_SIZE		100         // Stack size in words
+#endif
 #define ROBOT_TASK_QUEUE_SIZE		 10
 
 
@@ -85,6 +89,12 @@ void vApplicationStackOverflowHook(xTaskHandle *pxTask, char *pcTaskName)
     }
 }
 
+void vApplicationMallocFailedHook()
+{
+	logger(Error, Log_Robot, "[vApplicationMallocFailedHook] Out of memory");
+	logStackTrace();
+}
+
 static MsgQueueId g_robotQueue;
 
 static void initializeSysClock();
@@ -96,6 +106,7 @@ static bool startTcpServer();
 static bool startSpiServerCom();
 static bool startUpdater();
 static bool startWheels();
+static bool startMpu();
 static bool initializeEEPROM();
 static void onReset();
 
@@ -110,6 +121,11 @@ void runRobot()
 #ifdef _ROBOT_MASTER_BOARD
 
 	if(!i2cTaskInit())
+	{
+		while(1){ }
+	}
+
+	if(!mpuTaskInit())
 	{
 		while(1){ }
 	}
@@ -159,7 +175,7 @@ void initializeRobot()
 	if(!initializeEEPROM()) while(1){};
 	enableInterrupts();
 	initilizeFreeRTOS();
-	initWatchDog();
+	initWatchDog(); // must be invoked after initilizeFreeRTOS()
 
 }
 
@@ -196,14 +212,34 @@ static void robotTask(void *pvParameters)
 
 #else
 
+	if(!startMpu())
+	{
+		while(1){}
+	}
+
 //	if(!startWheels())
 //	{
 //		while(1){}
 //	}
-//	LedInit(LED2);
 
+//	LedInit(LED2);
+//	I2cManager* i2cManager = (I2cManager*) pvPortMalloc(sizeof(I2cManager));
+//	Mpu6050* mpu = (Mpu6050*) pvPortMalloc(sizeof(Mpu6050));
+//	ZeroBuffer(mpu, sizeof(Mpu6050));
+//	mpu->i2cManager = i2cManager;
+//	MpuInit(mpu);
+//
+//	MpuRawData rawData;
+//	ZeroBuffer(&rawData, sizeof(MpuRawData));
+//
 	while(1){
-		vTaskDelayUntil(&ui32WakeTime, pdMS_TO_TICKS(1000));
+		vTaskDelayUntil(&ui32WakeTime, pdMS_TO_TICKS(2000));
+
+//		MpuReadRawData(mpu, &rawData);
+//
+//		logger(Info, Log_Mpu, "Mpu data: %d, %d, %d, %d, %d, %d, %d",
+//				rawData.acX, rawData.acY, rawData.acZ,
+//				rawData.gyX, rawData.gyY, rawData.gyZ, rawData.tmp);
 
 
 //		LedTurnOnOff(LED2, isWdgLedOn);
@@ -444,7 +480,7 @@ bool startSpiServerCom()
 {
 	StartTaskMsgReq* request = (StartTaskMsgReq*) pvPortMalloc(sizeof(StartTaskMsgReq));
 	*request = INIT_START_TASK_MSG_REQ;
-	msgSend(g_robotQueue, getQueueIdFromTaskId(Msg_ServerSpiComTaskID), &request, MSG_WAIT_LONG_TIME);
+	msgSend(g_robotQueue, getAddressFromTaskId(Msg_ServerSpiComTaskID), &request, MSG_WAIT_LONG_TIME);
 
 	StartTaskMsgRsp* response;
 	if(!msgReceive(g_robotQueue, &response, MSG_WAIT_LONG_TIME))
@@ -459,7 +495,7 @@ bool startUpdater()
 {
 	StartTaskMsgReq* request = (StartTaskMsgReq*) pvPortMalloc(sizeof(StartTaskMsgReq));
 	*request = INIT_START_TASK_MSG_REQ;
-	msgSend(g_robotQueue, getQueueIdFromTaskId(Msg_UpdaterTaskID), &request, MSG_WAIT_LONG_TIME);
+	msgSend(g_robotQueue, getAddressFromTaskId(Msg_UpdaterTaskID), &request, MSG_WAIT_LONG_TIME);
 
 	StartTaskMsgRsp* response;
 	if(!msgReceive(g_robotQueue, &response, MSG_WAIT_LONG_TIME))
@@ -470,12 +506,28 @@ bool startUpdater()
 	return result;
 }
 
+
 #ifdef _ROBOT_MASTER_BOARD
 bool startWheels()
 {
 	StartTaskMsgReq* request = (StartTaskMsgReq*) pvPortMalloc(sizeof(StartTaskMsgReq));
 	*request = INIT_START_TASK_MSG_REQ;
-	msgSend(g_robotQueue, getQueueIdFromTaskId(Msg_WheelsTaskID), &request, MSG_WAIT_LONG_TIME);
+	msgSend(g_robotQueue, getAddressFromTaskId(Msg_WheelsTaskID), &request, MSG_WAIT_LONG_TIME);
+
+	StartTaskMsgRsp* response;
+	if(!msgReceive(g_robotQueue, &response, MSG_WAIT_LONG_TIME))
+		return false;
+
+	bool result = response->status;
+	vPortFree(response);
+	return result;
+}
+
+bool startMpu()
+{
+	StartTaskMsgReq* request = (StartTaskMsgReq*) pvPortMalloc(sizeof(StartTaskMsgReq));
+	*request = INIT_START_TASK_MSG_REQ;
+	msgSend(g_robotQueue, getAddressFromTaskId(Msg_MpuTaskID), &request, MSG_WAIT_LONG_TIME);
 
 	StartTaskMsgRsp* response;
 	if(!msgReceive(g_robotQueue, &response, MSG_WAIT_LONG_TIME))
@@ -490,7 +542,7 @@ bool startTcpServer()
 {
 	StartTaskMsgReq* request = (StartTaskMsgReq*) pvPortMalloc(sizeof(StartTaskMsgReq));
 	*request = INIT_START_TASK_MSG_REQ;
-	msgSend(g_robotQueue, getQueueIdFromTaskId(Msg_TcpServerTaskID), &request, MSG_WAIT_LONG_TIME);
+	msgSend(g_robotQueue, getAddressFromTaskId(Msg_TcpServerTaskID), &request, MSG_WAIT_LONG_TIME);
 
 	StartTaskMsgRsp* response;
 	if(!msgReceive(g_robotQueue, &response, MSG_WAIT_LONG_TIME))
@@ -523,7 +575,16 @@ void onReset()
 	}
 	else if(resetCause & SYSCTL_CAUSE_WDOG0)
 	{
+		logger(Error, Log_Robot, "[onReset] Reset cause: watchdog");
 		g_isWdgReset = true;
+	}
+	else if(resetCause & SYSCTL_CAUSE_BOR)
+	{
+		logger(Error, Log_Robot, "[onReset] Reset cause: brown-out");
+	}
+	else
+	{
+		logger(Error, Log_Robot, "[onReset] Reset cause: %d", resetCause);
 	}
 }
 

@@ -61,7 +61,7 @@ bool i2cSend(I2cManager* i2cMng, uint8_t slaveAddress, const uint8_t* data, uint
 	request->slaveAddress = slaveAddress;
 	request->data = (uint8_t*)data;
 	request->length = length;
-	request->sender = queueInd;
+	request->header.queueId = queueInd;
 
 	if(xQueueSend(g_i2cTxQueue, (void*) &request, portMAX_DELAY) != pdPASS)
 	{
@@ -73,7 +73,7 @@ bool i2cSend(I2cManager* i2cMng, uint8_t slaveAddress, const uint8_t* data, uint
 	if(xQueueReceive(g_i2cRxQueues[queueInd], &response, ( portTickType ) RX_WAIT_TIME_TICKS) != pdPASS)
 		return false;
 
-	if(response->msgId != I2C_SEND_MSG_RSP || !response->status)
+	if(response->header.msgId != I2C_SEND_MSG_RSP || !response->status)
 	{
 		vPortFree(response);
 		return false;
@@ -97,7 +97,7 @@ bool i2cReceive(I2cManager* i2cMng, uint8_t slaveAddress, uint8_t* data, uint32_
 	*request = INIT_I2C_RECEIVE_MSG_REQ;
 	request->slaveAddress = slaveAddress;
 	request->length = length;
-	request->sender = queueInd;
+	request->header.queueId = queueInd;
 
 	if(xQueueSend(g_i2cTxQueue, (void*) &request, portMAX_DELAY) != pdPASS)
 	{
@@ -109,7 +109,7 @@ bool i2cReceive(I2cManager* i2cMng, uint8_t slaveAddress, uint8_t* data, uint32_
 	if(xQueueReceive(g_i2cRxQueues[queueInd], &response, ( portTickType ) RX_WAIT_TIME_TICKS) != pdPASS)
 		return false;
 
-	if(response->msgId != I2C_RECEIVE_MSG_RSP || !response->status)
+	if(response->header.msgId != I2C_RECEIVE_MSG_RSP || !response->status)
 	{
 		vPortFree(response);
 		return false;
@@ -136,7 +136,7 @@ bool i2cSendAndReceive(I2cManager* i2cMng, uint8_t slaveAddress, uint8_t* sentDa
 	request->data = sentData;
 	request->sentLength = sentLength;
 	request->rcvLength = recvLength;
-	request->sender = queueInd;
+	request->header.queueId = queueInd;
 
 	if(xQueueSend(g_i2cTxQueue, (void*) &request, portMAX_DELAY) != pdPASS)
 	{
@@ -148,7 +148,7 @@ bool i2cSendAndReceive(I2cManager* i2cMng, uint8_t slaveAddress, uint8_t* sentDa
 	if(xQueueReceive(g_i2cRxQueues[queueInd], &response, ( portTickType ) RX_WAIT_TIME_TICKS) != pdPASS)
 		return false;
 
-	if(response->msgId != I2C_SEND_N_RECEIVE_MSG_RSP || !response->status)
+	if(response->header.msgId != I2C_SEND_N_RECEIVE_MSG_RSP || !response->status)
 	{
 		vPortFree(response);
 		return false;

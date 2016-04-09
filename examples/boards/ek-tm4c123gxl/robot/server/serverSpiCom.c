@@ -23,6 +23,20 @@ SpiComInstance* g_spiComInstServer = NULL;
 #define SPI_BUFFER_SIZE		4096
 #define UDMA_RX_READ_SIZE	16
 
+#define ROUTE_TABLE_SIZE 				10
+
+typedef struct
+{
+	MsgAddress adresses[ROUTE_TABLE_SIZE];
+	uint8_t index;
+} RoutingTable;
+
+static RoutingTable g_routingTable;
+static bool g_isFirstUpdate = true;
+
+static bool routeMsg(void* msg);
+//static bool updateRoutingTable(void* msg);
+
 
 void initializeSpi()
 {
@@ -78,40 +92,21 @@ bool receiveSpiMsg(void** msg)
 	uint32_t len = 0;
 	if(!SpiComReceive(g_spiComInstServer, msg, &len))
 		return false;
-//	UARTprintf("receiveSpiMsg\n");
-//	printBuffer(*msg, len);
 
-//	msgId = *((uint8_t*)*msg);
-
-#ifdef _ROBOT_MASTER_BOARD
-//	I2cManager* i2cManager = (I2cManager*) pvPortMalloc(sizeof(I2cManager));
-//	GpioExpander* gpioExpander = (GpioExpander*) pvPortMalloc(sizeof(GpioExpander));
-//	//
-//	ZeroBuffer(gpioExpander, sizeof(GpioExpander));
-//	gpioExpander->i2cManager = i2cManager;
-//	gpioExpander->hwAddress		= 0x21;
-//	GpioExpInit(gpioExpander);
-//	GpioExpSetPinDirOut(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN5);
-//	GpioExpSetPin(gpioExpander, GPIOEXP_PORTB, GPIOEXP_PIN5);
-#endif
-//	UARTprintf("receiveSpiMsg msgId: %d\n", msgId);
-//	uint32_t msgLen = getMsgSize(*msg);
-//	*msg = pvPortMalloc(msgLen);
-#ifdef _ROBOT_MASTER_BOARD
-//	UARTprintf("receiveSpiMsg msgLen: %d\n", msgLen);
-#endif
 	if(*msg == NULL)
 		return false;
 
-//	*((uint8_t*) *msg) = msgId;
-
-//	if(!SpiComReceive(g_spiComInstServer, ((uint8_t*)*msg) + 1, msgLen - 1))
-//		return false;
 #ifdef _ROBOT_MASTER_BOARD
-//	uint8_t* m = (uint8_t*)*msg;
-//	UARTprintf("receiveSpiMsg msg: %d %d %d\n", m[0], m[1], m[2]);
-//	UARTprintf("receiveSpiMsg success ");
+	if(g_isFirstUpdate)
+	{
+		if(!updateRoutingTable(*msg))
+		{
+			logger(Error, Log_ServerSpiCom, "[receiveSpiMsg] Couldn't update routing table");
+			return false;
+		}
+	}
 #endif
+
 	return true;
 }
 
@@ -119,6 +114,10 @@ bool sendSpiMsg(void* msg)
 {
 	uint32_t msgLen = getMsgSize(msg);
 
+#ifdef _ROBOT_MASTER_BOARD
+	if(!routeMsg(msg))
+		return false;
+#endif
 //	printBuffer(msg, msgLen);
 	if(!SpiComSend(g_spiComInstServer, msg, msgLen))
 	{
@@ -133,5 +132,46 @@ bool sendSpiMsg(void* msg)
 	return true;
 }
 
+bool routeMsg(void* msg)
+{
+	MsgHeader* msgHeader = (MsgHeader*) msg;
 
+	for(int i = 0; i != g_routingTable.index; ++i)
+	{
+		if(g_routingTable.adresses[i].slot == msgHeader->slot)
+		{
+			msgHeader->queueId = g_routingTable.adresses[i].queueId;
+			return true;
+		}
+	}
+
+	logger(Error, Log_ServerSpiCom, "[routeMsg] Couldn't find slot");
+	return false;
+}
+
+bool updateRoutingTable(void* msg)
+{
+	g_isFirstUpdate = false;
+
+	MsgHeader* msgHeader = (MsgHeader*) msg;
+
+	for(int i = 0; i != g_routingTable.index; ++i)
+	{
+		if(g_routingTable.adresses[i].slot == msgHeader->slot)
+		{
+			g_routingTable.adresses[i].queueId = msgHeader->queueId;
+			return true;
+		}
+	}
+
+	if(g_routingTable.index < ROUTE_TABLE_SIZE - 1)
+	{
+		uint8_t index = g_routingTable.index++;
+		g_routingTable.adresses[index].slot = msgHeader->slot;
+		g_routingTable.adresses[index].queueId = msgHeader->queueId;
+		return true;
+	}
+
+	return false;
+}
 

@@ -81,17 +81,15 @@ static void handleNotifyAfterSpeed(EncoderNotifyAfterSpeedMsgRsp* response);
 static void wheelsTask()
 {
 	uint8_t wdgTaskID = registerToWatchDog();
-	uint32_t counter = 0;
 
 	while(true)
 	{
-		if(!(++counter % 10000UL))
-		{
-			feedWatchDog(wdgTaskID);
-		}
-
 		void* msg;
-		if(msgReceive(g_wheelsMainQueue, &msg, 10))
+		feedWatchDog(wdgTaskID, WDG_ASLEEP);
+		bool result = msgReceive(g_wheelsMainQueue, &msg, 10);
+		feedWatchDog(wdgTaskID, WDG_ALIVE);
+
+		if(result)
 		{
 			handleMessages(msg);
 		}
@@ -243,7 +241,7 @@ void handleStartTask(StartTaskMsgReq* request)
 
 	StartTaskMsgReq* startMotorsTaskReq = (StartTaskMsgReq*) pvPortMalloc(sizeof(StartTaskMsgReq));
 	*startMotorsTaskReq = INIT_START_TASK_MSG_REQ;
-	msgSend(g_motorsRxQueue, getQueueIdFromTaskId(Msg_MotorsTaskID), &startMotorsTaskReq, MSG_WAIT_LONG_TIME);
+	msgSend(g_motorsRxQueue, getAddressFromTaskId(Msg_MotorsTaskID), &startMotorsTaskReq, MSG_WAIT_LONG_TIME);
 
 	StartTaskMsgRsp* response;
 	result &= msgReceive(g_motorsRxQueue, &response, MSG_WAIT_LONG_TIME);
@@ -255,7 +253,7 @@ void handleStartTask(StartTaskMsgReq* request)
 
 	StartTaskMsgReq* startEncodersTaskReq = (StartTaskMsgReq*) pvPortMalloc(sizeof(StartTaskMsgReq));
 	*startEncodersTaskReq = INIT_START_TASK_MSG_REQ;
-	msgSend(g_encodersRxQueue, getQueueIdFromTaskId(Msg_EncoderTaskID), &startEncodersTaskReq, MSG_WAIT_LONG_TIME);
+	msgSend(g_encodersRxQueue, getAddressFromTaskId(Msg_EncoderTaskID), &startEncodersTaskReq, MSG_WAIT_LONG_TIME);
 
 	result &= msgReceive(g_encodersRxQueue, &response, MSG_WAIT_LONG_TIME);
 	if(result)
@@ -267,7 +265,7 @@ void handleStartTask(StartTaskMsgReq* request)
 	response = (StartTaskMsgRsp*) pvPortMalloc(sizeof(StartTaskMsgRsp));
 	*response = INIT_START_TASK_MSG_RSP;
 	response->status = result;
-	msgRespond(request->sender, &response, MSG_WAIT_LONG_TIME);
+	msgRespond(msgGetAddress(request), &response, MSG_WAIT_LONG_TIME);
 	vPortFree(request);
 
 	g_taskStarted = result;
@@ -363,7 +361,7 @@ void setDirection(uint8_t wheelId, uint8_t direction)
 	directionReq->motorId = wheelsData[wheelId].motorId;
 	directionReq->direction = direction;
 
-	if(!msgSend(g_motorsRxQueue, getQueueIdFromTaskId(Msg_MotorsTaskID), (void**) &directionReq, portMAX_DELAY))
+	if(!msgSend(g_motorsRxQueue, getAddressFromTaskId(Msg_MotorsTaskID), (void**) &directionReq, portMAX_DELAY))
 	{
 		logger(Error, Log_Wheels, "[setDirection] couldn't send directionReq");
 		return;
@@ -380,7 +378,7 @@ void setDutyCycle(uint8_t wheelId, uint8_t dutyCycle)
 	request->motorId = wheelsData[wheelId].motorId;
 	request->dutyCycle = 10;//dutyCycle;
 
-	if(!msgSend(g_motorsRxQueue, getQueueIdFromTaskId(Msg_MotorsTaskID), (void**) &request, portMAX_DELAY))
+	if(!msgSend(g_motorsRxQueue, getAddressFromTaskId(Msg_MotorsTaskID), (void**) &request, portMAX_DELAY))
 	{
 		logger(Error, Log_Wheels, "[setDutyCycle] couldn't send request");
 		return;
@@ -396,7 +394,7 @@ void startMotor(uint8_t wheelId)
 	*request = INIT_MOTOR_START_MSG_REQ;
 	request->motorId = wheelsData[wheelId].motorId;
 
-	if(!msgSend(g_motorsRxQueue, getQueueIdFromTaskId(Msg_MotorsTaskID), (void**) &request, portMAX_DELAY))
+	if(!msgSend(g_motorsRxQueue, getAddressFromTaskId(Msg_MotorsTaskID), (void**) &request, portMAX_DELAY))
 	{
 		logger(Error, Log_Wheels, "[startMotor] couldn't send request");
 		return;
@@ -412,7 +410,7 @@ void stopMotor(uint8_t wheelId)
 	*request = INIT_MOTOR_STOP_MSG_REQ;
 	request->motorId = wheelsData[wheelId].motorId;
 
-	if(!msgSend(g_motorsRxQueue, getQueueIdFromTaskId(Msg_MotorsTaskID), (void**) &request, portMAX_DELAY))
+	if(!msgSend(g_motorsRxQueue, getAddressFromTaskId(Msg_MotorsTaskID), (void**) &request, portMAX_DELAY))
 	{
 		logger(Error, Log_Wheels, "[stopMotor] couldn't send request");
 		return;
@@ -436,7 +434,7 @@ bool getSpeedFromEncoder(uint8_t wheelId, float* speed)
 	*getSpeedReq = INIT_ENCODER_GET_SPEED_MSG_REQ;
 	getSpeedReq->encoderId = wheelsData[wheelId].encoderId;
 
-	if(!msgSend(g_encodersRxQueue, getQueueIdFromTaskId(Msg_EncoderTaskID), (void**) &getSpeedReq, MSG_WAIT_LONG_TIME))
+	if(!msgSend(g_encodersRxQueue, getAddressFromTaskId(Msg_EncoderTaskID), (void**) &getSpeedReq, MSG_WAIT_LONG_TIME))
 	{
 		logger(Error, Log_Wheels, "[handleRun] couldn't send getSpeedReq");
 		return false;
@@ -473,7 +471,7 @@ bool requestNotifAfterRotations(uint8_t wheelId, uint8_t direction, float rotati
 	rotationsReq->direction = direction;
 	rotationsReq->rotations = (int64_t)(rotations * (float) WHEEL_ROTATION);
 
-	if(!msgSend(g_wheelsMainQueue, getQueueIdFromTaskId(Msg_EncoderTaskID), (void**) &rotationsReq, MSG_WAIT_LONG_TIME))
+	if(!msgSend(g_wheelsMainQueue, getAddressFromTaskId(Msg_EncoderTaskID), (void**) &rotationsReq, MSG_WAIT_LONG_TIME))
 	{
 		logger(Error, Log_Wheels, "[handleRun] couldn't send rotationsReq");
 		return false;
@@ -499,7 +497,7 @@ bool requestNotifAfterSpeed(uint8_t wheelId, float speed)
 	speedNotifReq->encoderId = wheelsData[wheelId].encoderId;
 	speedNotifReq->speed = (uint64_t)(speed * (float)WHEEL_ROTATION);
 
-	if(!msgSend(g_wheelsMainQueue, getQueueIdFromTaskId(Msg_EncoderTaskID), (void**) &speedNotifReq, MSG_WAIT_LONG_TIME))
+	if(!msgSend(g_wheelsMainQueue, getAddressFromTaskId(Msg_EncoderTaskID), (void**) &speedNotifReq, MSG_WAIT_LONG_TIME))
 	{
 		logger(Error, Log_Wheels, "[handleRun] couldn't send speedReq");
 		return false;

@@ -3,12 +3,12 @@
 #include "task.h"
 #include "queue.h"
 #include "msgSystem.h"
+#include "messages.h"
 
 #define QUEUE_ITEM_SIZE			4
 #define QUEUES_MAX_SIZE			20
 #define TASK_IDS_MAX_SIZE		20
 
-#define SENDER_OFFSET			2
 
 static xQueueHandle g_queues[QUEUES_MAX_SIZE] = {0};
 static MsgQueueId g_queuesByTasks[TASK_IDS_MAX_SIZE] = {0};
@@ -85,6 +85,16 @@ MsgQueueId getQueueIdFromTaskId(uint8_t taskId)
 	return g_queuesByTasks[taskId];
 }
 
+MsgAddress getAddressFromTaskId(uint8_t taskId)
+{
+	MsgAddress address;
+
+	address.queueId = getQueueIdFromTaskId(taskId);
+	address.slot = 0xFF;
+
+	return address;
+}
+
 bool msgReceive(MsgQueueId receiver, void** pMsg, uint16_t waitTicks)
 {
 	if(receiver < 0 || receiver >= QUEUES_MAX_SIZE)
@@ -99,38 +109,62 @@ bool msgReceive(MsgQueueId receiver, void** pMsg, uint16_t waitTicks)
 	return false;
 }
 
-bool msgSend(MsgQueueId sender, MsgQueueId receiver, void** pMsg, uint16_t waitTicks)
+bool msgSend(MsgQueueId sender, MsgAddress receiver, void** pMsg, uint16_t waitTicks)
 {
-	if(receiver < 0 || receiver >= QUEUES_MAX_SIZE)
+	if(receiver.queueId < 0 || receiver.queueId >= QUEUES_MAX_SIZE)
 		return false;
 
 	if(sender < 0 || sender >= QUEUES_MAX_SIZE)
 		return false;
 
-	if(g_queues[receiver] == NULL || g_queues[sender] == NULL)
+	if(g_queues[receiver.queueId] == NULL || g_queues[sender] == NULL)
 		return false;
 
-	uint8_t* msgPtr = (uint8_t*) *pMsg;
-	msgPtr += SENDER_OFFSET;
-	*msgPtr = (uint8_t) sender;
+	MsgHeader* msgHeader = (MsgHeader*)*pMsg;
 
-	if(xQueueSend(g_queues[receiver], pMsg, waitTicks) == pdTRUE)
+	msgHeader->queueId = sender;
+//	msgHeader->slot = sender.slot;
+
+	if(xQueueSend(g_queues[receiver.queueId], pMsg, waitTicks) == pdTRUE)
 		return true;
 
 	return false;
 }
 
-bool msgRespond(MsgQueueId receiver, void** pMsg, uint16_t waitTicks)
+bool msgRespond(MsgAddress receiver, void** pMsg, uint16_t waitTicks)
 {
-	if(receiver < 0 || receiver >= QUEUES_MAX_SIZE)
+	if(receiver.queueId < 0 || receiver.queueId >= QUEUES_MAX_SIZE)
 		return false;
 
-	if(g_queues[receiver] == NULL)
+	if(g_queues[receiver.queueId] == NULL)
 		return false;
 
-	if(xQueueSend(g_queues[receiver], pMsg, waitTicks) == pdTRUE)
+	MsgHeader* msgHeader = (MsgHeader*)*pMsg;
+	msgHeader->queueId = 0xFF; 	// N/A
+	msgHeader->slot = receiver.slot;
+
+	if(xQueueSend(g_queues[receiver.queueId], pMsg, waitTicks) == pdTRUE)
 		return true;
 
 	return false;
 
+}
+
+MsgAddress msgGetAddress(void* pMsg)
+{
+	MsgAddress address;
+
+	MsgHeader* msgHeader = (MsgHeader*)pMsg;
+
+	address.queueId = msgHeader->queueId;
+	address.slot = msgHeader->slot;
+
+	return address;
+}
+
+void msgSetAddress(void* pMsg, MsgAddress address)
+{
+	MsgHeader* msgHeader = (MsgHeader*)pMsg;
+	msgHeader->queueId = address.queueId;
+	msgHeader->slot = address.slot;
 }

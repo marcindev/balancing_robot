@@ -90,13 +90,13 @@ void handleStartTask(StartTaskMsgReq* request)
 		ServerStartedNotifMsgReq*  serverStartedNotif =
 				(ServerStartedNotifMsgReq*) pvPortMalloc(sizeof(ServerStartedNotifMsgReq));
 		*serverStartedNotif = INIT_SERVER_STARTED_NOTIF_MSG_REQ;
-		msgSend(g_tcpServerMainQueue, getQueueIdFromTaskId(Msg_ServerSpiComTaskID), &serverStartedNotif, MSG_WAIT_LONG_TIME);
+		msgSend(g_tcpServerMainQueue, getAddressFromTaskId(Msg_ServerSpiComTaskID), &serverStartedNotif, MSG_WAIT_LONG_TIME);
 	}
 
 	StartTaskMsgRsp* response = (StartTaskMsgRsp*) pvPortMalloc(sizeof(StartTaskMsgRsp));
 	*response = INIT_START_TASK_MSG_RSP;
 	response->status = result;
-	msgRespond(request->sender, &response, MSG_WAIT_LONG_TIME);
+	msgRespond(msgGetAddress(request), &response, MSG_WAIT_LONG_TIME);
 	vPortFree(request);
 }
 

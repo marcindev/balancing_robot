@@ -76,10 +76,8 @@ static void tcpServerHandlerTask(void *pvParameters)
 
 	while(true)
 	{
-		if(!(++counter % 100000UL))
-		{
-			feedWatchDog(wdgTaskID);
-		}
+		feedWatchDog(wdgTaskID, WDG_ALIVE);
+
 		//void* msg = NULL;
 		if(receiveTcpMsg(slot))
 		{
@@ -188,7 +186,7 @@ void sendConnStatusNotif(uint16_t slot, uint8_t state)
 	*connStatus = INIT_CONNECTION_STATUS_MSG_REQ;
 	connStatus->slot = slot;
 	connStatus->state = state;
-	msgSend(g_serverHandlerQueues[slot], getQueueIdFromTaskId(Msg_ServerSpiComTaskID), &connStatus, MSG_WAIT_LONG_TIME);
+	msgSend(g_serverHandlerQueues[slot], getAddressFromTaskId(Msg_ServerSpiComTaskID), &connStatus, MSG_WAIT_LONG_TIME);
 }
 
 void handleMessages(uint16_t slot)
@@ -246,7 +244,7 @@ void handleHandShake(uint16_t slot)
 	g_counter[slot] = 0;
 
 	HandshakeMsgRsp response = INIT_HANDSHAKE_MSG_RSP;
-	response.slot = slot;
+	response.header.slot = slot;
 
 	sendTcpMsg(slot, (void*) &response);
 }
@@ -263,8 +261,8 @@ void handleGetLogs(uint16_t slot)
 		UARTprintf("handleGetLogs(uint16_t slot): slot: %d", slot);
 		GetLogsMsgReq* getLogsReq = (GetLogsMsgReq*) pvPortMalloc(sizeof(GetLogsMsgReq));
 		*getLogsReq = INIT_GET_LOGS_MSG_REQ;
-		getLogsReq->slot = slot;
-		msgSend(g_serverHandlerQueues[slot], getQueueIdFromTaskId(Msg_ServerSpiComTaskID), &getLogsReq, MSG_WAIT_LONG_TIME);
+		getLogsReq->header.slot = slot;
+		msgSend(g_serverHandlerQueues[slot], getAddressFromTaskId(Msg_ServerSpiComTaskID), &getLogsReq, MSG_WAIT_LONG_TIME);
 		return;
 	}
 
@@ -314,8 +312,8 @@ void handleGetPostmortem(uint16_t slot)
 		UARTprintf("handleGetPostmortem(uint16_t slot): slot: %d", slot);
 		GetPostmortemMsgReq* request = (GetPostmortemMsgReq*) pvPortMalloc(sizeof(GetPostmortemMsgReq));
 		*request = INIT_GET_POSTMORTEM_MSG_REQ;
-		request->slot = slot;
-		msgSend(g_serverHandlerQueues[slot], getQueueIdFromTaskId(Msg_ServerSpiComTaskID), &request, MSG_WAIT_LONG_TIME);
+		request->header.slot = slot;
+		msgSend(g_serverHandlerQueues[slot], getAddressFromTaskId(Msg_ServerSpiComTaskID), &request, MSG_WAIT_LONG_TIME);
 		return;
 	}
 
@@ -365,7 +363,7 @@ void handleGetPostmortem(uint16_t slot)
 
 void handleGetLogsRsp(GetLogsMsgRsp* msg)
 {
-	sendTcpMsg(msg->slot, (void*) msg);
+	sendTcpMsg(msg->header.slot, (void*) msg);
 
 	vPortFree(msg);
 	msg = NULL;
@@ -380,8 +378,8 @@ void handleGetFreeHeapSize(uint16_t slot)
 	{
 		GetFreeHeapSizeReq* request = (GetFreeHeapSizeReq*) pvPortMalloc(sizeof(GetFreeHeapSizeReq));
 		*request = INIT_GET_FREE_HEAP_SIZE_MSG_REQ;
-		request->slot = slot;
-		msgSend(g_serverHandlerQueues[slot], getQueueIdFromTaskId(Msg_ServerSpiComTaskID), &request, MSG_WAIT_LONG_TIME);
+		request->header.slot = slot;
+		msgSend(g_serverHandlerQueues[slot], getAddressFromTaskId(Msg_ServerSpiComTaskID), &request, MSG_WAIT_LONG_TIME);
 		return;
 	}
 
@@ -401,8 +399,8 @@ void handleGetTaskList(uint16_t slot)
 	{
 		GetTaskListReq* request = (GetTaskListReq*) pvPortMalloc(sizeof(GetTaskListReq));
 		*request = INIT_GET_TASK_LIST_MSG_REQ;
-		request->slot = slot;
-		msgSend(g_serverHandlerQueues[slot], getQueueIdFromTaskId(Msg_ServerSpiComTaskID), &request, MSG_WAIT_LONG_TIME);
+		request->header.slot = slot;
+		msgSend(g_serverHandlerQueues[slot], getAddressFromTaskId(Msg_ServerSpiComTaskID), &request, MSG_WAIT_LONG_TIME);
 		return;
 	}
 
@@ -449,8 +447,8 @@ void handleSetTaskPriority(uint16_t slot)
 	{
 		SetTaskPriorityMsgReq* request = (SetTaskPriorityMsgReq*) pvPortMalloc(sizeof(SetTaskPriorityMsgReq));
 		*request = INIT_SET_TASK_PRIORITY_MSG_REQ;
-		request->slot = slot;
-		msgSend(g_serverHandlerQueues[slot], getQueueIdFromTaskId(Msg_ServerSpiComTaskID), &request, MSG_WAIT_LONG_TIME);
+		request->header.slot = slot;
+		msgSend(g_serverHandlerQueues[slot], getAddressFromTaskId(Msg_ServerSpiComTaskID), &request, MSG_WAIT_LONG_TIME);
 		return;
 	}
 
@@ -470,15 +468,15 @@ void handleUpdaterCmd(uint16_t slot)
 
 	UpdaterCmdMsgReq* request = (UpdaterCmdMsgReq*) pvPortMalloc(sizeof(UpdaterCmdMsgReq));
 	*request = *msg;
-	request->slot = slot;
+	request->header.slot = slot;
 
 	if(request->isMaster)
 	{
-		msgSend(g_serverHandlerQueues[slot], getQueueIdFromTaskId(Msg_ServerSpiComTaskID), &request, MSG_WAIT_LONG_TIME);
+		msgSend(g_serverHandlerQueues[slot], getAddressFromTaskId(Msg_ServerSpiComTaskID), &request, MSG_WAIT_LONG_TIME);
 		return;
 	}
 
-	msgSend(g_serverHandlerQueues[slot], getQueueIdFromTaskId(Msg_UpdaterTaskID), &request, MSG_WAIT_LONG_TIME);
+	msgSend(g_serverHandlerQueues[slot], getAddressFromTaskId(Msg_UpdaterTaskID), &request, MSG_WAIT_LONG_TIME);
 }
 
 void handleUpdaterSendData(uint16_t slot)
@@ -488,30 +486,30 @@ void handleUpdaterSendData(uint16_t slot)
 
 	UpdaterSendDataMsgReq* request = (UpdaterSendDataMsgReq*) pvPortMalloc(sizeof(UpdaterSendDataMsgReq));
 	*request = *msg;
-	request->slot = slot;
+	request->header.slot = slot;
 
 	if(request->isMaster)
 	{
-		msgSend(g_serverHandlerQueues[slot], getQueueIdFromTaskId(Msg_ServerSpiComTaskID), &request, MSG_WAIT_LONG_TIME);
+		msgSend(g_serverHandlerQueues[slot], getAddressFromTaskId(Msg_ServerSpiComTaskID), &request, MSG_WAIT_LONG_TIME);
 		return;
 	}
 
-	msgSend(g_serverHandlerQueues[slot], getQueueIdFromTaskId(Msg_UpdaterTaskID), &request, MSG_WAIT_LONG_TIME);
+	msgSend(g_serverHandlerQueues[slot], getAddressFromTaskId(Msg_UpdaterTaskID), &request, MSG_WAIT_LONG_TIME);
 }
 
 void forwardMsgToSpi(uint16_t slot)
 {
-	TcpMsgHeader* tempMsgHdr = &g_buffer[0];
+	MsgHeader* tempMsgHdr = &g_buffer[0];
 	uint16_t msgLen = getMsgSize(tempMsgHdr);
-	TcpMsgHeader* msgHdr = (TcpMsgHeader*) pvPortMalloc(sizeof(msgLen));
+	MsgHeader* msgHdr = (MsgHeader*) pvPortMalloc(sizeof(msgLen));
 	memcpy(msgHdr, tempMsgHdr, msgLen);
 	msgHdr->slot = slot;
-	msgSend(g_serverHandlerQueues[slot], getQueueIdFromTaskId(Msg_ServerSpiComTaskID), &msgHdr, MSG_WAIT_LONG_TIME);
+	msgSend(g_serverHandlerQueues[slot], getAddressFromTaskId(Msg_ServerSpiComTaskID), &msgHdr, MSG_WAIT_LONG_TIME);
 }
 
 void forwardMsgToTcp(void* msg)
 {
-	TcpMsgHeader* msgHdr = (TcpMsgHeader*) msg;
+	MsgHeader* msgHdr = (MsgHeader*) msg;
 	sendTcpMsg(msgHdr->slot, msg);
 
 	vPortFree(msg);

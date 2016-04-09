@@ -40,10 +40,11 @@ static void i2cTask(void *pvParameters)
 
 	while(true)
 	{
-		feedWatchDog(wdgTaskID);
-
 		void* msg;
-        if(xQueueReceive(g_i2cTxQueue, &msg, I2C_MSG_WAIT_TIME) == pdPASS)
+		feedWatchDog(wdgTaskID, WDG_ASLEEP);
+		BaseType_t result = xQueueReceive(g_i2cTxQueue, &msg, I2C_MSG_WAIT_TIME);
+		feedWatchDog(wdgTaskID, WDG_ALIVE);
+        if(result == pdPASS)
         {
         	switch(*((uint8_t*)msg))
         	{
@@ -74,9 +75,10 @@ bool i2cTaskInit()
     if(xTaskCreate(i2cTask, (signed portCHAR *)"I2C", I2C_TASK_STACK_SIZE, NULL,
                    tskIDLE_PRIORITY + PRIORITY_I2C_TASK, NULL) != pdTRUE)
     {
+    	logger(Error, Log_I2CTask, "[i2cTaskInit] Couldn't create task");
         return false;
     }
-
+    logger(Info, Log_I2CTask, "[i2cTaskInit] Task created");
     return true;
 }
 
@@ -92,7 +94,7 @@ void i2cHandleSend(I2cSendMsgReq* request)
 	*response = INIT_SEND_I2C_MSG_RSP;
 	response->status = result;
 
-	xQueueSend(g_i2cRxQueues[request->sender], (void*) &response, portMAX_DELAY);
+	xQueueSend(g_i2cRxQueues[request->header.queueId], (void*) &response, portMAX_DELAY);
 #endif
 	//vPortFree(request);
 }
@@ -116,7 +118,7 @@ void i2cHandleReceive(I2cReceiveMsgReq* request)
 	response->data = data;
 	response->length = request->length;
 
-	xQueueSend(g_i2cRxQueues[request->sender], (void*) &response, portMAX_DELAY);
+	xQueueSend(g_i2cRxQueues[request->header.queueId], (void*) &response, portMAX_DELAY);
 
 	//vPortFree(request);
 }
@@ -140,7 +142,7 @@ void i2cHandleSendAndReceive(I2cSendAndReceiveMsgReq* request)
 	if(!result)
 	{
 		response->status = 0;
-		xQueueSend(g_i2cRxQueues[request->sender], (void*) &response, portMAX_DELAY);
+		xQueueSend(g_i2cRxQueues[request->header.queueId], (void*) &response, portMAX_DELAY);
 
 		return;
 	}
@@ -151,7 +153,7 @@ void i2cHandleSendAndReceive(I2cSendAndReceiveMsgReq* request)
 	response->data = data;
 	response->length = request->rcvLength;
 
-	xQueueSend(g_i2cRxQueues[request->sender], (void*) &response, portMAX_DELAY);
+	xQueueSend(g_i2cRxQueues[request->header.queueId], (void*) &response, portMAX_DELAY);
 
 	//vPortFree(request);
 }

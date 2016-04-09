@@ -157,7 +157,7 @@ void uDMAErrorHandler(void)
 
 void WDG_intHandler(void)
 {
-	WatchdogIntClear(WATCHDOG0_BASE);
+//	WatchdogIntClear(WATCHDOG0_BASE); // don't clear for reset
 
 	onWatchDogTimeout();
 }

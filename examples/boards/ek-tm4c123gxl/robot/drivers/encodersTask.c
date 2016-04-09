@@ -39,7 +39,7 @@ typedef struct
 	int64_t startCounter;
 	int64_t threshold;
 	int8_t expectedDirection;
-	int8_t notifReceiver;
+	MsgAddress notifReceiver;
 	bool isActive;
 }RotationNotifData;
 
@@ -47,7 +47,7 @@ typedef struct
 {
 	uint64_t threshold;
 	int8_t greaterOrLess;
-	int8_t notifReceiver;
+	MsgAddress notifReceiver;
 	bool isActive;
 }SpeedNotifData;
 
@@ -81,11 +81,12 @@ static void encodersTask()
 
 	while(true)
 	{
-		feedWatchDog(wdgTaskID);
-
 		void* msg;
+		feedWatchDog(wdgTaskID, WDG_ASLEEP);
+
 		if(msgReceive(g_encodersQueue, &msg, MSG_WAIT_LONG_TIME))
 		{
+			feedWatchDog(wdgTaskID, WDG_ALIVE);
 			handleMessages(msg);
 		}
 
@@ -256,7 +257,7 @@ void handleStartTask(StartTaskMsgReq* request)
 	StartTaskMsgRsp* response = (StartTaskMsgRsp*) pvPortMalloc(sizeof(StartTaskMsgRsp));
 	*response = INIT_START_TASK_MSG_RSP;
 	response->status = true;
-	msgRespond(request->sender, &response, MSG_WAIT_LONG_TIME);
+	msgRespond(msgGetAddress(request), &response, MSG_WAIT_LONG_TIME);
 	vPortFree(request);
 }
 
@@ -275,7 +276,7 @@ void handleGetCounter(EncoderGetCounterMsgReq* request)
 
 	*response = INIT_ENCODER_GET_COUNTER_MSG_RSP;
 
-	msgRespond(request->sender, &response, MSG_WAIT_LONG_TIME);
+	msgRespond(msgGetAddress(request), &response, MSG_WAIT_LONG_TIME);
 
 	vPortFree(request);
 }
@@ -294,7 +295,7 @@ void handleGetSpeed(EncoderGetSpeedMsgReq* request)
 
 	*response = INIT_ENCODER_GET_SPEED_MSG_RSP;
 
-	msgRespond(request->sender, &response, MSG_WAIT_LONG_TIME);
+	msgRespond(msgGetAddress(request), &response, MSG_WAIT_LONG_TIME);
 
 	vPortFree(request);
 }
@@ -323,7 +324,7 @@ void handleNotifyAfterRotations(EncoderNotifyAfterRotationsMsgReq* request)
 	}
 
 	rotationNotifData[encoderId].startCounter = startCounter;
-	rotationNotifData[encoderId].notifReceiver = request->sender;
+	rotationNotifData[encoderId].notifReceiver = msgGetAddress(request);
 	rotationNotifData[encoderId].expectedDirection = request->direction;
 
 	if(!rotationNotifData[encoderId].isActive)
@@ -406,7 +407,7 @@ void handleNotifyAfterSpeed(EncoderNotifyAfterSpeedMsgReq* request)
 	speedNotifData[encoderId].greaterOrLess =
 			((request->speed > getEncoderSpeed(g_encoders[encoderId])) ?
 					ENCODER_SPEED_GRATER : ENCODER_SPEED_LESS);
-	speedNotifData[encoderId].notifReceiver = request->sender;
+	speedNotifData[encoderId].notifReceiver = msgGetAddress(request);
     speedNotifData[encoderId].isActive = true;
 
 	vPortFree(request);

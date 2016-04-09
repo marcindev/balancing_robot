@@ -26,9 +26,11 @@ static void encoderSamplerTask()
 
 	while(true)
 	{
-		feedWatchDog(wdgTaskID);
+		feedWatchDog(wdgTaskID, WDG_ASLEEP);
+		BaseType_t result = xSemaphoreTake(g_gpioExp1PortBIntSem, LONG_TIME);
+		feedWatchDog(wdgTaskID, WDG_ALIVE);
 
-		if(xSemaphoreTake(g_gpioExp1PortBIntSem, LONG_TIME) == pdTRUE)
+		if(result == pdTRUE)
 			doEncoderJob();
 	}
 }

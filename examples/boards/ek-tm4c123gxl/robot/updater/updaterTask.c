@@ -36,14 +36,12 @@ static void updaterTask()
 
 	while(true)
 	{
-		if(!(++counter % 10000UL))
-		{
-			feedWatchDog(wdgTaskID);
-		}
-
 		void* msg;
+		feedWatchDog(wdgTaskID, WDG_ASLEEP);
+
 		if(msgReceive(g_updaterMainQueue, &msg, UPDATER_MSG_WAIT_TIME))
 		{
+			feedWatchDog(wdgTaskID, WDG_ALIVE);
 			handleMessages(msg);
 		}
 
@@ -100,7 +98,7 @@ void handleStartTask(StartTaskMsgReq* request)
 	StartTaskMsgRsp* response = (StartTaskMsgRsp*) pvPortMalloc(sizeof(StartTaskMsgRsp));
 	*response = INIT_START_TASK_MSG_RSP;
 	response->status = true;
-	msgRespond(request->sender, &response, MSG_WAIT_LONG_TIME);
+	msgRespond(msgGetAddress(request), &response, MSG_WAIT_LONG_TIME);
 	vPortFree(request);
 }
 
@@ -113,9 +111,8 @@ void handleUpdaterCmd(UpdaterCmdMsgReq* request)
 
 	UpdaterCmdMsgRsp* response = (UpdaterCmdMsgRsp*) pvPortMalloc(sizeof(UpdaterCmdMsgRsp));
 	*response = INIT_UPDATER_CMD_MSG_RSP;
-	response->slot = request->slot;
 	response->status = status;
-	msgRespond(request->sender, &response, MSG_WAIT_LONG_TIME);
+	msgRespond(msgGetAddress(request), &response, MSG_WAIT_LONG_TIME);
 	vPortFree(request);
 }
 
@@ -125,9 +122,8 @@ void handleUpdaterSendData(UpdaterSendDataMsgReq* request)
 
 	UpdaterSendDataMsgRsp* response = (UpdaterSendDataMsgRsp*) pvPortMalloc(sizeof(UpdaterSendDataMsgRsp));
 	*response = INIT_UPDATER_SEND_DATA_MSG_RSP;
-	response->slot = request->slot;
 	response->status = status;
-	msgRespond(request->sender, &response, MSG_WAIT_LONG_TIME);
+	msgRespond(msgGetAddress(request), &response, MSG_WAIT_LONG_TIME);
 	vPortFree(request);
 }
 
