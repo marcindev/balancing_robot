@@ -72,8 +72,8 @@
 #define configUSE_TICK_HOOK                 0
 #define configCPU_CLOCK_HZ                  ( ( unsigned long ) 80000000 )
 #define configTICK_RATE_HZ                  ( ( portTickType ) 1000 )
-#define configMINIMAL_STACK_SIZE            ( ( unsigned short ) 200 )
-#define configTOTAL_HEAP_SIZE               ( ( size_t ) ( 0x4000 ) )
+#define configMINIMAL_STACK_SIZE            ( ( unsigned short ) 100 )
+#define configTOTAL_HEAP_SIZE               ( ( size_t ) ( 0x5500 ) )
 #define configMAX_TASK_NAME_LEN             ( 15 )
 #define configUSE_TRACE_FACILITY            1
 #define configUSE_STATS_FORMATTING_FUNCTIONS 1
@@ -84,11 +84,12 @@
 #define configUSE_RECURSIVE_MUTEXES         1
 #define configUSE_TIMERS					1
 #define configCHECK_FOR_STACK_OVERFLOW      2
+#define configUSE_MALLOC_FAILED_HOOK		1
 /* Software timer related definitions. */
 #define configUSE_TIMERS                        1
 #define configTIMER_TASK_PRIORITY               5
 #define configTIMER_QUEUE_LENGTH                10
-#define configTIMER_TASK_STACK_DEPTH            configMINIMAL_STACK_SIZE
+#define configTIMER_TASK_STACK_DEPTH            200
 
 #define configMAX_PRIORITIES                ( 16 )
 #define configMAX_CO_ROUTINE_PRIORITIES     ( 2 )
