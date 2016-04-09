@@ -38,7 +38,7 @@ void SetWheelSpeedCmd::run()
 	ss << args[0];
 	ss >> wheelId;
 
-	if(ss.good())
+	if(!ss.good())
 	{
 		cout << "Incorrect argument: \"" << args[0] << "\"" << endl;
 		return;
@@ -50,7 +50,7 @@ void SetWheelSpeedCmd::run()
 	float speed;
 	ss >> speed;
 
-	if(ss.good())
+	if(!ss.good())
 	{
 		cout << "Incorrect argument: \"" << args[1] << "\"" << endl;
 		return;

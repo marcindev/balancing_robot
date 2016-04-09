@@ -48,7 +48,7 @@ void SetTaskPriorityCmd::run()
 	ss << args[1];
 	ss >> taskId;
 
-	if(ss.good())
+	if(!ss.good())
 	{
 		cout << "Incorrect argument: \"" << args[0] << "\"" << endl;
 		return;
@@ -60,7 +60,7 @@ void SetTaskPriorityCmd::run()
 	ss << args[2];
 	ss >> priority;
 
-	if(ss.good())
+	if(!ss.good())
 	{
 		cout << "Incorrect argument: \"" << args[1] << "\"" << endl;
 		return;

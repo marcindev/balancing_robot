@@ -41,7 +41,7 @@ void WheelRunCmd::run()
 	ss << args[0];
 	ss >> wheelId;
 
-	if(ss.good())
+	if(!ss.good())
 	{
 		cout << "Incorrect argument: \"" << args[0] << "\"" << endl;
 		return;
@@ -53,7 +53,7 @@ void WheelRunCmd::run()
 	int direction;
 	ss >> direction;
 
-	if(ss.good())
+	if(!ss.good())
 	{
 		cout << "Incorrect argument: \"" << args[1] << "\"" << endl;
 		return;
@@ -65,7 +65,7 @@ void WheelRunCmd::run()
 	float rotations;
 	ss >> rotations;
 
-	if(ss.good())
+	if(!ss.good())
 	{
 		cout << "Incorrect argument: \"" << args[2] << "\"" << endl;
 		return;

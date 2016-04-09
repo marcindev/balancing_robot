@@ -112,6 +112,7 @@ void UpdaterCmd::run()
 			else
 			{
 				cout << "UpdaterCmd: unrecognized msg " << hex << static_cast<int>(msgId) << endl;
+				cout << dec;
 			}
 		}
 
@@ -803,6 +804,8 @@ void UpdaterCmd::AvailPartition1Handler::execute()
 	cout << "Binary will be programmed on partition 1:" << endl;
 	cout << "\tFlash address:" "0x" << hex << owner.partitions[Partitions::PARTITION_1]->address << endl;
 	cout << "\tLength:" << "0x" << hex << owner.partitions[Partitions::PARTITION_1]->length << dec << endl;
+	cout << dec;
+
 	owner.currentPartition = Partitions::PARTITION_1;
 
 	cout << "Building binary..." << endl;
@@ -829,6 +832,8 @@ void UpdaterCmd::AvailPartition2Handler::execute()
 	cout << "Binary will be programmed on partition 2:" << endl;
 	cout << "\tFlash address:" "0x" << hex << owner.partitions[Partitions::PARTITION_2]->address << endl;
 	cout << "\tLength:" << "0x" << hex << owner.partitions[Partitions::PARTITION_2]->length << dec << endl;
+	cout << dec;
+
 	owner.currentPartition = Partitions::PARTITION_2;
 
 	cout << "Building binary..." << endl;

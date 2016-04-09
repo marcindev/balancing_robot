@@ -57,12 +57,12 @@ void GetFuncNameCmd::run()
 	stringstream ss;
 
 
-	ss << args[2];
+	ss << hex << args[2];
 	ss >> address;
 
-	if(ss.good())
+	if(!ss.good())
 	{
-		cout << "Incorrect argument: \"" << args[0] << "\"" << endl;
+		cout << "Incorrect argument: \"" << args[2] << "\"" << endl;
 		return;
 	}
 
@@ -77,5 +77,6 @@ void GetFuncNameCmd::run()
 	}
 
 	cout << "Address: " << "0x" << hex << address << ", function: " << funcName << endl;
+	cout << dec;
 
 }
