@@ -162,6 +162,9 @@ bool GetLogsCommand::handleGetLogsRsp(const GetLogsMsgRsp& response)
 	case 12:
 		ss << "Log_Updater";
 		break;
+	case 13:
+		ss << "Log_Mpu";
+		break;
 	default:
 	ss << "Unknown flag( " << static_cast<int>(response.component) << " )";
 	}

@@ -72,6 +72,18 @@ shared_ptr<BaseMessage> BaseMessage::getMessageFromPayload(unsigned char* data)
 	case UPDATER_SEND_DATA_MSG_RSP:
 		msg = shared_ptr<BaseMessage>(new Message<UpdaterSendDataMsgRsp>(shared_ptr<UpdaterSendDataMsgRsp>(new UpdaterSendDataMsgRsp)));
 		break;
+	case MPU_REG_READ_MSG_REQ:
+		msg = shared_ptr<BaseMessage>(new Message<MpuRegReadMsgReq>(shared_ptr<MpuRegReadMsgReq>(new MpuRegReadMsgReq)));
+		break;
+	case MPU_REG_READ_MSG_RSP:
+		msg = shared_ptr<BaseMessage>(new Message<MpuRegReadMsgRsp>(shared_ptr<MpuRegReadMsgRsp>(new MpuRegReadMsgRsp)));
+		break;
+	case MPU_REG_WRITE_MSG_REQ:
+		msg = shared_ptr<BaseMessage>(new Message<MpuRegWriteMsgReq>(shared_ptr<MpuRegWriteMsgReq>(new MpuRegWriteMsgReq)));
+		break;
+	case MPU_REG_WRITE_MSG_RSP:
+		msg = shared_ptr<BaseMessage>(new Message<MpuRegWriteMsgRsp>(shared_ptr<MpuRegWriteMsgRsp>(new MpuRegWriteMsgRsp)));
+		break;
 	default:
 		msg = nullptr;
 		break;

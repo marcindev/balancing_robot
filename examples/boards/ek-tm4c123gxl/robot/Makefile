@@ -136,6 +136,8 @@ ${COMPILER}/robot_main.axf: ${COMPILER}/encodersTask.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/wheelsTask.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/wheel.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/led.o
+${COMPILER}/robot_main.axf: ${COMPILER}/MPU6050.o
+${COMPILER}/robot_main.axf: ${COMPILER}/mpuTask.o
 else ifeq ($(MAKECMDGOALS),slave)
 ${COMPILER}/robot_main.axf: ${COMPILER}/device.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/driver.o

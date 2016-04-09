@@ -59,6 +59,10 @@ const UpdaterCmdMsgReq INIT_UPDATER_CMD_MSG_REQ = {UPDATER_CMD_MSG_REQ, sizeof(U
 const UpdaterCmdMsgRsp INIT_UPDATER_CMD_MSG_RSP = {UPDATER_CMD_MSG_RSP, sizeof(UpdaterCmdMsgRsp)};
 const UpdaterSendDataMsgReq INIT_UPDATER_SEND_DATA_MSG_REQ = {UPDATER_SEND_DATA_MSG_REQ, sizeof(UpdaterSendDataMsgReq)};
 const UpdaterSendDataMsgRsp INIT_UPDATER_SEND_DATA_MSG_RSP = {UPDATER_SEND_DATA_MSG_RSP, sizeof(UpdaterSendDataMsgRsp)};
+const MpuRegReadMsgReq INIT_MPU_REG_READ_MSG_REQ = {MPU_REG_READ_MSG_REQ, sizeof(MpuRegReadMsgReq)};
+const MpuRegReadMsgRsp INIT_MPU_REG_READ_MSG_RSP = {MPU_REG_READ_MSG_RSP, sizeof(MpuRegReadMsgRsp)};
+const MpuRegWriteMsgReq INIT_MPU_REG_WRITE_MSG_REQ = {MPU_REG_WRITE_MSG_REQ, sizeof(MpuRegWriteMsgReq)};
+const MpuRegWriteMsgRsp INIT_MPU_REG_WRITE_MSG_RSP = {MPU_REG_WRITE_MSG_RSP, sizeof(MpuRegWriteMsgRsp)};
 
 
 

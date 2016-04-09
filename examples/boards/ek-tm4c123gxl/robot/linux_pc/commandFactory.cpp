@@ -10,6 +10,8 @@
 #include "getPostmortemCmd.h"
 #include "updaterCmd.h"
 #include "getFuncNameCmd.h"
+#include "readMpuRegCmd.h"
+#include "writeMpuRegCmd.h"
 
 using namespace std;
 
@@ -56,6 +58,13 @@ shared_ptr<Command> CommandFactory::createCommand(const string& strCommand,
 
 	if(strCommand == "getFuncName")
 		return shared_ptr<Command>(new GetFuncNameCmd(connection, args));
+
+	if(strCommand == "readMpuReg")
+		return shared_ptr<Command>(new ReadMpuRegCmd(connection, args));
+
+	if(strCommand == "writeMpuReg")
+		return shared_ptr<Command>(new WriteMpuRegCmd(connection, args));
+
 
 
 	cout << "Wrong command!" << endl;
