@@ -48,6 +48,7 @@ static IsrBuffers isrBuffers[ISR_BUFFERS_SIZE];
 static uint8_t isrBuffIndex = 0;
 static uint32_t g_framePointer;
 static uint8_t g_stackDepth;
+static char g_stacktraceStr[120];
 
 
 static void _logStackTrace(uint32_t* addresses, uint8_t num);
@@ -541,7 +542,23 @@ void _logStackTrace(uint32_t* addresses, uint8_t num)
 
 	size_t logStrLen = strPrefixLen + num * strElementLen + 1;
 
-	char* logStr = (char*) pvPortMalloc(logStrLen);
+	char* logStr = NULL;
+
+	if(isInIsr)
+	{
+		logStr = &g_stacktraceStr;
+	}
+	else
+	{
+		logStr = (char*) pvPortMalloc(logStrLen);
+
+		if(!logStr)
+		{
+			logStr = &g_stacktraceStr;
+			isInIsr = true;
+		}
+	}
+
 	char* strPtr = logStr;
 
 	memcpy(strPtr, strPrefix, strPrefixLen);
