@@ -28,7 +28,8 @@ typedef enum
 	Log_ServerSpiCom,
 	Log_Leds,
 	Log_Updater,
-	Log_Mpu
+	Log_Mpu,
+	Log_MotionCtrl
 } LogComponent;
 
 void logger(LogLevel level, LogComponent component, const char* string, ...);

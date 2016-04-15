@@ -157,6 +157,7 @@ void handleSpiMessages(void* msg)
 		break;
 	case MPU_REG_READ_MSG_REQ:
 	case MPU_REG_WRITE_MSG_REQ:
+	case MPU_GET_DATA_TCP_MSG_REQ:
 		handleMpuMsgs(msg);
 		break;
 	case SERVER_STARTED_NOTIF_MSG_REQ:

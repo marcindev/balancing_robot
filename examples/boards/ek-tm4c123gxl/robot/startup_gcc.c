@@ -54,7 +54,7 @@ extern void uDMAErrorHandler(void);
 extern void WDG_intHandler(void);
 
 #ifdef _ROBOT_MASTER_BOARD
-
+extern void Timer0BIntHandler(void);
 #else
 extern void GPIOB_intHandler(void);
 extern void UART1_intHandler(void);
@@ -133,7 +133,11 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // ADC Sequence 3
 	WDG_intHandler,	                        // Watchdog timer
     IntDefaultHandler,                      // Timer 0 subtimer A
-    IntDefaultHandler,                      // Timer 0 subtimer B
+#ifdef _ROBOT_MASTER_BOARD
+	Timer0BIntHandler,                      // Timer 0 subtimer B
+#else
+	IntDefaultHandler,                      // Timer 0 subtimer B
+#endif
     IntDefaultHandler,                      // Timer 1 subtimer A
     IntDefaultHandler,                      // Timer 1 subtimer B
     IntDefaultHandler,                      // Timer 2 subtimer A

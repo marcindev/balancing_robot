@@ -12,6 +12,7 @@
 #include "getFuncNameCmd.h"
 #include "readMpuRegCmd.h"
 #include "writeMpuRegCmd.h"
+#include "getMpuData.h"
 
 using namespace std;
 
@@ -64,6 +65,9 @@ shared_ptr<Command> CommandFactory::createCommand(const string& strCommand,
 
 	if(strCommand == "writeMpuReg")
 		return shared_ptr<Command>(new WriteMpuRegCmd(connection, args));
+
+	if(strCommand == "getMpuData")
+		return shared_ptr<Command>(new GetMpuDataCmd(connection, args));
 
 
 

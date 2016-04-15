@@ -212,10 +212,10 @@ static void robotTask(void *pvParameters)
 
 #else
 
-	if(!startMpu())
-	{
-		while(1){}
-	}
+//	if(!startMpu())
+//	{
+//		while(1){}
+//	}
 
 //	if(!startWheels())
 //	{

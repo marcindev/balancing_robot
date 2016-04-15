@@ -1,6 +1,7 @@
 #include "MPU6050.h"
 #include "MPU6050RegMap.h"
 #include "logger.h"
+#include <math.h>
 
 
 #define MPU_I2C_ADDRESS			0x68
@@ -14,16 +15,27 @@ typedef struct
 			z_offset;
 } GyroCalib;
 
-typedef struct
-{
-	float x_axis;
-	float y_axis;
-} AccelAngle;
+
+/* Sensitivity for gyro
+FS_SEL	Full Scale Range	LSB Sensitivity
+0		± 250 °/s			131 LSB/°/s
+1		± 500 °/s			65.5 LSB/°/s
+2		± 1000 °/s			32.8 LSB/°/s
+3		± 2000 °/s			16.4 LSB/°/s
+*/
 
 static GyroCalib g_gyroCalib;
+static float g_gyroSensitivity;
+static AccelAngles g_accelAngles;
+static GyroRates g_gyroRates;
 
 static bool MpuTest(Mpu6050* mpu);
 static bool MpuConfigure(Mpu6050* mpu);
+static bool MpuCalibrateGyros(Mpu6050* mpu);
+static bool MpuReadRawData(Mpu6050* mpu, MpuRawData* rawData);
+static AccelAngles calcAccelAngles(const MpuRawData* rawData);
+static GyroRates calcGyroRates(const MpuRawData* rawData);
+static float getGyroSensitivity(Mpu6050* mpu);
 
 void MpuInit(Mpu6050* mpu)
 {
@@ -89,7 +101,7 @@ bool MpuConfigure(Mpu6050* mpu)
 	//Disable FSync, 256Hz DLPF
 	result &= MpuRegWrite(mpu, CONFIG, 0x0);
 	//Disable gyro self tests, scale of 500 degrees/s
-	result &= MpuRegWrite(mpu, CONFIG, 0x0b00001000);
+	result &= MpuRegWrite(mpu, GYRO_CONFIG, 0b00001000);
 	//Disable accel self tests, scale of +-2g, no DHPF
 	result &= MpuRegWrite(mpu, ACCEL_CONFIG, 0x0);
     //Motion threshold of 0mg
@@ -108,12 +120,16 @@ bool MpuConfigure(Mpu6050* mpu)
     //Disables FIFO, AUX I2C, FIFO and I2C reset bits to 0
 	result &= MpuRegWrite(mpu, USER_CTRL, 0x00);
     //Sets clock source to gyro reference w/ PLL
-	result &= MpuRegWrite(mpu, PWR_MGMT_1, 0x0b00000010);
+	result &= MpuRegWrite(mpu, PWR_MGMT_1, 0b00000010);
     //Controls frequency of wakeups in accel low power mode plus the sensor standby modes
 	result &= MpuRegWrite(mpu, PWR_MGMT_2, 0x00);
 
     //Data transfer to and from the FIFO buffer
 	result &= MpuRegWrite(mpu, FIFO_R_W, 0x00);
+
+
+	// set gyro sensitivity based on scale range
+	g_gyroSensitivity = getGyroSensitivity(mpu);
 
 	return result;
 }
@@ -128,6 +144,38 @@ bool MpuSetDLPF(Mpu6050* mpu, uint8_t val)
 	regVal |= CONFIG__DLPF_CFG(val);
 
 	return MpuRegWrite(mpu, CONFIG, regVal);
+}
+
+float getGyroSensitivity(Mpu6050* mpu)
+{
+	uint8_t regVal = 0;
+
+	if(!MpuRegRead(mpu, GYRO_CONFIG, regVal))
+	{
+		logger(Error, Log_Mpu, "[getGyroSensitivity] couldn't read register");
+		return 1.0f;
+	}
+
+	const uint8_t FS_SEL_SHIFT = 3,
+				  FS_SEL  = 0x3;
+
+	uint8_t fsSelVal = (regVal >> FS_SEL_SHIFT) & FS_SEL;
+
+	switch(fsSelVal)
+	{
+	case 0:
+		return 131.0f;
+	case 1:
+		return 65.5f;
+	case 2:
+		return 32.8f;
+	case 3:
+		return 16.4f;
+	default:
+		break;
+	}
+
+	return 1.0f; // won't get here
 }
 
 
@@ -158,8 +206,6 @@ bool MpuReadRawData(Mpu6050* mpu, MpuRawData* rawData)
 
 
 	return true;
-
-
 }
 
 bool MpuCalibrateGyros(Mpu6050* mpu)
@@ -197,6 +243,54 @@ bool MpuCalibrateGyros(Mpu6050* mpu)
 	g_gyroCalib.z_offset = zOffsetSum / (GYRO_CALIB_ITERS - failsCnt);
 
 	return true;
+}
+
+bool MpuUpdateData(Mpu6050* mpu)
+{
+	MpuRawData rawData;
+
+	if(!MpuReadRawData(mpu, &rawData))
+		return false;
+
+	g_accelAngles = calcAccelAngles(&rawData);
+	g_gyroRates = calcGyroRates(&rawData);
+
+	return true;
+}
+
+
+AccelAngles MpuGetAccelAngles(Mpu6050* mpu)
+{
+	return g_accelAngles;
+}
+
+GyroRates MpuGetGyroRates(Mpu6050* mpu)
+{
+	return g_gyroRates;
+}
+
+AccelAngles calcAccelAngles(const MpuRawData* rawData)
+{
+	AccelAngles angles;
+
+	angles.x_axis = 57.295*atan((float)rawData->acY /
+			sqrt(pow((float)rawData->acZ,2) + pow((float)rawData->acX,2)));
+
+	angles.y_axis = 57.295*atan((float)-rawData->acX /
+			sqrt(pow((float)rawData->acZ,2)+pow((float)rawData->acY,2)));
+
+	return angles;
+}
+
+GyroRates calcGyroRates(const MpuRawData* rawData)
+{
+	GyroRates rates;
+
+	rates.x = (float)(rawData->gyX - g_gyroCalib.x_offset) / g_gyroSensitivity;
+	rates.y = (float)(rawData->gyY - g_gyroCalib.y_offset) / g_gyroSensitivity;
+	rates.z = (float)(rawData->gyZ - g_gyroCalib.z_offset) / g_gyroSensitivity;
+
+	return rates;
 }
 
 bool MpuRegWrite(Mpu6050* mpu, uint8_t reg, uint8_t value)

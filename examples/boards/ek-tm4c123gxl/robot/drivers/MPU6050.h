@@ -27,9 +27,23 @@ typedef struct
 
 } MpuRawData;
 
+typedef struct
+{
+	float x_axis;
+	float y_axis;
+} AccelAngles;
+
+typedef struct
+{
+	float x;
+	float y;
+	float z;
+} GyroRates;
+
 void MpuInit(Mpu6050* mpu);
-bool MpuReadRawData(Mpu6050* mpu, MpuRawData* rawData);
-bool MpuCalibrateGyros(Mpu6050* mpu);
+bool MpuUpdateData(Mpu6050* mpu);
+AccelAngles MpuGetAccelAngles(Mpu6050* mpu);
+GyroRates MpuGetGyroRates(Mpu6050* mpu);
 bool MpuSetDLPF(Mpu6050* mpu, uint8_t val);
 bool MpuRegWrite(Mpu6050* mpu, uint8_t reg, uint8_t value);
 bool MpuRegRead(Mpu6050* mpu, uint8_t reg, uint8_t* value);

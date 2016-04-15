@@ -13,6 +13,7 @@
 #include "driverlib/sysctl.h"
 #include "driverlib/ssi.h"
 #include "driverlib/watchdog.h"
+#include "driverlib/timer.h"
 #include "interrupts.h"
 #include "spiWrapper.h"
 #include "utils.h"
@@ -32,6 +33,7 @@
 
 SemaphoreHandle_t g_gpioExp1PortBIntSem  = NULL;
 SemaphoreHandle_t g_ssiRxIntSem  = NULL;
+SemaphoreHandle_t g_timerB0TimoutSem  = NULL;
 extern SpiComInstance* g_spiComInstServer;
 extern bool isWdgLedOn;
 
@@ -64,6 +66,13 @@ void initInterrupts()
 		IntPrioritySet(INT_SSI0, 3 << 5);	// priority 3 (3 top bits)
 		IntEnable(INT_SSI0);
 
+	}
+
+	{	// TimerB0
+//		IntPrioritySet(INT_TIMER0B, 5 << 5);	// priority 5 (3 top bits)
+//	    IntEnable(INT_TIMER0B);
+//
+//		g_timerB0TimoutSem = xSemaphoreCreateBinary();
 	}
 
 
@@ -160,4 +169,18 @@ void WDG_intHandler(void)
 //	WatchdogIntClear(WATCHDOG0_BASE); // don't clear for reset
 
 	onWatchDogTimeout();
+}
+
+
+Timer0BIntHandler(void)
+{
+
+    TimerIntClear(TIMER0_BASE, TIMER_TIMB_TIMEOUT);
+
+	static BaseType_t xHigherPriorityTaskWoken;
+
+	xHigherPriorityTaskWoken = pdFALSE;
+	xSemaphoreGiveFromISR( g_timerB0TimoutSem, &xHigherPriorityTaskWoken );
+	portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
+
 }

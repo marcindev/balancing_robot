@@ -63,6 +63,10 @@ const MpuRegReadMsgReq INIT_MPU_REG_READ_MSG_REQ = {MPU_REG_READ_MSG_REQ, sizeof
 const MpuRegReadMsgRsp INIT_MPU_REG_READ_MSG_RSP = {MPU_REG_READ_MSG_RSP, sizeof(MpuRegReadMsgRsp)};
 const MpuRegWriteMsgReq INIT_MPU_REG_WRITE_MSG_REQ = {MPU_REG_WRITE_MSG_REQ, sizeof(MpuRegWriteMsgReq)};
 const MpuRegWriteMsgRsp INIT_MPU_REG_WRITE_MSG_RSP = {MPU_REG_WRITE_MSG_RSP, sizeof(MpuRegWriteMsgRsp)};
+const MpuGetDataMsgReq INIT_MPU_GET_DATA_MSG_REQ = {MPU_GET_DATA_MSG_REQ, sizeof(MpuGetDataMsgReq)};
+const MpuGetDataMsgRsp INIT_MPU_GET_DATA_MSG_RSP = {MPU_GET_DATA_MSG_RSP, sizeof(MpuGetDataMsgRsp)};
+const MpuGetDataTcpMsgReq INIT_MPU_GET_DATA_TCP_MSG_REQ = {MPU_GET_DATA_TCP_MSG_REQ, sizeof(MpuGetDataTcpMsgReq)};
+const MpuGetDataTcpMsgRsp INIT_MPU_GET_DATA_TCP_MSG_RSP = {MPU_GET_DATA_TCP_MSG_RSP, sizeof(MpuGetDataTcpMsgRsp)};
 
 
 

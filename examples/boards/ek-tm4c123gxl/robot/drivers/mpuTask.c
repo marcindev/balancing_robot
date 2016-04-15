@@ -31,6 +31,8 @@ static void handleMessages(void* msg);
 static void handleStartTask(StartTaskMsgReq* request);
 static void handleMpuRegRead(MpuRegReadMsgReq* request);
 static void handleMpuRegWrite(MpuRegWriteMsgReq* request);
+static void handleMpuGetData(MpuGetDataMsgReq* request);
+static void handleMpuGetDataTcp(MpuGetDataTcpMsgReq* request);
 
 
 static void mpuTask()
@@ -41,16 +43,6 @@ static void mpuTask()
 	{
 		void* msg;
 		feedWatchDog(wdgTaskID, WDG_ASLEEP);
-
-		MpuRawData rawData;
-		ZeroBuffer(&rawData, sizeof(MpuRawData));
-
-		if(g_mpu)
-			MpuReadRawData(g_mpu, &rawData);
-
-		logger(Info, Log_Mpu, "Mpu data: %d, %d, %d, %d, %d, %d, %d",
-				rawData.acX, rawData.acY, rawData.acZ,
-				rawData.gyX, rawData.gyY, rawData.gyZ, rawData.tmp);
 
 		if(msgReceive(g_MpuQueue, &msg, MSG_WAIT_LONG_TIME))
 		{
@@ -114,6 +106,9 @@ void handleMessages(void* msg)
 	case MPU_REG_WRITE_MSG_REQ:
 		handleMpuRegWrite((MpuRegWriteMsgReq*) msg);
 		break;
+	case MPU_GET_DATA_MSG_REQ:
+		handleMpuGetData((MpuGetDataMsgReq*) msg);
+		break;
 	default:
 		logger(Warning, Log_Mpu, "[handleMessages] Received not-recognized message");
 		break;
@@ -131,9 +126,51 @@ void handleStartTask(StartTaskMsgReq* request)
 	vPortFree(request);
 }
 
+void handleMpuGetData(MpuGetDataMsgReq* request)
+{
+	MpuGetDataMsgRsp* response = (MpuGetDataMsgRsp*) pvPortMalloc(sizeof(MpuGetDataMsgRsp));
+	*response = INIT_MPU_GET_DATA_MSG_RSP;
+
+	bool status = MpuUpdateData(g_mpu);
+
+	AccelAngles accAngles = MpuGetAccelAngles(g_mpu);
+	GyroRates gyrRates = MpuGetGyroRates(g_mpu);
+
+	response->accelX = accAngles.x_axis;
+	response->accelY = accAngles.y_axis;
+	response->gyroX = gyrRates.x;
+	response->gyroY = gyrRates.y;
+	response->gyroZ = gyrRates.z;
+
+	response->status = status;
+	msgRespond(msgGetAddress(request), &response, MSG_WAIT_LONG_TIME);
+	vPortFree(request);
+}
+
+void handleMpuGetDataTcp(MpuGetDataTcpMsgReq* request)
+{
+	MpuGetDataTcpMsgRsp* response = (MpuGetDataTcpMsgRsp*) pvPortMalloc(sizeof(MpuGetDataTcpMsgRsp));
+	*response = INIT_MPU_GET_DATA_TCP_MSG_RSP;
+
+	bool status = MpuUpdateData(g_mpu);
+
+	AccelAngles accAngles = MpuGetAccelAngles(g_mpu);
+	GyroRates gyrRates = MpuGetGyroRates(g_mpu);
+
+	response->accelX = accAngles.x_axis;
+	response->accelY = accAngles.y_axis;
+	response->gyroX = gyrRates.x;
+	response->gyroY = gyrRates.y;
+	response->gyroZ = gyrRates.z;
+
+	response->status = status;
+	msgRespond(msgGetAddress(request), &response, MSG_WAIT_LONG_TIME);
+	vPortFree(request);
+}
+
 void handleMpuRegRead(MpuRegReadMsgReq* request)
 {
-	logger(Info, Log_Mpu, "[handleMpuRegRead] read MPU reg");
+	logger(Debug, Log_Mpu, "[handleMpuRegRead] read MPU reg");
 
 	MpuRegReadMsgRsp* response = (MpuRegReadMsgRsp*) pvPortMalloc(sizeof(MpuRegReadMsgRsp));
 	*response = INIT_MPU_REG_READ_MSG_RSP;
@@ -147,7 +184,7 @@ void handleMpuRegRead(MpuRegReadMsgReq* request)
 
 void handleMpuRegWrite(MpuRegWriteMsgReq* request)
 {
-	logger(Info, Log_Mpu, "[handleMpuRegWrite] write MPU reg");
+	logger(Debug, Log_Mpu, "[handleMpuRegWrite] write MPU reg");
 
 	MpuRegWriteMsgRsp* response = (MpuRegWriteMsgRsp*) pvPortMalloc(sizeof(MpuRegWriteMsgRsp));
 	*response = INIT_MPU_REG_WRITE_MSG_RSP;

@@ -81,6 +81,10 @@ uint16_t getMsgSize(void* msg);
 #define MPU_REG_READ_MSG_RSP							0x43
 #define MPU_REG_WRITE_MSG_REQ							0x44
 #define MPU_REG_WRITE_MSG_RSP							0x45
+#define MPU_GET_DATA_MSG_REQ							0x46
+#define MPU_GET_DATA_MSG_RSP							0x47
+#define MPU_GET_DATA_TCP_MSG_REQ						0x48
+#define MPU_GET_DATA_TCP_MSG_RSP						0x49
 
 
 
@@ -395,6 +399,25 @@ typedef struct
 }ConnectionStatusMsgRsp;
 extern const ConnectionStatusMsgRsp INIT_CONNECTION_STATUS_MSG_RSP;
 
+// MPU messages
+
+typedef struct
+{
+	MsgHeader header;
+}MpuGetDataMsgReq;
+extern const MpuGetDataMsgReq INIT_MPU_GET_DATA_MSG_REQ;
+
+typedef struct
+{
+	MsgHeader header;
+	float accelX;
+	float accelY;
+	float gyroX;
+	float gyroY;
+	float gyroZ;
+	uint8_t status;
+}MpuGetDataMsgRsp;
+extern const MpuGetDataMsgRsp INIT_MPU_GET_DATA_MSG_RSP;
 
 
 //***********************
@@ -609,6 +632,24 @@ typedef struct
 	uint8_t status;
 }__attribute__((packed, aligned(1))) MpuRegWriteMsgRsp;
 extern const MpuRegWriteMsgRsp INIT_MPU_REG_WRITE_MSG_RSP;
+
+typedef struct
+{
+	MsgHeader header;
+}__attribute__((packed, aligned(1))) MpuGetDataTcpMsgReq;
+extern const MpuGetDataTcpMsgReq INIT_MPU_GET_DATA_TCP_MSG_REQ;
+
+typedef struct
+{
+	MsgHeader header;
+	float accelX;
+	float accelY;
+	float gyroX;
+	float gyroY;
+	float gyroZ;
+	uint8_t status;
+}MpuGetDataTcpMsgRsp;
+extern const MpuGetDataTcpMsgRsp INIT_MPU_GET_DATA_TCP_MSG_RSP;
 
 
 #endif // MESSAGES_H
