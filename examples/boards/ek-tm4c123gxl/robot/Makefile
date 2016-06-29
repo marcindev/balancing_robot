@@ -138,6 +138,10 @@ ${COMPILER}/robot_main.axf: ${COMPILER}/wheel.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/led.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/MPU6050.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/mpuTask.o
+${COMPILER}/robot_main.axf: ${COMPILER}/motionControlTask.o
+${COMPILER}/robot_main.axf: ${COMPILER}/motionControlComTask.o
+${COMPILER}/robot_main.axf: ${COMPILER}/motionControl.o
+${COMPILER}/robot_main.axf: ${COMPILER}/PIDcontroller.o
 else ifeq ($(MAKECMDGOALS),slave)
 ${COMPILER}/robot_main.axf: ${COMPILER}/device.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/driver.o

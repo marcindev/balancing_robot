@@ -22,6 +22,7 @@ static void motionControlTask()
 {
 	uint8_t wdgTaskID = registerToWatchDog();
 	initInterrupts();
+	MCtrlInitialize();
 
 	while(true)
 	{

@@ -85,7 +85,14 @@ uint16_t getMsgSize(void* msg);
 #define MPU_GET_DATA_MSG_RSP							0x47
 #define MPU_GET_DATA_TCP_MSG_REQ						0x48
 #define MPU_GET_DATA_TCP_MSG_RSP						0x49
-
+#define MCTRL_SET_PID_PARAM_MSG_REQ						0x50
+#define MCTRL_SET_PID_PARAM_MSG_RSP						0x51
+#define MCTRL_SET_PERIOD_MSG_REQ						0x52
+#define MCTRL_SET_PERIOD_MSG_RSP						0x53
+#define MCTRL_SET_PID_DIR_MSG_REQ						0x54
+#define MCTRL_SET_PID_DIR_MSG_RSP						0x55
+#define MCTRL_GET_DATA_MSG_REQ							0x56
+#define MCTRL_GET_DATA_MSG_RSP							0x57
 
 
 // TODO: try with union messages or memcpy
@@ -160,7 +167,7 @@ typedef struct
 {
 	MsgHeader header;
 	uint8_t motorId;
-	uint8_t dutyCycle;
+	float dutyCycle;
 }MotorSetDutyCycleMsgReq;
 extern const MotorSetDutyCycleMsgReq INIT_MOTOR_SET_DUTY_CYCLE_MSG_REQ;
 
@@ -415,6 +422,7 @@ typedef struct
 	float gyroX;
 	float gyroY;
 	float gyroZ;
+	bool isAccValid;
 	uint8_t status;
 }MpuGetDataMsgRsp;
 extern const MpuGetDataMsgRsp INIT_MPU_GET_DATA_MSG_RSP;
@@ -648,8 +656,67 @@ typedef struct
 	float gyroY;
 	float gyroZ;
 	uint8_t status;
-}MpuGetDataTcpMsgRsp;
+}__attribute__((packed, aligned(1))) MpuGetDataTcpMsgRsp;
 extern const MpuGetDataTcpMsgRsp INIT_MPU_GET_DATA_TCP_MSG_RSP;
+
+typedef struct
+{
+	MsgHeader header;
+	uint8_t param;
+	float value;
+}__attribute__((packed, aligned(1))) MctrlSetPidParamMsgReq;
+extern const MctrlSetPidParamMsgReq INIT_MCTRL_SET_PID_PARAM_MSG_REQ;
+
+typedef struct
+{
+	MsgHeader header;
+	uint8_t status;
+}__attribute__((packed, aligned(1))) MctrlSetPidParamMsgRsp;
+extern const MctrlSetPidParamMsgRsp INIT_MCTRL_SET_PID_PARAM_MSG_RSP;
+
+typedef struct
+{
+	MsgHeader header;
+	uint32_t periodMs;
+}__attribute__((packed, aligned(1))) MctrlSetPeriodMsgReq;
+extern const MctrlSetPeriodMsgReq INIT_MCTRL_SET_PERIOD_MSG_REQ;
+
+typedef struct
+{
+	MsgHeader header;
+	uint8_t status;
+}__attribute__((packed, aligned(1))) MctrlSetPeriodMsgRsp;
+extern const MctrlSetPeriodMsgRsp INIT_MCTRL_SET_PERIOD_MSG_RSP;
+
+typedef struct
+{
+	MsgHeader header;
+	uint8_t direction;
+}__attribute__((packed, aligned(1))) MctrlSetPidDirMsgReq;
+extern const MctrlSetPidDirMsgReq INIT_MCTRL_SET_PID_DIR_MSG_REQ;
+
+typedef struct
+{
+	MsgHeader header;
+	uint8_t status;
+}__attribute__((packed, aligned(1))) MctrlSetPidDirMsgRsp;
+extern const MctrlSetPidDirMsgRsp INIT_MCTRL_SET_PID_DIR_MSG_RSP;
+
+typedef struct
+{
+	MsgHeader header;
+	uint8_t param;
+}__attribute__((packed, aligned(1))) MctrlGetDataMsgReq;
+extern const MctrlGetDataMsgReq INIT_MCTRL_GET_DATA_MSG_REQ;
+
+typedef struct
+{
+	MsgHeader header;
+	float data;
+	uint8_t status;
+}__attribute__((packed, aligned(1))) MctrlGetDataMsgRsp;
+extern const MctrlGetDataMsgRsp INIT_MCTRL_GET_DATA_MSG_RSP;
+
 
 
 #endif // MESSAGES_H

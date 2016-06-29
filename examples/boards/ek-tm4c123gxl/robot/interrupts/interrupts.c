@@ -69,10 +69,10 @@ void initInterrupts()
 	}
 
 	{	// TimerB0
-//		IntPrioritySet(INT_TIMER0B, 5 << 5);	// priority 5 (3 top bits)
-//	    IntEnable(INT_TIMER0B);
-//
-//		g_timerB0TimoutSem = xSemaphoreCreateBinary();
+		IntPrioritySet(INT_TIMER0B, 5 << 5);	// priority 5 (3 top bits)
+	    IntEnable(INT_TIMER0B);
+
+		g_timerB0TimoutSem = xSemaphoreCreateBinary();
 	}
 
 
@@ -172,7 +172,7 @@ void WDG_intHandler(void)
 }
 
 
-Timer0BIntHandler(void)
+void Timer0BIntHandler(void)
 {
 
     TimerIntClear(TIMER0_BASE, TIMER_TIMB_TIMEOUT);

@@ -58,7 +58,7 @@ bool initializeMotor(MotorInstance* motorInstance)
 	GpioExpander* gpioExpander = motorInstance->gpioExpander;
 	gpioExpander->i2cManager = &g_i2cManager;
 
-	motorInstance->dutyCycle = 10;
+	motorInstance->dutyCycle = 10.0f;
 	motorInstance->isRunning = false;
 	motorInstance->stopState = COAST;
 	motorInstance->direction = FORWARD;
@@ -202,7 +202,7 @@ void setMotorStopState(MotorInstance* motorInstance, uint8_t stopState)
 	motorInstance->stopState = stopState;
 }
 
-void setMotorDutyCycle(MotorInstance* motorInstance, uint8_t dutyCycle)
+void setMotorDutyCycle(MotorInstance* motorInstance, float dutyCycle)
 {
 	motorInstance->dutyCycle = dutyCycle;
 
@@ -211,12 +211,12 @@ void setMotorDutyCycle(MotorInstance* motorInstance, uint8_t dutyCycle)
 	case PWM_0:
 	    PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0,
 	                     ((float)PWMGenPeriodGet(PWM1_BASE, PWM_GEN_0))
-						 * (((float)motorInstance->dutyCycle) / 100.0f) );
+						 * (motorInstance->dutyCycle / 100.0f) );
 		break;
 	case PWM_1:
 	    PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1,
 	                     ((float)PWMGenPeriodGet(PWM1_BASE, PWM_GEN_0))
-						 * (((float)motorInstance->dutyCycle) / 100.0f) );
+						 * (motorInstance->dutyCycle / 100.0f ));
 		break;
 	default:
 		break;
@@ -239,7 +239,7 @@ uint8_t getMotorStopState(MotorInstance* motorInstance)
 	return motorInstance->stopState;
 }
 
-uint8_t getMotorDutyCycle(MotorInstance* motorInstance)
+float getMotorDutyCycle(MotorInstance* motorInstance)
 {
 	return motorInstance->dutyCycle;
 }

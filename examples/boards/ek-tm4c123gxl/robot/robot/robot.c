@@ -33,12 +33,15 @@
 #include "logger.h"
 #include "updater/updaterTask.h"
 #include "wdg.h"
+#include "config.h"
 
 #ifdef _ROBOT_MASTER_BOARD
 #include "drivers/i2c/i2cTask.h"
 #include "drivers/encoder.h"
 #include "drivers/wheelsTask.h"
 #include "drivers/MPU6050.h"
+#include "drivers/motionControlComTask.h"
+#include "drivers/motionControlTask.h"
 #else
 #include "server/tcpServerTask.h"
 #endif
@@ -63,7 +66,7 @@ extern void _bss;
 
 const HeapRegion_t xHeapRegions[] =
 {
-	{ ( uint8_t * ) 0x20002500UL, 0x05500 },
+	{ ( uint8_t * ) 0x20003000UL, 0x05000 },
     { NULL, 0 } /* Terminates the array. */
 };
 
@@ -107,6 +110,8 @@ static bool startSpiServerCom();
 static bool startUpdater();
 static bool startWheels();
 static bool startMpu();
+static bool startMotionControl();
+static bool startMotors();
 static bool initializeEEPROM();
 static void onReset();
 
@@ -125,10 +130,22 @@ void runRobot()
 		while(1){ }
 	}
 
+	if(!motorsTaskInit())
+	{
+		while(1){ }
+	}
+
 	if(!mpuTaskInit())
 	{
 		while(1){ }
 	}
+
+
+	if(!motionControlComTaskInit())
+	{
+		while(1){ }
+	}
+
 
 //	if(!wheelsTaskInit())
 //	{
@@ -211,11 +228,20 @@ static void robotTask(void *pvParameters)
 	}
 
 #else
+	if(!startMotors())
+	{
+		while(1){}
+	}
 
-//	if(!startMpu())
-//	{
-//		while(1){}
-//	}
+	if(!startMpu())
+	{
+		while(1){}
+	}
+
+	if(!startMotionControl())
+	{
+		while(1){}
+	}
 
 //	if(!startWheels())
 //	{
@@ -537,6 +563,37 @@ bool startMpu()
 	vPortFree(response);
 	return result;
 }
+
+bool startMotionControl()
+{
+	StartTaskMsgReq* request = (StartTaskMsgReq*) pvPortMalloc(sizeof(StartTaskMsgReq));
+	*request = INIT_START_TASK_MSG_REQ;
+	msgSend(g_robotQueue, getAddressFromTaskId(Msg_MotionControlTaskID), &request, MSG_WAIT_LONG_TIME);
+
+	StartTaskMsgRsp* response;
+	if(!msgReceive(g_robotQueue, &response, MSG_WAIT_LONG_TIME))
+		return false;
+
+	bool result = response->status;
+	vPortFree(response);
+	return result;
+}
+
+bool startMotors()
+{
+	StartTaskMsgReq* request = (StartTaskMsgReq*) pvPortMalloc(sizeof(StartTaskMsgReq));
+	*request = INIT_START_TASK_MSG_REQ;
+	msgSend(g_robotQueue, getAddressFromTaskId(Msg_MotorsTaskID), &request, MSG_WAIT_LONG_TIME);
+
+	StartTaskMsgRsp* response;
+	if(!msgReceive(g_robotQueue, &response, MSG_WAIT_LONG_TIME))
+		return false;
+
+	bool result = response->status;
+	vPortFree(response);
+	return result;
+}
+
 #else
 bool startTcpServer()
 {
@@ -577,6 +634,44 @@ void onReset()
 	{
 		logger(Error, Log_Robot, "[onReset] Reset cause: watchdog");
 		g_isWdgReset = true;
+
+		if(!isConfigRead())
+			readConfig();
+
+		bool isConfChanged = false;
+
+		if(config.binary1.version > config.binary2.version)
+		{
+			if(HWREG(NVIC_VTABLE) == config.binary1.address)
+			{
+				if(!config.binary1.isChecked)
+				{
+					config.binary1.isChecked = true;
+					config.binary1.isGood = false;
+					isConfChanged = true;
+				}
+			}
+		}
+		else
+		{
+			if(HWREG(NVIC_VTABLE) == config.binary2.address)
+			{
+				if(!config.binary2.isChecked)
+				{
+					config.binary2.isChecked = true;
+					config.binary2.isGood = false;
+					isConfChanged = true;
+				}
+			}
+		}
+
+		if(isConfChanged)
+		{
+			writeConfig();
+
+			HWREG(NVIC_VTABLE) = 0;
+			jumpToAddress(0);
+		}
 	}
 	else if(resetCause & SYSCTL_CAUSE_BOR)
 	{

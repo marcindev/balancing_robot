@@ -130,6 +130,7 @@ bool MpuConfigure(Mpu6050* mpu)
 
 	// set gyro sensitivity based on scale range
 	g_gyroSensitivity = getGyroSensitivity(mpu);
+	logger(Debug, Log_Mpu, "[MpuConfigure] gyro sensitivity: %f", g_gyroSensitivity);
 
 	return result;
 }
@@ -160,6 +161,7 @@ float getGyroSensitivity(Mpu6050* mpu)
 				  FS_SEL  = 0x3;
 
 	uint8_t fsSelVal = (regVal >> FS_SEL_SHIFT) & FS_SEL;
+	logger(Debug, Log_Mpu, "[getGyroSensitivity] fsSelVal: %d", (int)regVal);
 
 	switch(fsSelVal)
 	{
@@ -196,13 +198,13 @@ bool MpuReadRawData(Mpu6050* mpu, MpuRawData* rawData)
 	if(!result)
 		return false;
 
-	rawData->acX = tempData[1] << 8 | tempData[0]; // in reverse as MPU data is big-endian
-	rawData->acY = tempData[3] << 8 | tempData[2];
-	rawData->acZ = tempData[5] << 8 | tempData[4];
-	rawData->tmp = tempData[7] << 8 | tempData[6];
-	rawData->gyX = tempData[9] << 8 | tempData[8];
-	rawData->gyY = tempData[11] << 8 | tempData[10];
-	rawData->gyZ = tempData[13] << 8 | tempData[12];
+	rawData->acX = tempData[0] << 8 | tempData[1]; // in reverse as MPU data is big-endian
+	rawData->acY = tempData[2] << 8 | tempData[3];
+	rawData->acZ = tempData[4] << 8 | tempData[5];
+	rawData->tmp = tempData[6] << 8 | tempData[7];
+	rawData->gyX = tempData[8] << 8 | tempData[9];
+	rawData->gyY = tempData[10] << 8 | tempData[11];
+	rawData->gyZ = tempData[12] << 8 | tempData[13];
 
 
 	return true;
@@ -242,6 +244,9 @@ bool MpuCalibrateGyros(Mpu6050* mpu)
 	g_gyroCalib.y_offset = yOffsetSum / (GYRO_CALIB_ITERS - failsCnt);
 	g_gyroCalib.z_offset = zOffsetSum / (GYRO_CALIB_ITERS - failsCnt);
 
+	logger(Debug, Log_Mpu, "[MpuCalibrateGyros] offsets: %d, %d, %d",
+			g_gyroCalib.x_offset, g_gyroCalib.y_offset, g_gyroCalib.z_offset);
+
 	return true;
 }
 
@@ -272,6 +277,10 @@ GyroRates MpuGetGyroRates(Mpu6050* mpu)
 AccelAngles calcAccelAngles(const MpuRawData* rawData)
 {
 	AccelAngles angles;
+
+	int forceMagnApprox = abs(rawData->acX) + abs(rawData->acY) + abs(rawData->acZ);
+
+	angles.isDataValid = (forceMagnApprox > 8192 && forceMagnApprox < 32768);
 
 	angles.x_axis = 57.295*atan((float)rawData->acY /
 			sqrt(pow((float)rawData->acZ,2) + pow((float)rawData->acX,2)));

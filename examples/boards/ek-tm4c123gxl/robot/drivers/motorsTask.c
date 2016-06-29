@@ -22,7 +22,7 @@
 #define MOTORS_QUEUE_SIZE			  5
 #define MOTORS_ITEM_SIZE			  4			// bytes
 
-#define PWM_INITIAL_FREQUENCY	  10000
+#define PWM_INITIAL_FREQUENCY	  25000
 #define MOTORS_NUMBER				  2
 
 #define MOTOR_L_PWM			    PWM_0

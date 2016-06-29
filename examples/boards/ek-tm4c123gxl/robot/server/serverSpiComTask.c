@@ -53,6 +53,7 @@ static void handleSetTaskPriority(void* msg);
 static void handleUpdaterMsgs(void* msg);
 static void handleServerStartedNotif(void* msg);
 static void handleMpuMsgs(void* msg);
+static void handleMotionControlMsgs(void* msg);
 static void handleConnStatusNotif(void* msg);
 
 
@@ -159,6 +160,12 @@ void handleSpiMessages(void* msg)
 	case MPU_REG_WRITE_MSG_REQ:
 	case MPU_GET_DATA_TCP_MSG_REQ:
 		handleMpuMsgs(msg);
+		break;
+	case MCTRL_SET_PID_PARAM_MSG_REQ:
+	case MCTRL_SET_PERIOD_MSG_REQ:
+	case MCTRL_SET_PID_DIR_MSG_REQ:
+	case MCTRL_GET_DATA_MSG_REQ:
+		handleMotionControlMsgs(msg);
 		break;
 	case SERVER_STARTED_NOTIF_MSG_REQ:
 		handleServerStartedNotif(msg);
@@ -330,9 +337,14 @@ void handleMpuMsgs(void* msg)
 	msgSend(g_serverSpiComQueue, getAddressFromTaskId(Msg_MpuTaskID), &msg, MSG_WAIT_LONG_TIME);
 }
 
+void handleMotionControlMsgs(void* msg)
+{
+	msgSend(g_serverSpiComQueue, getAddressFromTaskId(Msg_MotionControlTaskID), &msg, MSG_WAIT_LONG_TIME);
+}
+
 void handleGetTaskList(void* msg)
 {
-	const uint32_t REPORT_BUFFER_SIZE = 1000;
+	const uint32_t REPORT_BUFFER_SIZE = 500;
 	const uint32_t MSG_BUFFER_SIZE = 200;
 
 	char* reportBuffer = (char*) pvPortMalloc(REPORT_BUFFER_SIZE);

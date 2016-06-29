@@ -40,7 +40,7 @@ typedef struct
 	// don't change below
 	uint8_t direction;			// FORWARD or REVERSE
 	uint8_t stopState;			// BREAK or COAST
-	uint8_t dutyCycle;			// PWM duty cycle in percents
+	float dutyCycle;			// PWM duty cycle in percents
 	uint32_t dutyCycleChangeTime;		// how fast can duty cycle change from one value to the other
 	bool initialized;
 	bool isRunning;
@@ -54,11 +54,11 @@ bool stopMotor(MotorInstance* motorInstance);
 bool isMotorRunning(MotorInstance* motorInstance);
 bool setMotorDirection(MotorInstance* motorInstance, uint8_t direction);
 void setMotorStopState(MotorInstance* motorInstance, uint8_t stopState);
-void setMotorDutyCycle(MotorInstance* motorInstance, uint8_t dutyCycle);
+void setMotorDutyCycle(MotorInstance* motorInstance, float dutyCycle);
 void setMotorDutyCycleChangeTime(MotorInstance* motorInstance, uint32_t dutyCycleChangeTime);
 uint8_t getMotorDirection(MotorInstance* motorInstance);
 uint8_t getMotorStopState(MotorInstance* motorInstance);
-uint8_t getMotorDutyCycle(MotorInstance* motorInstance);
+float getMotorDutyCycle(MotorInstance* motorInstance);
 uint8_t getMotorDutyCycleChangeTime(MotorInstance* motorInstance);
 
 #endif // MOTOR_H

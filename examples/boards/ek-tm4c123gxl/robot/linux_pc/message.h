@@ -2,6 +2,7 @@
 #define MESSAGE_H
 
 #include <memory>
+#include "../messages/messages.h"
 
 class BaseMessage
 {

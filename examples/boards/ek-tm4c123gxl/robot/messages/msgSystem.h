@@ -20,6 +20,7 @@ typedef enum
 	Msg_ServerSpiComTaskID,
 	Msg_UpdaterTaskID,
 	Msg_MpuTaskID,
+	Msg_MotionControlTaskID,
 	MSG_TcpServerHandlerID
 }MsgTaskId;
 

@@ -67,6 +67,15 @@ const MpuGetDataMsgReq INIT_MPU_GET_DATA_MSG_REQ = {MPU_GET_DATA_MSG_REQ, sizeof
 const MpuGetDataMsgRsp INIT_MPU_GET_DATA_MSG_RSP = {MPU_GET_DATA_MSG_RSP, sizeof(MpuGetDataMsgRsp)};
 const MpuGetDataTcpMsgReq INIT_MPU_GET_DATA_TCP_MSG_REQ = {MPU_GET_DATA_TCP_MSG_REQ, sizeof(MpuGetDataTcpMsgReq)};
 const MpuGetDataTcpMsgRsp INIT_MPU_GET_DATA_TCP_MSG_RSP = {MPU_GET_DATA_TCP_MSG_RSP, sizeof(MpuGetDataTcpMsgRsp)};
+const MctrlSetPidParamMsgReq INIT_MCTRL_SET_PID_PARAM_MSG_REQ = {MCTRL_SET_PID_PARAM_MSG_REQ, sizeof(MctrlSetPidParamMsgReq)};
+const MctrlSetPidParamMsgRsp INIT_MCTRL_SET_PID_PARAM_MSG_RSP = {MCTRL_SET_PID_PARAM_MSG_RSP, sizeof(MctrlSetPidParamMsgRsp)};
+const MctrlSetPeriodMsgReq INIT_MCTRL_SET_PERIOD_MSG_REQ = {MCTRL_SET_PERIOD_MSG_REQ, sizeof(MctrlSetPeriodMsgReq)};
+const MctrlSetPeriodMsgRsp INIT_MCTRL_SET_PERIOD_MSG_RSP = {MCTRL_SET_PERIOD_MSG_RSP, sizeof(MctrlSetPeriodMsgRsp)};
+const MctrlSetPidDirMsgReq INIT_MCTRL_SET_PID_DIR_MSG_REQ = {MCTRL_SET_PID_DIR_MSG_REQ, sizeof(MctrlSetPidDirMsgReq)};
+const MctrlSetPidDirMsgRsp INIT_MCTRL_SET_PID_DIR_MSG_RSP = {MCTRL_SET_PID_DIR_MSG_RSP, sizeof(MctrlSetPidDirMsgRsp)};
+const MctrlGetDataMsgReq INIT_MCTRL_GET_DATA_MSG_REQ = {MCTRL_GET_DATA_MSG_REQ, sizeof(MctrlGetDataMsgReq)};
+const MctrlGetDataMsgRsp INIT_MCTRL_GET_DATA_MSG_RSP = {MCTRL_GET_DATA_MSG_RSP, sizeof(MctrlGetDataMsgRsp)};
+
 
 
 

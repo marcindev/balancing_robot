@@ -40,7 +40,7 @@ uint8_t ui8ControlTable[1024];
 uint8_t ui8ControlTable[1024];
 #else
 #ifdef _ROBOT_MASTER_BOARD
-uint8_t ui8ControlTable[512] __attribute__ ((aligned(512)));
+uint8_t ui8ControlTable[1024] __attribute__ ((aligned(1024)));
 #else
 uint8_t ui8ControlTable[512] __attribute__ ((aligned(512)));
 #endif

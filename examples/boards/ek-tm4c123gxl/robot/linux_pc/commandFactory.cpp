@@ -10,9 +10,13 @@
 #include "getPostmortemCmd.h"
 #include "updaterCmd.h"
 #include "getFuncNameCmd.h"
+#include "getMpuDataCmd.h"
 #include "readMpuRegCmd.h"
 #include "writeMpuRegCmd.h"
-#include "getMpuData.h"
+#include "setPidParamCmd.h"
+#include "setPidDirection.h"
+#include "setMctrlPeriod.h"
+#include "getMctrlDataCmd.h"
 
 using namespace std;
 
@@ -68,6 +72,18 @@ shared_ptr<Command> CommandFactory::createCommand(const string& strCommand,
 
 	if(strCommand == "getMpuData")
 		return shared_ptr<Command>(new GetMpuDataCmd(connection, args));
+
+	if(strCommand == "setPidParam")
+		return shared_ptr<Command>(new SetPidParamCmd(connection, args));
+
+	if(strCommand == "setPidDirection")
+		return shared_ptr<Command>(new SetPidDirectionCmd(connection, args));
+
+	if(strCommand == "setMctrlPeriod")
+		return shared_ptr<Command>(new SetMctrlPeriodCmd(connection, args));
+
+	if(strCommand == "getMctrlData")
+		return shared_ptr<Command>(new GetMctrlDataCmd(connection, args));
 
 
 

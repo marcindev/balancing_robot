@@ -1,6 +1,4 @@
 #include "message.h"
-
-#include "../messages/messages.h"
 #include <algorithm>
 
 using namespace std;
@@ -83,6 +81,36 @@ shared_ptr<BaseMessage> BaseMessage::getMessageFromPayload(unsigned char* data)
 		break;
 	case MPU_REG_WRITE_MSG_RSP:
 		msg = shared_ptr<BaseMessage>(new Message<MpuRegWriteMsgRsp>(shared_ptr<MpuRegWriteMsgRsp>(new MpuRegWriteMsgRsp)));
+		break;
+	case MPU_GET_DATA_TCP_MSG_REQ:
+		msg = shared_ptr<BaseMessage>(new Message<MpuGetDataTcpMsgReq>(shared_ptr<MpuGetDataTcpMsgReq>(new MpuGetDataTcpMsgReq)));
+		break;
+	case MPU_GET_DATA_TCP_MSG_RSP:
+		msg = shared_ptr<BaseMessage>(new Message<MpuGetDataTcpMsgRsp>(shared_ptr<MpuGetDataTcpMsgRsp>(new MpuGetDataTcpMsgRsp)));
+		break;
+	case MCTRL_SET_PID_PARAM_MSG_REQ:
+		msg = shared_ptr<BaseMessage>(new Message<MctrlSetPidParamMsgReq>(shared_ptr<MctrlSetPidParamMsgReq>(new MctrlSetPidParamMsgReq)));
+		break;
+	case MCTRL_SET_PID_PARAM_MSG_RSP:
+		msg = shared_ptr<BaseMessage>(new Message<MctrlSetPidParamMsgRsp>(shared_ptr<MctrlSetPidParamMsgRsp>(new MctrlSetPidParamMsgRsp)));
+		break;
+	case MCTRL_SET_PID_DIR_MSG_REQ:
+		msg = shared_ptr<BaseMessage>(new Message<MctrlSetPidDirMsgReq>(shared_ptr<MctrlSetPidDirMsgReq>(new MctrlSetPidDirMsgReq)));
+		break;
+	case MCTRL_SET_PID_DIR_MSG_RSP:
+		msg = shared_ptr<BaseMessage>(new Message<MctrlSetPidDirMsgRsp>(shared_ptr<MctrlSetPidDirMsgRsp>(new MctrlSetPidDirMsgRsp)));
+		break;
+	case MCTRL_SET_PERIOD_MSG_REQ:
+		msg = shared_ptr<BaseMessage>(new Message<MctrlSetPeriodMsgReq>(shared_ptr<MctrlSetPeriodMsgReq>(new MctrlSetPeriodMsgReq)));
+		break;
+	case MCTRL_SET_PERIOD_MSG_RSP:
+		msg = shared_ptr<BaseMessage>(new Message<MctrlSetPeriodMsgRsp>(shared_ptr<MctrlSetPeriodMsgRsp>(new MctrlSetPeriodMsgRsp)));
+		break;
+	case MCTRL_GET_DATA_MSG_REQ:
+		msg = shared_ptr<BaseMessage>(new Message<MctrlGetDataMsgReq>(shared_ptr<MctrlGetDataMsgReq>(new MctrlGetDataMsgReq)));
+		break;
+	case MCTRL_GET_DATA_MSG_RSP:
+		msg = shared_ptr<BaseMessage>(new Message<MctrlGetDataMsgRsp>(shared_ptr<MctrlGetDataMsgRsp>(new MctrlGetDataMsgRsp)));
 		break;
 	default:
 		msg = nullptr;

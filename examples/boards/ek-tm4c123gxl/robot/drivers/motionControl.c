@@ -13,9 +13,8 @@
 #include "msgSystem.h"
 #include "PIDcontroller.h"
 
-#define DEF_SAMPLE_PERIOD		100
+#define DEF_SAMPLE_PERIOD		10
 #define MS_CTRL_QUEUE_SIZE			  2
-#define MS_CTRL_ITEM_SIZE			  4			// bytes
 
 #define MOTOR_DIR_FWD				0
 #define MOTOR_DIR_REV				1
@@ -33,26 +32,39 @@ typedef struct
 
 } MCtrlConfig;
 
+typedef enum
+{
+	MctrlInclination = 0,
+	MctrlPidOut
+} DataType;
 
 typedef struct
 {
 	uint8_t id;
 	uint8_t prevDutyCycle;
 	uint8_t direction;
+	bool isRunning;
 	float pidOffset;
 } MCtrlMotor;
 
 typedef struct
 {
 	MCtrlMotor motors[MOTORS_NUM];
+	float inclination;
+	float pidOut;
 } MCtrlStatus;
 
-static MCtrlConfig config;
+static MCtrlConfig g_mCtrlconfig;
 static PidCtrlInstance* g_pidCtrl;
-MCtrlStatus g_status;
+static MCtrlStatus g_status;
+static bool g_initialized;
 
 static bool getInclination(float* inclination);
+static float complementaryFilter(float accAngle, float gyroRate, bool isValid);
 static bool updateMotors(float pidOutput);
+static bool startMotor(uint8_t motorId);
+static bool stopMotor(uint8_t motorId);
+static bool startMotors();
 static bool setMotorDirection(uint8_t motorId, uint8_t direction);
 static bool setDutyCycle(uint8_t motorId, uint8_t dutyCycle);
 static void initTimer();
@@ -62,10 +74,11 @@ static void stopTimer();
 
 void MCtrlInitialize()
 {
-	g_MCtrlQueue = xQueueCreate(MS_CTRL_QUEUE_SIZE, MS_CTRL_ITEM_SIZE);
+
+	g_MCtrlQueue = registerMsgQueue(MS_CTRL_QUEUE_SIZE);
 
 	initTimer();
-	config.period = DEF_SAMPLE_PERIOD;
+	g_mCtrlconfig.period = DEF_SAMPLE_PERIOD;
 
 	g_pidCtrl = (PidCtrlInstance*) pvPortMalloc(sizeof(PidCtrlInstance));
 
@@ -77,18 +90,67 @@ void MCtrlInitialize()
 
 	ZeroBuffer(g_pidCtrl, sizeof(PidCtrlInstance));
 
-	PidInitialize(g_pidCtrl, config.period, 0.0f, 0.0f, 0.0f, 0.0f, PidDirect);
+	PidInitialize(g_pidCtrl, g_mCtrlconfig.period, 0.0f, 0.0f, 0.0f, 0.0f, PidDirect);
 
-	startTimer(config.period);
+	PidSetOutputLimits(g_pidCtrl, -100.0f, 100.0f);
+
+	if(!startMotors())
+		logger(Error, Log_MotionCtrl, "[MCtrlInitilize] Couldn't start motors");
+
+	logger(Info, Log_MotionCtrl, "[MCtrlInitilize] Motors started");
+
+	startTimer(g_mCtrlconfig.period);
+
+	g_initialized = true;
 
 	logger(Info, Log_MotionCtrl, "[MCtrlInitilize] Motion control initialized");
 }
 
 void MCtrlDoJob()
 {
+	if(!g_initialized)
+		return;
 
-	updateMotors(PidCompute(g_pidCtrl, getInclination()));
+	if(!getInclination(&g_status.inclination))
+		logger(Error, Log_MotionCtrl, "[MCtrlDoJob] couldn't get inclination");
 
+	g_status.pidOut = PidCompute(g_pidCtrl, g_status.inclination);
+
+	updateMotors(g_status.pidOut);
+
+}
+
+void MCtrlSetPeriod(uint32_t period)
+{
+	stopTimer();
+	g_mCtrlconfig.period = period;
+	PidSetSampPeriod(g_pidCtrl, period);
+	startTimer(period);
+}
+
+void MCtrlSetPidParam(uint8_t param, float value)
+{
+	PidSetParam(g_pidCtrl, (PidParameter) param, value);
+}
+
+void MCtrlSetPidDir(uint8_t direction)
+{
+	PidSetDirection(g_pidCtrl, (PidDirection) direction);
+}
+
+float MCtrlGetData(uint8_t param)
+{
+	switch((DataType) param)
+	{
+	case MctrlInclination:
+		return g_status.inclination;
+	case MctrlPidOut:
+		return g_status.pidOut;
+	default:
+		break;
+	}
+
+	return 0.0f;
 }
 
 
@@ -118,12 +180,24 @@ bool getInclination(float* inclination)
 		return false;
 	}
 
-	*inclination = getMpuDataRsp->accelX;
+	*inclination = complementaryFilter(getMpuDataRsp->accelX,
+									   getMpuDataRsp->gyroX,
+									   getMpuDataRsp->isAccValid);
 
 	vPortFree(getMpuDataRsp);
 	getMpuDataRsp = NULL;
 
 	return true;
+}
+
+float complementaryFilter(float accAngle, float gyroRate, bool isValid)
+{
+	float angle = gyroRate * ((float)g_mCtrlconfig.period / 1000.0f);
+
+	if(!isValid)
+		return angle;
+
+	return 0.98 * angle + 0.02 * accAngle;
 }
 
 bool updateMotors(float pidOutput)
@@ -140,10 +214,83 @@ bool updateMotors(float pidOutput)
 
 		float pidOutputCorr = pidOutput + g_status.motors[id].pidOffset;
 
-		uint8_t dutyCycle = (uint8_t) (pidOutputCorr < 0.0f ? ((-1) * pidOutputCorr) : pidOutputCorr);
+		if(pidOutputCorr >  (-1.0f) && pidOutputCorr < 1.0f)
+		{
+			if(g_status.motors[id].isRunning)
+				stopMotor(id);
+		}
+		else
+		{
+			float dutyCycle = (pidOutputCorr < 0.0f ? ((-1) * pidOutputCorr) : pidOutputCorr);
 
-		setDutyCycle(id, dutyCycle);
+			setDutyCycle(id, dutyCycle);
+
+			if(!g_status.motors[id].isRunning)
+				startMotor(id);
+
+		}
 	}
+}
+
+bool startMotors()
+{
+	for(int id = 0; id != MOTORS_NUM; ++id)
+	{
+		if(!startMotor(id))
+			return false;
+	}
+
+	return true;
+}
+
+bool startMotor(uint8_t motorId)
+{
+	MotorStartMsgReq* startMotorReq = (MotorStartMsgReq*) pvPortMalloc(sizeof(MotorStartMsgReq));
+
+	if(!startMotorReq)
+	{
+		logger(Error, Log_MotionCtrl, "[startMotor] couldn't allocate startMotorReq");
+		return false;
+	}
+
+	*startMotorReq = INIT_MOTOR_START_MSG_REQ;
+
+	startMotorReq->motorId = motorId;
+
+	if(!msgSend(g_MCtrlQueue, getAddressFromTaskId(Msg_MotorsTaskID), &startMotorReq, MSG_WAIT_LONG_TIME))
+	{
+		logger(Error, Log_MotionCtrl, "[startMotor] couldn't send startMotorReq");
+		return false;
+	}
+
+	g_status.motors[motorId].isRunning = true;
+
+	return true;
+}
+
+bool stopMotor(uint8_t motorId)
+{
+	MotorStopMsgReq* stopMotorReq = (MotorStopMsgReq*) pvPortMalloc(sizeof(MotorStopMsgReq));
+
+	if(!stopMotorReq)
+	{
+		logger(Error, Log_MotionCtrl, "[stopMotor] couldn't allocate stopMotorReq");
+		return false;
+	}
+
+	*stopMotorReq = INIT_MOTOR_STOP_MSG_REQ;
+
+	stopMotorReq->motorId = motorId;
+
+	if(!msgSend(g_MCtrlQueue, getAddressFromTaskId(Msg_MotorsTaskID), &stopMotorReq, MSG_WAIT_LONG_TIME))
+	{
+		logger(Error, Log_MotionCtrl, "[stopMotor] couldn't send stopMotorReq");
+		return false;
+	}
+
+	g_status.motors[motorId].isRunning = false;
+
+	return true;
 }
 
 

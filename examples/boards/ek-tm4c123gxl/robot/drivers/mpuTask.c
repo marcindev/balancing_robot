@@ -19,7 +19,7 @@
 #include "logger.h"
 
 #define MPU_TASK_STACK_SIZE	 	200        // Stack size in words
-#define MPU_QUEUE_SIZE			 20
+#define MPU_QUEUE_SIZE			 5
 
 
 
@@ -109,6 +109,9 @@ void handleMessages(void* msg)
 	case MPU_GET_DATA_MSG_REQ:
 		handleMpuGetData((MpuGetDataMsgReq*) msg);
 		break;
+	case MPU_GET_DATA_TCP_MSG_REQ:
+		handleMpuGetDataTcp((MpuGetDataTcpMsgReq*) msg);
+		break;
 	default:
 		logger(Warning, Log_Mpu, "[handleMessages] Received not-recognized message");
 		break;
@@ -138,9 +141,11 @@ void handleMpuGetData(MpuGetDataMsgReq* request)
 
 	response->accelX = accAngles.x_axis;
 	response->accelY = accAngles.y_axis;
+	response->isAccValid = accAngles.isDataValid;
 	response->gyroX = gyrRates.x;
 	response->gyroY = gyrRates.y;
 	response->gyroZ = gyrRates.z;
+
 
 	response->status = status;
 	msgRespond(msgGetAddress(request), &response, MSG_WAIT_LONG_TIME);
