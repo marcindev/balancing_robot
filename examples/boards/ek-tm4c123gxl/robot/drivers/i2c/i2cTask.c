@@ -133,7 +133,10 @@ void i2cHandleSendAndReceive(I2cSendAndReceiveMsgReq* request)
 
 	I2cSendAndReceiveMsgRsp* response = (I2cSendAndReceiveMsgRsp*) pvPortMalloc(sizeof(I2cSendAndReceiveMsgRsp));
 	if(!response)
+	{
+		vPortFree(data);
 		return; // out of memory
+	}
 
 	*response = INIT_I2C_SEND_N_RECEIVE_MSG_RSP;
 
@@ -141,17 +144,29 @@ void i2cHandleSendAndReceive(I2cSendAndReceiveMsgReq* request)
 
 	if(!result)
 	{
+		logger(Error, Log_I2CTask, "[i2cHandleSendAndReceive] I2CComSend failed");
+
 		response->status = 0;
 		xQueueSend(g_i2cRxQueues[request->header.queueId], (void*) &response, portMAX_DELAY);
 
+		vPortFree(data);
 		return;
 	}
 
 	result = I2CComReceive(&g_i2cInstance, request->slaveAddress, data, request->rcvLength);
 
+	if(!result)
+	{
+		logger(Error, Log_I2CTask, "[I2CComReceive] I2CComSend failed");
+		vPortFree(data);
+	}
+	else
+	{
+		response->data = data;
+		response->length = request->rcvLength;
+	}
+
 	response->status = result;
-	response->data = data;
-	response->length = request->rcvLength;
 
 	xQueueSend(g_i2cRxQueues[request->header.queueId], (void*) &response, portMAX_DELAY);
 

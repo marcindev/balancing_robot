@@ -42,7 +42,7 @@ bool I2CComSend(I2CComInstance* i2cComInst, uint8_t slaveAddress, const uint8_t*
 		return false;
 
 	uint32_t dataIndex = 0;
-
+// TODO: interrupt-semaphore solution instead of polling
 	if(i2cComInst->isMaster)
 	{
 
