@@ -45,7 +45,7 @@ void GetFreeHeapSizeCommand::run()
 	while(connection->isConnected())
 	{
 		shared_ptr<BaseMessage> msg;
-		if(connection->receive(msg))
+		if(connection->receive(msg, DEF_TIMEOUT))
 		{
 			uint8_t msgId = msg->getMsgId();
 
@@ -58,6 +58,10 @@ void GetFreeHeapSizeCommand::run()
 				handleResponse(*Message<GetFreeHeapSizeRsp>(*msg).getPayload());
 				return;
 			}
+		}
+		else
+		{
+			break;
 		}
 
 	}

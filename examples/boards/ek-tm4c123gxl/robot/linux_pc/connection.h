@@ -14,16 +14,24 @@
 #include <mutex>
 #include <thread>
 #include <time.h>
+#include <condition_variable>
 
 #include "message.h"
+#include "callbacker.h"
 
 
-class Connection
+class Connection : public Callbacker
 {
 public:
+	enum Event
+	{
+		connected = 0,
+		disconnected
+	};
+
 	Connection();
 	Connection(const std::string& _ipAdress);
-	~Connection(){}
+	~Connection();
 	void start();
 	void wait();
 	bool establishConnection();
@@ -31,6 +39,7 @@ public:
 	bool resetConnection();
 	void send(std::shared_ptr<BaseMessage> msg);
 	bool receive(std::shared_ptr<BaseMessage>& msg);
+	bool receive(std::shared_ptr<BaseMessage>& msg, unsigned timeoutMs);
 	bool isConnected() { return _isConnected; }
 private:
 	void run();
@@ -49,6 +58,7 @@ private:
 
 	std::shared_ptr<std::thread> _thread;
 	std::mutex txMutex, rxMutex;
+	std::condition_variable cv;
 
 	time_t startTime, sendTime;
 	bool _isConnected = false;

@@ -9,6 +9,8 @@
 
 using namespace std;
 
+const unsigned Command::DEF_TIMEOUT = 100;
+
 Command::Command(std::shared_ptr<Connection> conn) : connection(conn)
 {
 	stringToConfOption["make_exec"] = ConfOption::make_exec;
@@ -48,6 +50,8 @@ Command::Command(std::shared_ptr<Connection> conn, const std::vector<std::string
 Command::~Command()
 {
 	writeConfig();
+
+	stop();
 }
 
 void Command::execute()
@@ -61,8 +65,21 @@ void Command::wait()
 	if(!_thread)
 		return;
 
-	_thread->join();
+	if(_thread->joinable())
+		_thread->join();
 
+}
+
+void Command::stop()
+{
+	_isStopped = true;
+
+	wait();
+}
+
+bool Command::isStopped()
+{
+	return _isStopped;
 }
 
 string Command::getConfValue(ConfOption option)

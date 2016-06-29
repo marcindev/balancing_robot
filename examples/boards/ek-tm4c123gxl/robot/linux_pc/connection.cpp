@@ -30,6 +30,13 @@ Connection::Connection(const std::string& _ipAdress) :
 
 }
 
+Connection::~Connection()
+{
+	disconnect();
+
+	wait();
+}
+
 void Connection::start()
 {
 	_thread.reset(new thread(&Connection::run, this));
@@ -58,6 +65,7 @@ bool Connection::establishConnection()
 	if(!ipAdress.empty() && tryConnect(ipAdress))
 		return true;
 
+
 	int ipLastNum = 2;
 	std::string scanningString("Scanning for robot server ");
 
@@ -65,7 +73,7 @@ bool Connection::establishConnection()
 	{
 		if(ipLastNum == 255)
 		{
-			cout << "No more addresses, host not found in given range" << endl;
+			cout << "No more addresses, host not found in a given range" << endl;
 			return false;
 		}
 
@@ -135,6 +143,7 @@ bool Connection::tryConnect(const std::string& strIp)
 	time(&startTime);
     cout << endl;
     cout << "Connection established with " << strIp << endl;
+    execOnEvent(Event::connected);
     return true;
 }
 
@@ -143,15 +152,18 @@ void Connection::wait()
 	if(!_thread)
 		return;
 
-	_thread->join();
-
+	if(_thread->joinable())
+		_thread->join();
 }
 
 void Connection::disconnect()
 {
+	if(!_isConnected)
+		return;
+
 	close(sockfd);
 	_isConnected = false;
-
+	execOnEvent(Event::disconnected);
 }
 
 void Connection::checkConnection()
@@ -166,6 +178,7 @@ void Connection::checkConnection()
 void Connection::connectionLost()
 {
 	_isConnected = false;
+	execOnEvent(Event::disconnected);
 	cout << "Connection lost!" << endl;
 }
 
@@ -177,7 +190,29 @@ void Connection::send(std::shared_ptr<BaseMessage> msg)
 
 bool Connection::receive(shared_ptr<BaseMessage>& msg)
 {
-	lock_guard<mutex> rxLock(rxMutex);
+	unique_lock<mutex> rxLock(rxMutex);
+
+	if(rxMessages.empty())
+		return false;
+
+	msg = rxMessages.front();
+	rxMessages.pop();
+
+	return true;
+}
+
+bool Connection::receive(std::shared_ptr<BaseMessage>& msg, unsigned timeoutMs)
+{
+	unique_lock<mutex> rxLock(rxMutex);
+
+	if(rxMessages.empty())
+	{
+		if(!timeoutMs)
+			return false;
+
+		if(cv.wait_for(rxLock, std::chrono::milliseconds(timeoutMs)) == std::cv_status::timeout)
+			return false;
+	}
 
 	if(rxMessages.empty())
 		return false;
@@ -246,8 +281,9 @@ bool Connection::receiveNextMsg()
 		shared_ptr<BaseMessage> msg(BaseMessage::getMessageFromPayload(reinterpret_cast<unsigned char*>(buffer)));
 
 		{
-			lock_guard<mutex> rxLock(rxMutex);
+			unique_lock<mutex> rxLock(rxMutex);
 			rxMessages.push(msg);
+			cv.notify_one();
 		}
 
 		return true;

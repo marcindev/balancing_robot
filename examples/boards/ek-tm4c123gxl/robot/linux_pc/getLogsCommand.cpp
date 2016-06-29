@@ -3,11 +3,12 @@
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
+#include <iterator>
 #include "stackEncoder.h"
 
 using namespace std;
 
-const double GetLogsCommand::CONN_TIMEOUT = 2.0;
+const unsigned GetLogsCommand::RESP_TIMEOUT = 200;
 
 GetLogsCommand::GetLogsCommand(shared_ptr<Connection> conn) : Command(conn)
 {
@@ -45,19 +46,21 @@ void GetLogsCommand::run()
 
 	connection->send(shared_ptr<BaseMessage>(new Message<GetLogsMsgReq>(getLogsMsgReq)));
 
-	time_t startTime, currTime;
-	time(&startTime);
+//	time_t startTime, currTime;
+//	time(&startTime);
+
+	unsigned timeoutCnt = 0;
 
 	while(connection->isConnected())
 	{
-		time(&currTime);
-		double timeDiff = difftime(currTime, startTime);
-
-		if(timeDiff > CONN_TIMEOUT)
-			break;
+//		time(&currTime);
+//		double timeDiff = difftime(currTime, startTime);
+//
+//		if(timeDiff > CONN_TIMEOUT)
+//			break;
 
 		shared_ptr<BaseMessage> msg;
-		if(connection->receive(msg))
+		if(connection->receive(msg, RESP_TIMEOUT))
 		{
 			uint8_t msgId = msg->getMsgId();
 
@@ -68,8 +71,18 @@ void GetLogsCommand::run()
 				break;
 
 		}
+		else
+		{
+			++timeoutCnt;
+
+			if(timeoutCnt == 10)
+				break;
+		}
 
 	}
+
+	if(vecLogs.empty())
+		return;
 
 	sort(vecLogs.begin(), vecLogs.end(), sortLine);
 
@@ -86,8 +99,18 @@ void GetLogsCommand::run()
 		cout << *it << endl;
 	}
 
-	vecLogs.clear();
+//	vecLogs.clear();
 
+	execOnEvent(Event::finished);
+}
+
+std::string GetLogsCommand::getLogText() const
+{
+	ostringstream oss;
+
+	copy(vecLogs.cbegin(), vecLogs.cend(), ostream_iterator<string>(oss, "\n"));
+
+	return oss.str();
 }
 
 bool GetLogsCommand::handleGetLogsRsp(const GetLogsMsgRsp& response)
@@ -95,6 +118,10 @@ bool GetLogsCommand::handleGetLogsRsp(const GetLogsMsgRsp& response)
 	string line;
 	stringstream ss;
 	uint16_t totalLineNumber = response.totalLineNum;
+	logNum = totalLineNumber;
+
+	execOnEvent(Event::log_line_received);
+
 	ss << response.lineNum;
 	line += ss.str() + " ";
 	ss.str("");
@@ -164,6 +191,9 @@ bool GetLogsCommand::handleGetLogsRsp(const GetLogsMsgRsp& response)
 		break;
 	case 13:
 		ss << "Log_Mpu";
+		break;
+	case 14:
+		ss << "Log_MotionCtrl";
 		break;
 	default:
 	ss << "Unknown flag( " << static_cast<int>(response.component) << " )";

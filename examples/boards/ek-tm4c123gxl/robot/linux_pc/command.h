@@ -9,8 +9,9 @@
 #include <string>
 
 #include "connection.h"
+#include "callbacker.h"
 
-class Command
+class Command : public Callbacker
 {
 public:
 	enum class ConfOption
@@ -30,8 +31,10 @@ public:
 
 	virtual void execute();
 	virtual void wait();
+	virtual void stop();
 protected:
 	virtual void run() = 0;
+	bool isStopped();
 
 	bool readConfig();
 	bool writeConfig();
@@ -43,6 +46,9 @@ protected:
 	std::vector<std::string> args;
 	std::map<ConfOption, std::string> confOptions;
 	bool isConfigRead = false;
+	bool _isStopped = false;
+
+	static const unsigned DEF_TIMEOUT;
 private:
 	std::map<std::string, ConfOption> stringToConfOption;
 };
