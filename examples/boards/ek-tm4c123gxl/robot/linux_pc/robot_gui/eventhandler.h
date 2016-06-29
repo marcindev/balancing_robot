@@ -3,13 +3,26 @@
 
 #include <QObject>
 
-class EvantHandler : public QObject
+class EventHandler : public QObject
 {
     Q_OBJECT
 public:
-    explicit EvantHandler(QObject *parent = 0);
+    explicit EventHandler(QObject *parent = 0);
+
+    void connectedCallback();
+    void disconnectedCallback();
+    void getLogsFinishedCallback();
+    void getLogsLineReceivedCallback();
+    void setPidParamFinishedCallback();
+    void setPidParamTimeoutCallback();
 
 signals:
+    void connected();
+    void disconnected();
+    void getLogsFinished();
+    void getLogsLineReceived();
+    void setPidParamFinished();
+    void setPidParamTimeout();
 
 public slots:
 };

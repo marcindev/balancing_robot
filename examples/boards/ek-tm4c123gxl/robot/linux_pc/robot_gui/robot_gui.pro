@@ -13,8 +13,30 @@ TEMPLATE = app
 
 
 SOURCES += main.cpp\
-        mainwindow.cpp
+        mainwindow.cpp \
+    logswindow.cpp \
+    logsdialog.cpp \
+    eventhandler.cpp \
+    settingsdialog.cpp \
+    settings.cpp
 
-HEADERS  += mainwindow.h
+HEADERS  += mainwindow.h \
+    logswindow.h \
+    logsdialog.h \
+    eventhandler.h \
+    settingsdialog.h \
+    settings.h
 
-FORMS    += mainwindow.ui
+INCLUDEPATH += "../"
+
+FORMS    += mainwindow.ui \
+    logswindow.ui \
+    logsdialog.ui \
+    settingsdialog.ui
+
+LIBS += -L../lib -lrobot
+
+RESOURCES     = resource.qrc
+
+
+CONFIG += c++11

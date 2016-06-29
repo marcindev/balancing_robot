@@ -12,3 +12,9 @@ LogsWindow::~LogsWindow()
 {
     delete ui;
 }
+
+
+void LogsWindow::setLogsText(const std::string& logsText)
+{
+    ui->plainTextEdit->document()->setPlainText(QString::fromStdString(logsText));
+}
