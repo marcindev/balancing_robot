@@ -9,14 +9,14 @@
 class SetPidDirectionCmd : public Command
 {
 public:
-	SetPidDirectionCmd(std::shared_ptr<Connection> conn);
-	SetPidDirectionCmd(std::shared_ptr<Connection> conn, const std::vector<std::string>& _args);
+    SetPidDirectionCmd(std::shared_ptr<Connection> conn);
+    SetPidDirectionCmd(std::shared_ptr<Connection> conn, const std::vector<std::string>& _args);
 
 protected:
-	void run();
+    void run();
 private:
 
-	bool handleResponse(const MctrlSetPidDirMsgRsp& response);
+    bool handleResponse(const MctrlSetPidDirMsgRsp& response);
 
 };
 

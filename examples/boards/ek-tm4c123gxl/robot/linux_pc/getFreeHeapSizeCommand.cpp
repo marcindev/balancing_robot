@@ -12,7 +12,7 @@ GetFreeHeapSizeCommand::GetFreeHeapSizeCommand(shared_ptr<Connection> conn) : Co
 }
 
 GetFreeHeapSizeCommand::GetFreeHeapSizeCommand(shared_ptr<Connection> conn, const std::vector<std::string>& _args) :
-		Command(conn, _args)
+        Command(conn, _args)
 {
 
 }
@@ -20,56 +20,56 @@ GetFreeHeapSizeCommand::GetFreeHeapSizeCommand(shared_ptr<Connection> conn, cons
 
 void GetFreeHeapSizeCommand::run()
 {
-	if(args.empty())
-	{
-		cout << "GetFreeHeapSizeCommand: master/slave parameter not specified" << endl;
-		return;
-	}
+    if(args.empty())
+    {
+        cout << "GetFreeHeapSizeCommand: master/slave parameter not specified" << endl;
+        return;
+    }
 
-	std::string argument(args.front());
+    std::string argument(args.front());
 
-	if(argument != "0" && argument != "1")
-	{
-		cout << "GetFreeHeapSizeCommand: improper master/slave parameter" << endl;
-		return;
-	}
+    if(argument != "0" && argument != "1")
+    {
+        cout << "GetFreeHeapSizeCommand: improper master/slave parameter" << endl;
+        return;
+    }
 
-	bool isMaster = (argument == "0") ? false : true;
+    bool isMaster = (argument == "0") ? false : true;
 
-	shared_ptr<GetFreeHeapSizeReq> request(new GetFreeHeapSizeReq);
-	*request = INIT_GET_FREE_HEAP_SIZE_MSG_REQ;
-	request->isMaster = isMaster;
+    shared_ptr<GetFreeHeapSizeReq> request(new GetFreeHeapSizeReq);
+    *request = INIT_GET_FREE_HEAP_SIZE_MSG_REQ;
+    request->isMaster = isMaster;
 
-	connection->send(shared_ptr<BaseMessage>(new Message<GetFreeHeapSizeReq>(request)));
+    connection->send(shared_ptr<BaseMessage>(new Message<GetFreeHeapSizeReq>(request)));
 
-	while(connection->isConnected())
-	{
-		shared_ptr<BaseMessage> msg;
-		if(connection->receive(msg, DEF_TIMEOUT))
-		{
-			uint8_t msgId = msg->getMsgId();
+    while(connection->isConnected())
+    {
+        shared_ptr<BaseMessage> msg;
+        if(connection->receive(msg, DEF_TIMEOUT))
+        {
+            uint8_t msgId = msg->getMsgId();
 
-			if(msgId != GET_FREE_HEAP_SIZE_MSG_RSP)
-			{
-				cout << "GetFreeHeapSizeCommand: unrecognized msg " << hex << static_cast<int>(msgId) << endl;
-			}
-			else
-			{
-				handleResponse(*Message<GetFreeHeapSizeRsp>(*msg).getPayload());
-				return;
-			}
-		}
-		else
-		{
-			break;
-		}
+            if(msgId != GET_FREE_HEAP_SIZE_MSG_RSP)
+            {
+                cout << "GetFreeHeapSizeCommand: unrecognized msg " << hex << static_cast<int>(msgId) << endl;
+            }
+            else
+            {
+                handleResponse(*Message<GetFreeHeapSizeRsp>(*msg).getPayload());
+                return;
+            }
+        }
+        else
+        {
+            break;
+        }
 
-	}
+    }
 
 }
 
 void GetFreeHeapSizeCommand::handleResponse(const GetFreeHeapSizeRsp& response)
 {
-	cout << "Free heap size: " << response.heapSize << " words." << endl;
+    cout << "Free heap size: " << response.heapSize << " words." << endl;
 }
 

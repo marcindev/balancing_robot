@@ -9,14 +9,14 @@
 class WriteMpuRegCmd : public Command
 {
 public:
-	WriteMpuRegCmd(std::shared_ptr<Connection> conn);
-	WriteMpuRegCmd(std::shared_ptr<Connection> conn, const std::vector<std::string>& _args);
+    WriteMpuRegCmd(std::shared_ptr<Connection> conn);
+    WriteMpuRegCmd(std::shared_ptr<Connection> conn, const std::vector<std::string>& _args);
 
 protected:
-	void run();
+    void run();
 private:
 
-	bool handleResponse(const MpuRegWriteMsgRsp& response);
+    bool handleResponse(const MpuRegWriteMsgRsp& response);
 
 };
 

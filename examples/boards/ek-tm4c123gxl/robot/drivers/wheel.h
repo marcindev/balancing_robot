@@ -5,8 +5,8 @@
 #include <stdint.h>
 
 
-#define WHEEL_LEFT			0
-#define WHEEL_RIGHT			1
+#define WHEEL_LEFT          0
+#define WHEEL_RIGHT         1
 
 bool wheelSetSpeed(uint8_t wheelId, float speed);
 bool wheelSetAcceleration(uint8_t wheelId, float acceleration);

@@ -12,98 +12,98 @@ using namespace std;
 
 
 Connection::Connection() :
-		startTime(0),
-		sendTime(0),
-		sockfd(0),
-		server(nullptr)
+        startTime(0),
+        sendTime(0),
+        sockfd(0),
+        server(nullptr)
 {
 
 }
 
 Connection::Connection(const std::string& _ipAdress) :
-		startTime(0),
-		sendTime(0),
-		sockfd(0),
-		server(nullptr),
-		ipAdress(_ipAdress)
+        startTime(0),
+        sendTime(0),
+        sockfd(0),
+        server(nullptr),
+        ipAdress(_ipAdress)
 {
 
 }
 
 Connection::~Connection()
 {
-	disconnect();
+    disconnect();
 
-	wait();
+    wait();
 }
 
 void Connection::start()
 {
-	_thread.reset(new thread(&Connection::run, this));
+    _thread.reset(new thread(&Connection::run, this));
 }
 
 void Connection::run()
 {
-	if(!establishConnection())
-		return;
+    if(!establishConnection())
+        return;
 
-	while(true)
-	{
-		if(!_isConnected && !isInReset)
-			return;
+    while(true)
+    {
+        if(!_isConnected && !isInReset)
+            return;
 
-		sendNextMsg();
-		receiveNextMsg();
-		sendHandShake();
-//		checkConnection();
-	}
+        sendNextMsg();
+        receiveNextMsg();
+        sendHandShake();
+//      checkConnection();
+    }
 }
 
 bool Connection::establishConnection()
 {
 
-	if(!ipAdress.empty() && tryConnect(ipAdress))
-		return true;
+    if(!ipAdress.empty() && tryConnect(ipAdress))
+        return true;
 
 
-	int ipLastNum = 2;
-	std::string scanningString("Scanning for robot server ");
+    int ipLastNum = 2;
+    std::string scanningString("Scanning for robot server ");
 
-	do
-	{
-		if(ipLastNum == 255)
-		{
-			cout << "No more addresses, host not found in a given range" << endl;
-			return false;
-		}
+    do
+    {
+        if(ipLastNum == 255)
+        {
+            cout << "No more addresses, host not found in a given range" << endl;
+            return false;
+        }
 
-		string ipPrefix("192.168.2.");
-		stringstream ss;
+        string ipPrefix("192.168.2.");
+        stringstream ss;
 
-		scanningString += ".";
-		cout << scanningString << "\r";
-		cout.flush();
-		ss << ipLastNum;
-		ipAdress = ipPrefix + ss.str();
-		ipLastNum++;
+        scanningString += ".";
+        cout << scanningString << "\r";
+        cout.flush();
+        ss << ipLastNum;
+        ipAdress = ipPrefix + ss.str();
+        ipLastNum++;
 
-	}while(!tryConnect(ipAdress));
+    }while(!tryConnect(ipAdress));
 
-	return true;
+    return true;
 
 }
 
 bool Connection::resetConnection()
 {
-	bool status = false;
+    bool status = false;
 
-	isInReset = true;
-	disconnect();
-	this_thread::sleep_for(chrono::seconds(10));
-	status = establishConnection();
-	isInReset = false;
+    isInReset = true;
+    disconnect();
+    this_thread::sleep_for(chrono::seconds(10));
+    status = establishConnection();
+    isInReset = false;
 
-	return status;
+    return status;
 }
 
 bool Connection::tryConnect(const std::string& strIp)
@@ -140,7 +140,7 @@ bool Connection::tryConnect(const std::string& strIp)
     }
 
     _isConnected = true;
-	time(&startTime);
+    time(&startTime);
     cout << endl;
     cout << "Connection established with " << strIp << endl;
     execOnEvent(Event::connected);
@@ -149,233 +149,233 @@ bool Connection::tryConnect(const std::string& strIp)
 
 void Connection::wait()
 {
-	if(!_thread)
-		return;
+    if(!_thread)
+        return;
 
-	if(_thread->joinable())
-		_thread->join();
+    if(_thread->joinable())
+        _thread->join();
 }
 
 void Connection::disconnect()
 {
-	if(!_isConnected)
-		return;
+    if(!_isConnected)
+        return;
 
-	close(sockfd);
-	_isConnected = false;
-	execOnEvent(Event::disconnected);
+    close(sockfd);
+    _isConnected = false;
+    execOnEvent(Event::disconnected);
 }
 
 void Connection::checkConnection()
 {
-	time_t currTime;
-	time(&currTime);
+    time_t currTime;
+    time(&currTime);
 
-	if(difftime(currTime, startTime) > CONN_TIMEOUT)
-		connectionLost();
+    if(difftime(currTime, startTime) > CONN_TIMEOUT)
+        connectionLost();
 }
 
 void Connection::connectionLost()
 {
-	_isConnected = false;
-	execOnEvent(Event::disconnected);
-	cout << "Connection lost!" << endl;
+    _isConnected = false;
+    execOnEvent(Event::disconnected);
+    cout << "Connection lost!" << endl;
 }
 
 void Connection::send(std::shared_ptr<BaseMessage> msg)
 {
-	lock_guard<mutex> txLock(txMutex);
-	txMessages.push(msg);
+    lock_guard<mutex> txLock(txMutex);
+    txMessages.push(msg);
 }
 
 bool Connection::receive(shared_ptr<BaseMessage>& msg)
 {
-	unique_lock<mutex> rxLock(rxMutex);
+    unique_lock<mutex> rxLock(rxMutex);
 
-	if(rxMessages.empty())
-		return false;
+    if(rxMessages.empty())
+        return false;
 
-	msg = rxMessages.front();
-	rxMessages.pop();
+    msg = rxMessages.front();
+    rxMessages.pop();
 
-	return true;
+    return true;
 }
 
 bool Connection::receive(std::shared_ptr<BaseMessage>& msg, unsigned timeoutMs)
 {
-	unique_lock<mutex> rxLock(rxMutex);
+    unique_lock<mutex> rxLock(rxMutex);
 
-	if(rxMessages.empty())
-	{
-		if(!timeoutMs)
-			return false;
+    if(rxMessages.empty())
+    {
+        if(!timeoutMs)
+            return false;
 
-		if(cv.wait_for(rxLock, std::chrono::milliseconds(timeoutMs)) == std::cv_status::timeout)
-			return false;
-	}
+        if(cv.wait_for(rxLock, std::chrono::milliseconds(timeoutMs)) == std::cv_status::timeout)
+            return false;
+    }
 
-	if(rxMessages.empty())
-		return false;
+    if(rxMessages.empty())
+        return false;
 
-	msg = rxMessages.front();
-	rxMessages.pop();
+    msg = rxMessages.front();
+    rxMessages.pop();
 
-	return true;
+    return true;
 }
 
 void Connection::sendHandShake()
 {
 
-	time_t currTime;
-	time(&currTime);
+    time_t currTime;
+    time(&currTime);
 
-	if(difftime(currTime, sendTime) <= CONN_HANDSHAKE_PERIOD)
-		return;
+    if(difftime(currTime, sendTime) <= CONN_HANDSHAKE_PERIOD)
+        return;
 
-	shared_ptr<HandshakeMsgReq> handShakeReq(new HandshakeMsgReq);
-	*handShakeReq = INIT_HANDSHAKE_MSG_REQ;
+    shared_ptr<HandshakeMsgReq> handShakeReq(new HandshakeMsgReq);
+    *handShakeReq = INIT_HANDSHAKE_MSG_REQ;
 
-	send(shared_ptr<BaseMessage>(new Message<HandshakeMsgReq>(handShakeReq)));
+    send(shared_ptr<BaseMessage>(new Message<HandshakeMsgReq>(handShakeReq)));
 
-	time(&sendTime);
+    time(&sendTime);
 }
 
 bool Connection::receiveHandShake()
 {
-	uint8_t msgId = buffer[0];
+    uint8_t msgId = buffer[0];
 
-	if(msgId == HANDSHAKE_MSG_RSP)
-	{
-		time(&startTime);
-		return true;
-	}
+    if(msgId == HANDSHAKE_MSG_RSP)
+    {
+        time(&startTime);
+        return true;
+    }
 
-	return false;
+    return false;
 }
 
 bool Connection::sendNextMsg()
 {
-	shared_ptr<BaseMessage> msg;
+    shared_ptr<BaseMessage> msg;
 
-	{
-		lock_guard<mutex> txLock(txMutex);
-		if(txMessages.empty())
-			return false;
+    {
+        lock_guard<mutex> txLock(txMutex);
+        if(txMessages.empty())
+            return false;
 
-		msg = txMessages.front();
-		txMessages.pop();
-	}
+        msg = txMessages.front();
+        txMessages.pop();
+    }
 
-	sendTcpMsg(msg->getRawPayload());
+    sendTcpMsg(msg->getRawPayload());
 
-	return true;
+    return true;
 }
 
 bool Connection::receiveNextMsg()
 {
-	if(receiveTcpMsg())
-	{
-		if(receiveHandShake())
-			return false;
+    if(receiveTcpMsg())
+    {
+        if(receiveHandShake())
+            return false;
 
-		shared_ptr<BaseMessage> msg(BaseMessage::getMessageFromPayload(reinterpret_cast<unsigned char*>(buffer)));
+        shared_ptr<BaseMessage> msg(BaseMessage::getMessageFromPayload(reinterpret_cast<unsigned char*>(buffer)));
 
-		{
-			unique_lock<mutex> rxLock(rxMutex);
-			rxMessages.push(msg);
-			cv.notify_one();
-		}
+        {
+            unique_lock<mutex> rxLock(rxMutex);
+            rxMessages.push(msg);
+            cv.notify_one();
+        }
 
-		return true;
-	}
+        return true;
+    }
 
-	return false;
+    return false;
 }
 
 bool Connection::receiveTcpMsg()
 {
-	const int16_t MSG_LEN_OFFSET = 2;
-	int16_t bufferIndex = 0;
-	int16_t status = 0;
-	int16_t leftToRcv = 0;
+    const int16_t MSG_LEN_OFFSET = 2;
+    int16_t bufferIndex = 0;
+    int16_t status = 0;
+    int16_t leftToRcv = 0;
 
-	fd_set         input;
-	FD_ZERO(&input);
-	FD_SET(sockfd, &input);
-	struct timeval timeout;
-	timeout.tv_sec  = 0;
-	timeout.tv_usec = 5000;
-	status = select(sockfd + 1, &input, NULL, NULL, &timeout);
+    fd_set         input;
+    FD_ZERO(&input);
+    FD_SET(sockfd, &input);
+    struct timeval timeout;
+    timeout.tv_sec  = 0;
+    timeout.tv_usec = 5000;
+    status = select(sockfd + 1, &input, NULL, NULL, &timeout);
 
-	if(status <= 0)
-	{
-		return false;
-	}
+    if(status <= 0)
+    {
+        return false;
+    }
 
-	if (!FD_ISSET(sockfd, &input))
-	   return false;
+    if (!FD_ISSET(sockfd, &input))
+       return false;
 
-	leftToRcv = MSG_LEN_OFFSET;
+    leftToRcv = MSG_LEN_OFFSET;
 
-	while(leftToRcv > 0)
-	{
-		if(!_isConnected)
-			return false;
+    while(leftToRcv > 0)
+    {
+        if(!_isConnected)
+            return false;
 
-		status = read(sockfd, &(buffer[bufferIndex]), leftToRcv);
+        status = read(sockfd, &(buffer[bufferIndex]), leftToRcv);
 
-		if(status == 0)
-			return false;
+        if(status == 0)
+            return false;
 
-		if(status < 0)
-		{
-			cout << "Couldn't receive TCP message" << endl;
-			return false;
-		}
-
-
-		leftToRcv -= status;
-		bufferIndex += status;
-
-		if(bufferIndex == MSG_LEN_OFFSET)
-			leftToRcv = getMsgSize(&buffer[0]) - MSG_LEN_OFFSET;
-	}
+        if(status < 0)
+        {
+            cout << "Couldn't receive TCP message" << endl;
+            return false;
+        }
 
 
-	return true;
+        leftToRcv -= status;
+        bufferIndex += status;
+
+        if(bufferIndex == MSG_LEN_OFFSET)
+            leftToRcv = getMsgSize(&buffer[0]) - MSG_LEN_OFFSET;
+    }
+
+
+    return true;
 }
 
 void Connection::sendTcpMsg(void* msg)
 {
-	int16_t bufferIndex = 0;
-	int16_t status = 0;
-	int16_t msgLen = 0;
-	int16_t leftToSend = 0;
+    int16_t bufferIndex = 0;
+    int16_t status = 0;
+    int16_t msgLen = 0;
+    int16_t leftToSend = 0;
 
-	uint8_t* msgPtr = (uint8_t*) msg;
+    uint8_t* msgPtr = (uint8_t*) msg;
 
-	msgLen = getMsgSize(msg);
-	leftToSend = msgLen;
+    msgLen = getMsgSize(msg);
+    leftToSend = msgLen;
 
-	while(leftToSend > 0)
-	{
-		if(!_isConnected)
-			return;
+    while(leftToSend > 0)
+    {
+        if(!_isConnected)
+            return;
 
-		status = write(sockfd, &(msgPtr[bufferIndex]), leftToSend);
+        status = write(sockfd, &(msgPtr[bufferIndex]), leftToSend);
 
-		if(status == 0)
-			return;
+        if(status == 0)
+            return;
 
-		if(status < 0)
-		{
-			cout << "Couldn't send TCP message" << endl;
-			return;
-		}
+        if(status < 0)
+        {
+            cout << "Couldn't send TCP message" << endl;
+            return;
+        }
 
-		leftToSend -= status;
-		bufferIndex += status;
-	}
+        leftToSend -= status;
+        bufferIndex += status;
+    }
 
 }
 

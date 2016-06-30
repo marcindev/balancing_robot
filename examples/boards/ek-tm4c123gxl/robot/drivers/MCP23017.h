@@ -15,31 +15,31 @@
 // API declarations
 //******************************
 
-#define GPIOEXP_PORTA	1
-#define GPIOEXP_PORTB	2
+#define GPIOEXP_PORTA   1
+#define GPIOEXP_PORTB   2
 
-#define GPIOEXP_PIN0	0x01
-#define GPIOEXP_PIN1	0x02
-#define GPIOEXP_PIN2	0x04
-#define GPIOEXP_PIN3	0x08
-#define GPIOEXP_PIN4	0x10
-#define GPIOEXP_PIN5	0x20
-#define GPIOEXP_PIN6	0x40
-#define GPIOEXP_PIN7	0x80
+#define GPIOEXP_PIN0    0x01
+#define GPIOEXP_PIN1    0x02
+#define GPIOEXP_PIN2    0x04
+#define GPIOEXP_PIN3    0x08
+#define GPIOEXP_PIN4    0x10
+#define GPIOEXP_PIN5    0x20
+#define GPIOEXP_PIN6    0x40
+#define GPIOEXP_PIN7    0x80
 
 
 // struct for storing single expander config
 
 typedef struct
 {
-	I2cManager* i2cManager;
-	uint8_t hwAddress;
-	// Don't modify below fields
-	uint8_t	outPinsA,
-			outPinsB,
-			outPinsStateA,
-			outPinsStateB;
-	bool initiated;
+    I2cManager* i2cManager;
+    uint8_t hwAddress;
+    // Don't modify below fields
+    uint8_t outPinsA,
+            outPinsB,
+            outPinsStateA,
+            outPinsStateB;
+    bool initiated;
 } GpioExpander;
 
 

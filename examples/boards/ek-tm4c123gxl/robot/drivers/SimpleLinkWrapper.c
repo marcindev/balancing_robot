@@ -219,7 +219,7 @@ void SimpleLinkSockEventHandler(SlSockEvent_t *pSock)
             break;
 
         default:
-        	logger(Debug, Log_Wlan, " [SimpleLinkSockEventHandler] Unexpected event");
+            logger(Debug, Log_Wlan, " [SimpleLinkSockEventHandler] Unexpected event");
             break;
     }
 }
@@ -229,19 +229,19 @@ void SimpleLinkSockEventHandler(SlSockEvent_t *pSock)
 
 uint8_t startSimpleLinkTask(uint16_t priority)
 {
-	OsiReturnVal_e retVal;
-	retVal = VStartSimpleLinkSpawnTask(priority);
+    OsiReturnVal_e retVal;
+    retVal = VStartSimpleLinkSpawnTask(priority);
 
-	if(retVal == OSI_OK)
-		return true;
+    if(retVal == OSI_OK)
+        return true;
 
-	return false;
+    return false;
 }
 
 
 uint8_t connectToAP()
 {
-	_i32 retVal = -1;
+    _i32 retVal = -1;
 
     retVal = configureSimpleLinkToDefaultState();
     if(retVal < 0)
@@ -330,9 +330,9 @@ _i32 configureSimpleLinkToDefaultState()
         {
             /* If the device is in AP mode, we need to wait for this event before doing anything */
 #ifdef SL_PLATFORM_MULTI_THREADED
-        	while(!IS_IP_ACQUIRED(g_Status)) {};
+            while(!IS_IP_ACQUIRED(g_Status)) {};
 #else
-        	while(!IS_IP_ACQUIRED(g_Status)) { _SlNonOsMainLoopTask(); }
+            while(!IS_IP_ACQUIRED(g_Status)) { _SlNonOsMainLoopTask(); }
 #endif
         }
 

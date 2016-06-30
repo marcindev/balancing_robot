@@ -5,49 +5,49 @@
 
 typedef enum
 {
-	PidDirect = 0,
-	PidReverse
+    PidDirect = 0,
+    PidReverse
 } PidDirection;
 
 typedef enum
 {
-	PidManual = 0,
-	PidAuto
+    PidManual = 0,
+    PidAuto
 } PidMode;
 
 typedef enum
 {
-	PidProportional = 0,
-	PidIntegral,
-	PidDerivative,
-	PidSetPoint
+    PidProportional = 0,
+    PidIntegral,
+    PidDerivative,
+    PidSetPoint
 } PidParameter;
 
 typedef struct
 {
-	float setPoint,
-		  kp,
-		  ki,
-		  kd;
-	float samplePeriodSec;
-	PidDirection direction;
+    float setPoint,
+          kp,
+          ki,
+          kd;
+    float samplePeriodSec;
+    PidDirection direction;
 
-	float iTerm,
-		  lastInput;
-	float outMin,
-		  outMax;
+    float iTerm,
+          lastInput;
+    float outMin,
+          outMax;
 
 } PidCtrlInstance;
 
 
 void PidInitialize(PidCtrlInstance* pidCtrl,
-				   uint32_t samplePeriodMs,
-				   float setPoint,
-				   float kp,
-				   float ki,
-				   float kd,
-				   PidDirection dir
-				   );
+                   uint32_t samplePeriodMs,
+                   float setPoint,
+                   float kp,
+                   float ki,
+                   float kd,
+                   PidDirection dir
+                   );
 
 float PidCompute(PidCtrlInstance* pidCtrl, float input);
 void PidSetParam(PidCtrlInstance* pidCtrl, PidParameter param, float value);

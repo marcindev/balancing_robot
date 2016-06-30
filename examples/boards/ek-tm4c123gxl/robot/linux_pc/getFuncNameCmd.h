@@ -11,11 +11,11 @@
 class GetFuncNameCmd : public Command
 {
 public:
-	GetFuncNameCmd(std::shared_ptr<Connection> conn);
-	GetFuncNameCmd(std::shared_ptr<Connection> conn, const std::vector<std::string>& _args);
+    GetFuncNameCmd(std::shared_ptr<Connection> conn);
+    GetFuncNameCmd(std::shared_ptr<Connection> conn, const std::vector<std::string>& _args);
 
 protected:
-	void run();
+    void run();
 
 
 };

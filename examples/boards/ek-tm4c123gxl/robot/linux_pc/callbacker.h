@@ -8,32 +8,32 @@
 
 class Callbacker
 {
-	class Callback
-	{
-	public:
-		Callback();
-		virtual ~Callback() { }
-		virtual void execute() const = 0;
-		unsigned getId() { return id; }
-	private:
-		unsigned id;
-		static unsigned nextId;
-	};
+    class Callback
+    {
+    public:
+        Callback();
+        virtual ~Callback() { }
+        virtual void execute() const = 0;
+        unsigned getId() { return id; }
+    private:
+        unsigned id;
+        static unsigned nextId;
+    };
 
-	template <typename T>
-	class CallbackImpl : public Callback
-	{
-	public:
-		CallbackImpl(const T& func) : _func(func){ }
+    template <typename T>
+    class CallbackImpl : public Callback
+    {
+    public:
+        CallbackImpl(const T& func) : _func(func){ }
 
-		~CallbackImpl() { }
-		void execute() const
-		{
-			_func();
-		}
-	private:
-		T _func;
-	};
+        ~CallbackImpl() { }
+        void execute() const
+        {
+            _func();
+        }
+    private:
+        T _func;
+    };
 
 public:
 
@@ -43,16 +43,16 @@ public:
         template <typename FuncType, typename ObjType>
         EventRegisterer(int event, FuncType func, ObjType& obj)
                         : helper(new ConcreteHelper<FuncType, ObjType>(event, func, obj))
-		{
+        {
 
-		}
+        }
 
         unsigned registerToCallbacker(Callbacker& callbacker) const;
     private:
         class Helper
         {
         public:
-        	Helper() { }
+            Helper() { }
             virtual ~Helper() { }
 
             virtual unsigned registerWithParams(Callbacker& callbacker) = 0;
@@ -62,81 +62,81 @@ public:
         class ConcreteHelper : public Helper
         {
         public:
-        	ConcreteHelper(int _event, FuncType _func, ObjType& _obj) :
-        		event(_event),
-				func(_func),
-				obj(_obj)
-        	{
+            ConcreteHelper(int _event, FuncType _func, ObjType& _obj) :
+                event(_event),
+                func(_func),
+                obj(_obj)
+            {
 
-        	}
+            }
 
-        	unsigned registerWithParams(Callbacker& callbacker)
-        	{
+            unsigned registerWithParams(Callbacker& callbacker)
+            {
                         return callbacker.registerCallback(event, func, obj);
-        	}
+            }
 
         private:
 
-        	int event;
-        	FuncType func;
-        	ObjType& obj;
+            int event;
+            FuncType func;
+            ObjType& obj;
         };
 
         std::unique_ptr<Helper> helper;
     };
 
-	Callbacker() { }
-	~Callbacker() { }
+    Callbacker() { }
+    ~Callbacker() { }
 
-	template <typename FuncType, typename ObjType>
-	unsigned registerCallback(int event, FuncType func, ObjType& obj);
+    template <typename FuncType, typename ObjType>
+    unsigned registerCallback(int event, FuncType func, ObjType& obj);
 
-	template <typename FuncType>
-	unsigned registerCallback(int event, FuncType func);
+    template <typename FuncType>
+    unsigned registerCallback(int event, FuncType func);
 
-	bool deregisterCallback(unsigned callbackId);
+    bool deregisterCallback(unsigned callbackId);
 
 protected:
 
-	void execOnEvent(int event);
+    void execOnEvent(int event);
 
 private:
-	std::map<int, std::list<std::shared_ptr<Callback>>> eventCallbackMap;
+    std::map<int, std::list<std::shared_ptr<Callback>>> eventCallbackMap;
 
 };
 
 template <typename FuncType, typename ObjType>
 unsigned Callbacker::registerCallback(int event, FuncType func, ObjType& obj)
 {
-	auto it = eventCallbackMap.find(event);
+    auto it = eventCallbackMap.find(event);
 
-	if(it == eventCallbackMap.end())
-		eventCallbackMap[event] = std::list<std::shared_ptr<Callback>>();
+    if(it == eventCallbackMap.end())
+        eventCallbackMap[event] = std::list<std::shared_ptr<Callback>>();
 
-	auto funcObj = std::bind(func, std::ref(obj));
-	std::shared_ptr<Callback> callbackPtr =
-			std::make_shared<CallbackImpl<decltype(funcObj)>>(funcObj);
+    auto funcObj = std::bind(func, std::ref(obj));
+    std::shared_ptr<Callback> callbackPtr =
+            std::make_shared<CallbackImpl<decltype(funcObj)>>(funcObj);
 
-	eventCallbackMap.at(event).push_back(callbackPtr);
+    eventCallbackMap.at(event).push_back(callbackPtr);
 
-	return callbackPtr->getId();
+    return callbackPtr->getId();
 }
 
 template <typename T>
 unsigned Callbacker::registerCallback(int event, T func)
 {
-	auto it = eventCallbackMap.find(event);
+    auto it = eventCallbackMap.find(event);
 
-	if(it == eventCallbackMap.end())
-		eventCallbackMap[event] = std::list<std::shared_ptr<Callback>>();
+    if(it == eventCallbackMap.end())
+        eventCallbackMap[event] = std::list<std::shared_ptr<Callback>>();
 
-	std::function<T> funcObj(func);
-	std::shared_ptr<Callback> callbackPtr =
-			std::make_shared<CallbackImpl<decltype(funcObj)>>(funcObj);
+    std::function<T> funcObj(func);
+    std::shared_ptr<Callback> callbackPtr =
+            std::make_shared<CallbackImpl<decltype(funcObj)>>(funcObj);
 
-	eventCallbackMap.at(event).push_back(callbackPtr);
+    eventCallbackMap.at(event).push_back(callbackPtr);
 
-	return callbackPtr->getId();
+    return callbackPtr->getId();
 }
 
 

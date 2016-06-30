@@ -9,20 +9,20 @@
 class SetPidParamCmd : public Command
 {
 public:
-	enum Event
-	{
-		response_timeout,
-		finished
-	};
+    enum Event
+    {
+        response_timeout,
+        finished
+    };
 
-	SetPidParamCmd(std::shared_ptr<Connection> conn);
-	SetPidParamCmd(std::shared_ptr<Connection> conn, const std::vector<std::string>& _args);
+    SetPidParamCmd(std::shared_ptr<Connection> conn);
+    SetPidParamCmd(std::shared_ptr<Connection> conn, const std::vector<std::string>& _args);
 
 protected:
-	void run();
+    void run();
 private:
 
-	bool handleResponse(const MctrlSetPidParamMsgRsp& response);
+    bool handleResponse(const MctrlSetPidParamMsgRsp& response);
 
 };
 

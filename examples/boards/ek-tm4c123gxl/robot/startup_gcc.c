@@ -94,7 +94,7 @@ void (* const g_pfnVectors[])(void) =
     NmiSR,                                  // The NMI handler
     FaultISR,                               // The hard fault handler
     IntDefaultHandler,                      // The MPU fault handler
-	BusFaultISR,                            // The bus fault handler
+    BusFaultISR,                            // The bus fault handler
     IntDefaultHandler,                      // The usage fault handler
     0,                                      // Reserved
     0,                                      // Reserved
@@ -107,20 +107,20 @@ void (* const g_pfnVectors[])(void) =
     xPortSysTickHandler,                    // The SysTick handler
     IntDefaultHandler,                      // GPIO Port A
 #ifdef _ROBOT_MASTER_BOARD
-	IntDefaultHandler,                       // GPIO Port B
+    IntDefaultHandler,                       // GPIO Port B
 #else
-	GPIOB_intHandler,                       // GPIO Port B
+    GPIOB_intHandler,                       // GPIO Port B
 #endif
     IntDefaultHandler,                      // GPIO Port C
     IntDefaultHandler,                      // GPIO Port D
-	GPIOE_intHandler,                      // GPIO Port E
+    GPIOE_intHandler,                      // GPIO Port E
     IntDefaultHandler,                      // UART0 Rx and Tx
 #ifdef _ROBOT_MASTER_BOARD
-	IntDefaultHandler,                       // UART1 Rx and Tx
+    IntDefaultHandler,                       // UART1 Rx and Tx
 #else
-	UART1_intHandler,                       // UART1 Rx and Tx
+    UART1_intHandler,                       // UART1 Rx and Tx
 #endif
-	SSI0_intHandler,                       // SSI0 Rx and Tx
+    SSI0_intHandler,                       // SSI0 Rx and Tx
     IntDefaultHandler,                      // I2C0 Master and Slave
     IntDefaultHandler,                      // PWM Fault
     IntDefaultHandler,                      // PWM Generator 0
@@ -131,12 +131,12 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // ADC Sequence 1
     IntDefaultHandler,                      // ADC Sequence 2
     IntDefaultHandler,                      // ADC Sequence 3
-	WDG_intHandler,	                        // Watchdog timer
+    WDG_intHandler,                         // Watchdog timer
     IntDefaultHandler,                      // Timer 0 subtimer A
 #ifdef _ROBOT_MASTER_BOARD
-	Timer0BIntHandler,                      // Timer 0 subtimer B
+    Timer0BIntHandler,                      // Timer 0 subtimer B
 #else
-	IntDefaultHandler,                      // Timer 0 subtimer B
+    IntDefaultHandler,                      // Timer 0 subtimer B
 #endif
     IntDefaultHandler,                      // Timer 1 subtimer A
     IntDefaultHandler,                      // Timer 1 subtimer B
@@ -153,7 +153,7 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // UART2 Rx and Tx
     IntDefaultHandler,                      // SSI1 Rx and Tx
     IntDefaultHandler,                      // Timer 3 subtimer A
-	IntDefaultHandler,                      // Timer 3 subtimer B
+    IntDefaultHandler,                      // Timer 3 subtimer B
     IntDefaultHandler,                      // I2C1 Master and Slave
     IntDefaultHandler,                      // Quadrature Encoder 1
     IntDefaultHandler,                      // CAN0
@@ -164,7 +164,7 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // USB0
     IntDefaultHandler,                      // PWM Generator 3
     IntDefaultHandler,                      // uDMA Software Transfer
-	uDMAErrorHandler,                       // uDMA Error
+    uDMAErrorHandler,                       // uDMA Error
     IntDefaultHandler,                      // ADC1 Sequence 0
     IntDefaultHandler,                      // ADC1 Sequence 1
     IntDefaultHandler,                      // ADC1 Sequence 2
@@ -403,56 +403,56 @@ IntDefaultHandler(void)
 
 void prvGetRegistersFromStack( uint32_t *pulFaultStackAddress )
 {
-	/* These are volatile to try and prevent the compiler/linker optimising them
-	away as the variables never actually get used.  If the debugger won't show the
-	values of the variables, make them global my moving their declaration outside
-	of this function. */
+    /* These are volatile to try and prevent the compiler/linker optimising them
+    away as the variables never actually get used.  If the debugger won't show the
+    values of the variables, make them global my moving their declaration outside
+    of this function. */
 
-	volatile uint32_t r0;
-	volatile uint32_t r1;
-	volatile uint32_t r2;
-	volatile uint32_t r3;
-	volatile uint32_t r12;
-	volatile uint32_t lr; /* Link register. */
-	volatile uint32_t pc; /* Program counter. */
-	volatile uint32_t psr;/* Program status register. */
+    volatile uint32_t r0;
+    volatile uint32_t r1;
+    volatile uint32_t r2;
+    volatile uint32_t r3;
+    volatile uint32_t r12;
+    volatile uint32_t lr; /* Link register. */
+    volatile uint32_t pc; /* Program counter. */
+    volatile uint32_t psr;/* Program status register. */
 
-	r0 = pulFaultStackAddress[ 0 ];
-	r1 = pulFaultStackAddress[ 1 ];
-	r2 = pulFaultStackAddress[ 2 ];
-	r3 = pulFaultStackAddress[ 3 ];
+    r0 = pulFaultStackAddress[ 0 ];
+    r1 = pulFaultStackAddress[ 1 ];
+    r2 = pulFaultStackAddress[ 2 ];
+    r3 = pulFaultStackAddress[ 3 ];
 
-	r12 = pulFaultStackAddress[ 4 ];
-	lr = pulFaultStackAddress[ 5 ];
-	pc = pulFaultStackAddress[ 6 ];
-	psr = pulFaultStackAddress[ 7 ];
+    r12 = pulFaultStackAddress[ 4 ];
+    lr = pulFaultStackAddress[ 5 ];
+    pc = pulFaultStackAddress[ 6 ];
+    psr = pulFaultStackAddress[ 7 ];
 
-	/* When the following line is hit, the variables contain the register values. */
+    /* When the following line is hit, the variables contain the register values. */
 
-	logger(Error, Log_Robot, "FaultISR! \n"
-			"Register values: \n"
-			" r0: %#x\n r1: %#x\n r2: %#x\n r3: %#x\n"
-			" r12: %#x\n lr: %#x\n pc: %#x\n psr: %#x",
-			r0, r1, r2, r3, r12, lr, pc, psr);
+    logger(Error, Log_Robot, "FaultISR! \n"
+            "Register values: \n"
+            " r0: %#x\n r1: %#x\n r2: %#x\n r3: %#x\n"
+            " r12: %#x\n lr: %#x\n pc: %#x\n psr: %#x",
+            r0, r1, r2, r3, r12, lr, pc, psr);
 
-	dumpPostMortem();
-	for( ;; );
+    dumpPostMortem();
+    for( ;; );
 }
 
 
 //*********************************************************
 void BusFaultISR(void)
 {
-	uint32_t busFaultReg;
-	uint32_t busFaultAdr;
-	uint32_t busFaultStat;
+    uint32_t busFaultReg;
+    uint32_t busFaultAdr;
+    uint32_t busFaultStat;
 
-	busFaultReg = HWREG(0xE000ED29);
-	busFaultAdr = HWREG(NVIC_FAULT_ADDR);
-	busFaultStat = HWREG(NVIC_FAULT_STAT);
-	while(1)
-	{
+    busFaultReg = HWREG(0xE000ED29);
+    busFaultAdr = HWREG(NVIC_FAULT_ADDR);
+    busFaultStat = HWREG(NVIC_FAULT_STAT);
+    while(1)
+    {
 
-	}
+    }
 }
 

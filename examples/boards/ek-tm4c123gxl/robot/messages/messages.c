@@ -81,5 +81,5 @@ const MctrlGetDataMsgRsp INIT_MCTRL_GET_DATA_MSG_RSP = {MCTRL_GET_DATA_MSG_RSP, 
 
 uint16_t getMsgSize(void* msg)
 {
-	return ((MsgHeader*)msg)->msgLen;
+    return ((MsgHeader*)msg)->msgLen;
 }

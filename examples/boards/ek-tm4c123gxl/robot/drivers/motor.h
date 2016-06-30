@@ -10,16 +10,16 @@
 #include "MCP23017.h"
 
 
-#define FORWARD			0x00
-#define REVERSE			0x01
-#define BREAK			0x02
-#define COAST			0x03
+#define FORWARD         0x00
+#define REVERSE         0x01
+#define BREAK           0x02
+#define COAST           0x03
 
-#define MOTOR_LEFT		0x00
-#define MOTOR_RIGHT		0x01
+#define MOTOR_LEFT      0x00
+#define MOTOR_RIGHT     0x01
 
-#define PWM_0			0x00
-#define PWM_1			0x01
+#define PWM_0           0x00
+#define PWM_1           0x01
 
 //*************************************************************************************
 //MotorA       ENA  IN1  IN2
@@ -30,23 +30,23 @@
 //*************************************************************************************
 typedef struct
 {
-	GpioExpander* gpioExpander;
-	uint8_t pwm; // PWM_0 / PWM_1
-	uint8_t portFwd;
-	uint8_t pinFwd;
-	uint8_t portRev;
-	uint8_t pinRev;
-	// to this point must be set
-	// don't change below
-	uint8_t direction;			// FORWARD or REVERSE
-	uint8_t stopState;			// BREAK or COAST
-	float dutyCycle;			// PWM duty cycle in percents
-	uint32_t dutyCycleChangeTime;		// how fast can duty cycle change from one value to the other
-	bool initialized;
-	bool isRunning;
+    GpioExpander* gpioExpander;
+    uint8_t pwm; // PWM_0 / PWM_1
+    uint8_t portFwd;
+    uint8_t pinFwd;
+    uint8_t portRev;
+    uint8_t pinRev;
+    // to this point must be set
+    // don't change below
+    uint8_t direction;          // FORWARD or REVERSE
+    uint8_t stopState;          // BREAK or COAST
+    float dutyCycle;            // PWM duty cycle in percents
+    uint32_t dutyCycleChangeTime;       // how fast can duty cycle change from one value to the other
+    bool initialized;
+    bool isRunning;
 } MotorInstance;
 
-void initializePwm(	uint32_t pwmFrequency);
+void initializePwm( uint32_t pwmFrequency);
 void setPwmFrequency(uint32_t pwmFrequency);
 bool initializeMotor(MotorInstance* motorInstance);
 bool startMotor(MotorInstance* motorInstance);

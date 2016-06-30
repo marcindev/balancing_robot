@@ -24,24 +24,24 @@
 
 void ZeroBuffer(void* buffer, int len)
 {
-	unsigned char* uchPtr = (unsigned char*) buffer;
+    unsigned char* uchPtr = (unsigned char*) buffer;
 
-	for(int i = 0; i != len; i++)
-	{
-		*uchPtr++ = 0;
-	}
+    for(int i = 0; i != len; i++)
+    {
+        *uchPtr++ = 0;
+    }
 }
 
 void printBuffer(void* buffer, int len)
 {
-	UARTprintf("Buffer:");
-	unsigned char* uchPtr = (unsigned char*) buffer;
+    UARTprintf("Buffer:");
+    unsigned char* uchPtr = (unsigned char*) buffer;
 
-	for(int i = 0; i < len; ++i)
-	{
-		UARTprintf(" 0x%02X", *uchPtr++);
-	}
-	UARTprintf("\n");
+    for(int i = 0; i < len; ++i)
+    {
+        UARTprintf(" 0x%02X", *uchPtr++);
+    }
+    UARTprintf("\n");
 }
 
 void
@@ -78,32 +78,32 @@ ConfigureUART(void)
 
 void* getTaskHandleByNum(int taskNumber)
 {
-	TaskStatus_t *pxTaskStatusArray;
-	volatile UBaseType_t uxArraySize;
-	unsigned long ulTotalRunTime;
-	TaskHandle_t taskHandle = NULL;
+    TaskStatus_t *pxTaskStatusArray;
+    volatile UBaseType_t uxArraySize;
+    unsigned long ulTotalRunTime;
+    TaskHandle_t taskHandle = NULL;
 
-	uxArraySize = uxTaskGetNumberOfTasks();
+    uxArraySize = uxTaskGetNumberOfTasks();
 
-	pxTaskStatusArray = pvPortMalloc( uxArraySize * sizeof( TaskStatus_t ) );
+    pxTaskStatusArray = pvPortMalloc( uxArraySize * sizeof( TaskStatus_t ) );
 
-	if(!pxTaskStatusArray)
-		return NULL;
+    if(!pxTaskStatusArray)
+        return NULL;
 
-	uxArraySize = uxTaskGetSystemState( pxTaskStatusArray,
-										uxArraySize,
-										&ulTotalRunTime );
+    uxArraySize = uxTaskGetSystemState( pxTaskStatusArray,
+                                        uxArraySize,
+                                        &ulTotalRunTime );
 
-	for(int i = 0; i != uxArraySize; ++i)
-	{
-		if(pxTaskStatusArray[i].xTaskNumber == taskNumber)
-		{
-			taskHandle = pxTaskStatusArray[i].xHandle;
-			break;
-		}
-	}
+    for(int i = 0; i != uxArraySize; ++i)
+    {
+        if(pxTaskStatusArray[i].xTaskNumber == taskNumber)
+        {
+            taskHandle = pxTaskStatusArray[i].xHandle;
+            break;
+        }
+    }
 
-	vPortFree( pxTaskStatusArray );
+    vPortFree( pxTaskStatusArray );
 
-	return taskHandle;
+    return taskHandle;
 }

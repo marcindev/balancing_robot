@@ -9,28 +9,28 @@
 class GetMpuDataCmd : public Command
 {
 public:
-	GetMpuDataCmd(std::shared_ptr<Connection> conn);
-	GetMpuDataCmd(std::shared_ptr<Connection> conn, const std::vector<std::string>& _args);
+    GetMpuDataCmd(std::shared_ptr<Connection> conn);
+    GetMpuDataCmd(std::shared_ptr<Connection> conn, const std::vector<std::string>& _args);
 
 protected:
-	enum Option
-	{
-		OneShot,
-		Periodically,
-		Continuously
-	};
+    enum Option
+    {
+        OneShot,
+        Periodically,
+        Continuously
+    };
 
 
-	void run();
+    void run();
 private:
 
-	bool handleResponse(const MpuGetDataTcpMsgRsp& response);
-	void printHelp();
-	void handleOptions();
+    bool handleResponse(const MpuGetDataTcpMsgRsp& response);
+    void printHelp();
+    void handleOptions();
 
-	Option option;
-	uint32_t period;
-	bool isHelp = false;
+    Option option;
+    uint32_t period;
+    bool isHelp = false;
 
 };
 

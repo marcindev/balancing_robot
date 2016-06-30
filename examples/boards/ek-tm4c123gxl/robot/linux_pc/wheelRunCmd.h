@@ -9,11 +9,11 @@
 class WheelRunCmd : public Command
 {
 public:
-	WheelRunCmd(std::shared_ptr<Connection> conn);
-	WheelRunCmd(std::shared_ptr<Connection> conn, const std::vector<std::string>& _args);
+    WheelRunCmd(std::shared_ptr<Connection> conn);
+    WheelRunCmd(std::shared_ptr<Connection> conn, const std::vector<std::string>& _args);
 
 protected:
-	void run();
+    void run();
 
 };
 

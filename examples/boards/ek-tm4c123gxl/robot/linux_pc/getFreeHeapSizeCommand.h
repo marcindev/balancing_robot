@@ -9,14 +9,14 @@
 class GetFreeHeapSizeCommand : public Command
 {
 public:
-	GetFreeHeapSizeCommand(std::shared_ptr<Connection> conn);
-	GetFreeHeapSizeCommand(std::shared_ptr<Connection> conn, const std::vector<std::string>& _args);
+    GetFreeHeapSizeCommand(std::shared_ptr<Connection> conn);
+    GetFreeHeapSizeCommand(std::shared_ptr<Connection> conn, const std::vector<std::string>& _args);
 
 protected:
-	void run();
+    void run();
 private:
-	void handleResponse(const GetFreeHeapSizeRsp& response);
-	std::vector<std::string> vecLogs;
+    void handleResponse(const GetFreeHeapSizeRsp& response);
+    std::vector<std::string> vecLogs;
 };
 
 #endif // GET_FREE_HEAP_SIZE_COMMAND_H

@@ -9,11 +9,11 @@
 class SetWheelSpeedCmd : public Command
 {
 public:
-	SetWheelSpeedCmd(std::shared_ptr<Connection> conn);
-	SetWheelSpeedCmd(std::shared_ptr<Connection> conn, const std::vector<std::string>& _args);
+    SetWheelSpeedCmd(std::shared_ptr<Connection> conn);
+    SetWheelSpeedCmd(std::shared_ptr<Connection> conn, const std::vector<std::string>& _args);
 
 protected:
-	void run();
+    void run();
 
 };
 

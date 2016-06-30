@@ -9,14 +9,14 @@
 class SetMctrlPeriodCmd : public Command
 {
 public:
-	SetMctrlPeriodCmd(std::shared_ptr<Connection> conn);
-	SetMctrlPeriodCmd(std::shared_ptr<Connection> conn, const std::vector<std::string>& _args);
+    SetMctrlPeriodCmd(std::shared_ptr<Connection> conn);
+    SetMctrlPeriodCmd(std::shared_ptr<Connection> conn, const std::vector<std::string>& _args);
 
 protected:
-	void run();
+    void run();
 private:
 
-	bool handleResponse(const MctrlSetPeriodMsgRsp& response);
+    bool handleResponse(const MctrlSetPeriodMsgRsp& response);
 
 };
 

@@ -18,24 +18,24 @@
 #include "motorsTask.h"
 #include "logger.h"
 
-#define MOTORS_TASK_STACK_SIZE		150        // Stack size in words
-#define MOTORS_QUEUE_SIZE			  5
-#define MOTORS_ITEM_SIZE			  4			// bytes
+#define MOTORS_TASK_STACK_SIZE      150        // Stack size in words
+#define MOTORS_QUEUE_SIZE             5
+#define MOTORS_ITEM_SIZE              4         // bytes
 
-#define PWM_INITIAL_FREQUENCY	  25000
-#define MOTORS_NUMBER				  2
+#define PWM_INITIAL_FREQUENCY     25000
+#define MOTORS_NUMBER                 2
 
-#define MOTOR_L_PWM			    PWM_0
-#define MOTOR_L_FW_PORT			GPIOEXP_PORTA
-#define MOTOR_L_FW_PIN			GPIOEXP_PIN0
-#define MOTOR_L_RV_PORT			GPIOEXP_PORTA
-#define MOTOR_L_RV_PIN			GPIOEXP_PIN1
+#define MOTOR_L_PWM             PWM_0
+#define MOTOR_L_FW_PORT         GPIOEXP_PORTA
+#define MOTOR_L_FW_PIN          GPIOEXP_PIN0
+#define MOTOR_L_RV_PORT         GPIOEXP_PORTA
+#define MOTOR_L_RV_PIN          GPIOEXP_PIN1
 
-#define MOTOR_R_PWM			    PWM_1
-#define MOTOR_R_FW_PORT			GPIOEXP_PORTA
-#define MOTOR_R_FW_PIN			GPIOEXP_PIN2
-#define MOTOR_R_RV_PORT			GPIOEXP_PORTA
-#define MOTOR_R_RV_PIN			GPIOEXP_PIN3
+#define MOTOR_R_PWM             PWM_1
+#define MOTOR_R_FW_PORT         GPIOEXP_PORTA
+#define MOTOR_R_FW_PIN          GPIOEXP_PIN2
+#define MOTOR_R_RV_PORT         GPIOEXP_PORTA
+#define MOTOR_R_RV_PIN          GPIOEXP_PIN3
 
 
 static MsgQueueId g_motorsQueue;
@@ -53,26 +53,26 @@ static void handleSetDirection(MotorSetDirectionMsgReq* request);
 
 static void motorsTask()
 {
-	uint8_t wdgTaskID = registerToWatchDog();
+    uint8_t wdgTaskID = registerToWatchDog();
 
-	while(true)
-	{
-		void* msg;
-		feedWatchDog(wdgTaskID, WDG_ASLEEP);
+    while(true)
+    {
+        void* msg;
+        feedWatchDog(wdgTaskID, WDG_ASLEEP);
 
-		if(msgReceive(g_motorsQueue, &msg, MSG_WAIT_LONG_TIME))
-		{
-			feedWatchDog(wdgTaskID, WDG_ALIVE);
-			handleMessages(msg);
-		}
+        if(msgReceive(g_motorsQueue, &msg, MSG_WAIT_LONG_TIME))
+        {
+            feedWatchDog(wdgTaskID, WDG_ALIVE);
+            handleMessages(msg);
+        }
 
-	}
+    }
 
 }
 
 bool motorsTaskInit()
 {
-	g_motorsQueue = registerMainMsgQueue(Msg_MotorsTaskID, MOTORS_QUEUE_SIZE);
+    g_motorsQueue = registerMainMsgQueue(Msg_MotorsTaskID, MOTORS_QUEUE_SIZE);
 
     if(xTaskCreate(motorsTask, (signed portCHAR *)"Motors", MOTORS_TASK_STACK_SIZE, NULL,
                    tskIDLE_PRIORITY + PRIORITY_MOTORS_TASK, NULL) != pdTRUE)
@@ -85,104 +85,104 @@ bool motorsTaskInit()
 
 void initializeMotors()
 {
-	g_gpioExpander.hwAddress = GPIO_EXPANDER1_ADDRESS;
-	g_motors[MOTOR_LEFT].gpioExpander = &g_gpioExpander;
-	g_motors[MOTOR_LEFT].pwm = MOTOR_L_PWM;
-	g_motors[MOTOR_LEFT].portFwd = MOTOR_L_FW_PORT;
-	g_motors[MOTOR_LEFT].pinFwd = MOTOR_L_FW_PIN;
-	g_motors[MOTOR_LEFT].portRev = MOTOR_L_RV_PORT;
-	g_motors[MOTOR_LEFT].pinRev = MOTOR_L_RV_PIN;
+    g_gpioExpander.hwAddress = GPIO_EXPANDER1_ADDRESS;
+    g_motors[MOTOR_LEFT].gpioExpander = &g_gpioExpander;
+    g_motors[MOTOR_LEFT].pwm = MOTOR_L_PWM;
+    g_motors[MOTOR_LEFT].portFwd = MOTOR_L_FW_PORT;
+    g_motors[MOTOR_LEFT].pinFwd = MOTOR_L_FW_PIN;
+    g_motors[MOTOR_LEFT].portRev = MOTOR_L_RV_PORT;
+    g_motors[MOTOR_LEFT].pinRev = MOTOR_L_RV_PIN;
 
-	g_motors[MOTOR_RIGHT].gpioExpander = &g_gpioExpander;
-	g_motors[MOTOR_RIGHT].pwm = MOTOR_R_PWM;
-	g_motors[MOTOR_RIGHT].portFwd = MOTOR_R_FW_PORT;
-	g_motors[MOTOR_RIGHT].pinFwd = MOTOR_R_FW_PIN;
-	g_motors[MOTOR_RIGHT].portRev = MOTOR_R_RV_PORT;
-	g_motors[MOTOR_RIGHT].pinRev = MOTOR_R_RV_PIN;
+    g_motors[MOTOR_RIGHT].gpioExpander = &g_gpioExpander;
+    g_motors[MOTOR_RIGHT].pwm = MOTOR_R_PWM;
+    g_motors[MOTOR_RIGHT].portFwd = MOTOR_R_FW_PORT;
+    g_motors[MOTOR_RIGHT].pinFwd = MOTOR_R_FW_PIN;
+    g_motors[MOTOR_RIGHT].portRev = MOTOR_R_RV_PORT;
+    g_motors[MOTOR_RIGHT].pinRev = MOTOR_R_RV_PIN;
 
-	for(size_t i = 0; i != MOTORS_NUMBER; ++i)
-		initializeMotor(&g_motors[i]);
+    for(size_t i = 0; i != MOTORS_NUMBER; ++i)
+        initializeMotor(&g_motors[i]);
 }
 
 void handleMessages(void* msg)
 {
-	uint8_t msgId = *((uint8_t*)msg);
+    uint8_t msgId = *((uint8_t*)msg);
 
-	switch(msgId)
-	{
-	case START_TASK_MSG_REQ:
-		handleStartTask((StartTaskMsgReq*) msg);
-		break;
-	case MOTOR_START_MSG_REQ:
-		handleStart((MotorStartMsgReq*) msg);
-		break;
-	case MOTOR_STOP_MSG_REQ:
-		handleStop((MotorStopMsgReq*) msg);
-		break;
-	case MOTOR_SET_DUTY_CYCLE_MSG_REQ:
-		handleSetDutyCycle((MotorSetDutyCycleMsgReq*) msg);
-		break;
-	case MOTOR_SET_DIRECTION_MSG_REQ:
-		handleSetDirection((MotorSetDirectionMsgReq*) msg);
-		break;
-	default:
-		logger(Warning, Log_Motors, "[handleMessages] Received not recognized message %d", msgId);
-		break;
-	}
+    switch(msgId)
+    {
+    case START_TASK_MSG_REQ:
+        handleStartTask((StartTaskMsgReq*) msg);
+        break;
+    case MOTOR_START_MSG_REQ:
+        handleStart((MotorStartMsgReq*) msg);
+        break;
+    case MOTOR_STOP_MSG_REQ:
+        handleStop((MotorStopMsgReq*) msg);
+        break;
+    case MOTOR_SET_DUTY_CYCLE_MSG_REQ:
+        handleSetDutyCycle((MotorSetDutyCycleMsgReq*) msg);
+        break;
+    case MOTOR_SET_DIRECTION_MSG_REQ:
+        handleSetDirection((MotorSetDirectionMsgReq*) msg);
+        break;
+    default:
+        logger(Warning, Log_Motors, "[handleMessages] Received not recognized message %d", msgId);
+        break;
+    }
 }
 
 void handleStartTask(StartTaskMsgReq* request)
 {
-	initializePwm(PWM_INITIAL_FREQUENCY);
-	initializeMotors();
+    initializePwm(PWM_INITIAL_FREQUENCY);
+    initializeMotors();
 
-	StartTaskMsgRsp* response = (StartTaskMsgRsp*) pvPortMalloc(sizeof(StartTaskMsgRsp));
-	*response = INIT_START_TASK_MSG_RSP;
-	response->status = true;
-	msgRespond(msgGetAddress(request), &response, MSG_WAIT_LONG_TIME);
-	vPortFree(request);
+    StartTaskMsgRsp* response = (StartTaskMsgRsp*) pvPortMalloc(sizeof(StartTaskMsgRsp));
+    *response = INIT_START_TASK_MSG_RSP;
+    response->status = true;
+    msgRespond(msgGetAddress(request), &response, MSG_WAIT_LONG_TIME);
+    vPortFree(request);
 }
 
 void handleStart(MotorStartMsgReq* request)
 {
-	if(request->motorId >= MOTORS_NUMBER)
-		return;
+    if(request->motorId >= MOTORS_NUMBER)
+        return;
 
-	if(!startMotor(&g_motors[request->motorId]))
-		logger(Error, Log_Motors, "[handleStart] Could not start motor %d", request->motorId);
+    if(!startMotor(&g_motors[request->motorId]))
+        logger(Error, Log_Motors, "[handleStart] Could not start motor %d", request->motorId);
 
-	vPortFree(request);
+    vPortFree(request);
 }
 
 void handleStop(MotorStopMsgReq* request)
 {
-	if(request->motorId >= MOTORS_NUMBER)
-		return;
+    if(request->motorId >= MOTORS_NUMBER)
+        return;
 
-	if(!stopMotor(&g_motors[request->motorId]))
-		logger(Error, Log_Motors, "[handleStart] Could not stop motor %d", request->motorId);
+    if(!stopMotor(&g_motors[request->motorId]))
+        logger(Error, Log_Motors, "[handleStart] Could not stop motor %d", request->motorId);
 
-	vPortFree(request);
+    vPortFree(request);
 }
 
 
 void handleSetDutyCycle(MotorSetDutyCycleMsgReq* request)
 {
-	if(request->motorId >= MOTORS_NUMBER)
-		return;
+    if(request->motorId >= MOTORS_NUMBER)
+        return;
 
-	setMotorDutyCycle(&g_motors[request->motorId], request->dutyCycle);
+    setMotorDutyCycle(&g_motors[request->motorId], request->dutyCycle);
 
-	vPortFree(request);
+    vPortFree(request);
 }
 
 void handleSetDirection(MotorSetDirectionMsgReq* request)
 {
-	if(request->motorId >= MOTORS_NUMBER)
-		return;
+    if(request->motorId >= MOTORS_NUMBER)
+        return;
 
-	setMotorDirection(&g_motors[request->motorId], request->direction);
+    setMotorDirection(&g_motors[request->motorId], request->direction);
 
-	vPortFree(request);
+    vPortFree(request);
 }
 

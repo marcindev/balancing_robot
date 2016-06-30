@@ -9,35 +9,35 @@
 
 typedef struct
 {
-	I2cManager* i2cManager;
-	uint8_t hwAddress;
-	bool initiated;
+    I2cManager* i2cManager;
+    uint8_t hwAddress;
+    bool initiated;
 } Mpu6050;
 
 
 typedef struct
 {
-	int16_t acX,
-			acY,
-			acZ,
-			tmp,
-			gyX,
-			gyY,
-			gyZ;
+    int16_t acX,
+            acY,
+            acZ,
+            tmp,
+            gyX,
+            gyY,
+            gyZ;
 
 } MpuRawData;
 
 typedef struct
 {
-	float x_axis;
-	float y_axis;
+    float x_axis;
+    float y_axis;
 } AccelAngles;
 
 typedef struct
 {
-	float x;
-	float y;
-	float z;
+    float x;
+    float y;
+    float z;
 } GyroRates;
 
 void MpuInit(Mpu6050* mpu);

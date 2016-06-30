@@ -7,27 +7,27 @@
 #include <stdint.h>
 
 typedef int16_t MsgQueueId;
-#define MSG_WAIT_LONG_TIME		0xFFFF
+#define MSG_WAIT_LONG_TIME      0xFFFF
 
 typedef enum
 {
-	Msg_RobotTaskID = 0,
-	Msg_TcpServerTaskID,
-	Msg_MotorsTaskID,
-	Msg_I2cTaskID,
-	Msg_EncoderTaskID,
-	Msg_WheelsTaskID,
-	Msg_ServerSpiComTaskID,
-	Msg_UpdaterTaskID,
-	Msg_MpuTaskID,
-	Msg_MotionControlTaskID,
-	MSG_TcpServerHandlerID
+    Msg_RobotTaskID = 0,
+    Msg_TcpServerTaskID,
+    Msg_MotorsTaskID,
+    Msg_I2cTaskID,
+    Msg_EncoderTaskID,
+    Msg_WheelsTaskID,
+    Msg_ServerSpiComTaskID,
+    Msg_UpdaterTaskID,
+    Msg_MpuTaskID,
+    Msg_MotionControlTaskID,
+    MSG_TcpServerHandlerID
 }MsgTaskId;
 
 typedef struct
 {
-	MsgQueueId queueId;
-	uint16_t slot;
+    MsgQueueId queueId;
+    uint16_t slot;
 } MsgAddress;
 
 

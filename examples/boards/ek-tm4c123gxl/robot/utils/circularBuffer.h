@@ -5,11 +5,11 @@
 
 typedef struct
 {
-	uint8_t* bufferStart;
-	uint8_t* bufferEnd;
-	uint8_t* head;
-	uint8_t* tail;
-	uint16_t size;
+    uint8_t* bufferStart;
+    uint8_t* bufferEnd;
+    uint8_t* head;
+    uint8_t* tail;
+    uint16_t size;
 }CircularBuffer;
 
 void CB_setBuffer(CircularBuffer* circularBuffer, uint8_t* buffer, uint32_t size);

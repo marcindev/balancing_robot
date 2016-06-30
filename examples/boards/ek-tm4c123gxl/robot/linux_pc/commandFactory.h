@@ -11,13 +11,13 @@
 class CommandFactory
 {
 public:
-	CommandFactory(std::shared_ptr<Connection> conn);
+    CommandFactory(std::shared_ptr<Connection> conn);
 
-	std::shared_ptr<Command> createCommand(const std::string& strCommand,
-			const std::vector<std::string>& args);
+    std::shared_ptr<Command> createCommand(const std::string& strCommand,
+            const std::vector<std::string>& args);
 
 private:
-	std::shared_ptr<Connection> connection;
+    std::shared_ptr<Connection> connection;
 };
 
 

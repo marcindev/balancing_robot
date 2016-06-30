@@ -1,5 +1,5 @@
-/*	Wrapper for I2C driver
- * 	autor: Marcin Gozdziewski
+/*  Wrapper for I2C driver
+ *  autor: Marcin Gozdziewski
  */
 #ifndef I2CWRAPPER_H
 #define I2CWRAPPER_H
@@ -14,24 +14,24 @@
 #include "driverlib/pin_map.h"
 #include "driverlib/sysctl.h"
 
-#define I2C_SPEED_400	1
-#define I2C_SPEED_100 	0
+#define I2C_SPEED_400   1
+#define I2C_SPEED_100   0
 
 typedef struct
 {
-	uint32_t i2cPeripheral,
-			 gpioPeripheral,
-			 sclPinConfig,
-			 sdaPinConfig,
-			 gpioPortBase,
-			 sclPin,
-			 sdaPin,
-			 i2cBase,
-			 slaveAddress;
-	uint8_t speed;
-	bool isMaster;
-	bool initiated;
-	uint32_t errState;
+    uint32_t i2cPeripheral,
+             gpioPeripheral,
+             sclPinConfig,
+             sdaPinConfig,
+             gpioPortBase,
+             sclPin,
+             sdaPin,
+             i2cBase,
+             slaveAddress;
+    uint8_t speed;
+    bool isMaster;
+    bool initiated;
+    uint32_t errState;
 } I2CComInstance;
 
 void I2CComInit(I2CComInstance* i2cComInst);

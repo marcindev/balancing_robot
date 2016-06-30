@@ -23,56 +23,56 @@
 class Connection : public Callbacker
 {
 public:
-	enum Event
-	{
-		connected = 0,
-		disconnected
-	};
+    enum Event
+    {
+        connected = 0,
+        disconnected
+    };
 
-	Connection();
-	Connection(const std::string& _ipAdress);
-	~Connection();
-	void start();
-	void wait();
-	bool establishConnection();
-	void disconnect();
-	bool resetConnection();
-	void send(std::shared_ptr<BaseMessage> msg);
-	bool receive(std::shared_ptr<BaseMessage>& msg);
-	bool receive(std::shared_ptr<BaseMessage>& msg, unsigned timeoutMs);
-	bool isConnected() { return _isConnected; }
+    Connection();
+    Connection(const std::string& _ipAdress);
+    ~Connection();
+    void start();
+    void wait();
+    bool establishConnection();
+    void disconnect();
+    bool resetConnection();
+    void send(std::shared_ptr<BaseMessage> msg);
+    bool receive(std::shared_ptr<BaseMessage>& msg);
+    bool receive(std::shared_ptr<BaseMessage>& msg, unsigned timeoutMs);
+    bool isConnected() { return _isConnected; }
 private:
-	void run();
-	bool tryConnect(const std::string& ip);
-	void checkConnection();
-	void connectionLost();
-	void sendHandShake();
-	bool receiveHandShake();
-	bool sendNextMsg();
-	bool receiveNextMsg();
-	bool receiveTcpMsg();
-	void sendTcpMsg(void* msg);
+    void run();
+    bool tryConnect(const std::string& ip);
+    void checkConnection();
+    void connectionLost();
+    void sendHandShake();
+    bool receiveHandShake();
+    bool sendNextMsg();
+    bool receiveNextMsg();
+    bool receiveTcpMsg();
+    void sendTcpMsg(void* msg);
 
-	std::queue<std::shared_ptr<BaseMessage>> txMessages;
-	std::queue<std::shared_ptr<BaseMessage>> rxMessages;
+    std::queue<std::shared_ptr<BaseMessage>> txMessages;
+    std::queue<std::shared_ptr<BaseMessage>> rxMessages;
 
-	std::shared_ptr<std::thread> _thread;
-	std::mutex txMutex, rxMutex;
-	std::condition_variable cv;
+    std::shared_ptr<std::thread> _thread;
+    std::mutex txMutex, rxMutex;
+    std::condition_variable cv;
 
-	time_t startTime, sendTime;
-	bool _isConnected = false;
-	bool isInReset = false;
+    time_t startTime, sendTime;
+    bool _isConnected = false;
+    bool isInReset = false;
 
-	int sockfd;
-	sockaddr_in serv_addr;
-	hostent *server;
-	std::string ipAdress;
-	char buffer[512];
+    int sockfd;
+    sockaddr_in serv_addr;
+    hostent *server;
+    std::string ipAdress;
+    char buffer[512];
 
-	const unsigned PORT = 5001;
-	const double CONN_TIMEOUT = 20.0;
-	const double CONN_HANDSHAKE_PERIOD = 1.0;
+    const unsigned PORT = 5001;
+    const double CONN_TIMEOUT = 20.0;
+    const double CONN_HANDSHAKE_PERIOD = 1.0;
 };
 
 #endif // CONNECTION_H

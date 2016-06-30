@@ -3,83 +3,83 @@
 
 void CB_setBuffer(CircularBuffer* circularBuffer, uint8_t* buffer, uint32_t size)
 {
-	circularBuffer->size = size;
-	circularBuffer->bufferStart = buffer;
-	circularBuffer->bufferEnd = circularBuffer->bufferStart + size;
-	circularBuffer->head = circularBuffer->tail = circularBuffer->bufferStart;
+    circularBuffer->size = size;
+    circularBuffer->bufferStart = buffer;
+    circularBuffer->bufferEnd = circularBuffer->bufferStart + size;
+    circularBuffer->head = circularBuffer->tail = circularBuffer->bufferStart;
 
 }
 
 bool CB_isEmpty(CircularBuffer* circularBuffer)
 {
-	return circularBuffer->head == circularBuffer->tail;
+    return circularBuffer->head == circularBuffer->tail;
 }
 
 bool CB_isFull(CircularBuffer* circularBuffer)
 {
-	return (circularBuffer->tail - circularBuffer->head) == 1
-			|| (circularBuffer->head - circularBuffer->tail) == (circularBuffer->size - 1);
+    return (circularBuffer->tail - circularBuffer->head) == 1
+            || (circularBuffer->head - circularBuffer->tail) == (circularBuffer->size - 1);
 }
 
 bool CB_pushData(CircularBuffer* circularBuffer, const void* data, uint32_t size)
 {
-	if(CB_getAvailableSpace(circularBuffer) < size)
-		return false;
+    if(CB_getAvailableSpace(circularBuffer) < size)
+        return false;
 
-	uint8_t* u8Data = (uint8_t*) data;
+    uint8_t* u8Data = (uint8_t*) data;
 
-	uint8_t* tempHead = circularBuffer->head;
+    uint8_t* tempHead = circularBuffer->head;
 
-	for(uint32_t i = 0; i < size; ++i)
-	{
-		*tempHead = *u8Data++;
+    for(uint32_t i = 0; i < size; ++i)
+    {
+        *tempHead = *u8Data++;
 
-		if((tempHead + 1) == circularBuffer->bufferEnd)
-			tempHead = circularBuffer->bufferStart;
-		else
-			tempHead++;
+        if((tempHead + 1) == circularBuffer->bufferEnd)
+            tempHead = circularBuffer->bufferStart;
+        else
+            tempHead++;
 
-		if(tempHead == circularBuffer->tail)
-		{
-			return false;
-		}
+        if(tempHead == circularBuffer->tail)
+        {
+            return false;
+        }
 
-	}
+    }
 
-	circularBuffer->head = tempHead;
+    circularBuffer->head = tempHead;
 
-	return true;
+    return true;
 }
 
 uint32_t CB_popData(CircularBuffer* circularBuffer, void* data, uint32_t size)
 {
-	uint32_t popCnt = 0;
-	uint8_t* u8Data = (uint8_t*) data;
+    uint32_t popCnt = 0;
+    uint8_t* u8Data = (uint8_t*) data;
 
-	for(uint32_t i = 0; i < size; ++i)
-	{
-		if(CB_isEmpty(circularBuffer))
-			return popCnt;
+    for(uint32_t i = 0; i < size; ++i)
+    {
+        if(CB_isEmpty(circularBuffer))
+            return popCnt;
 
-		*u8Data++ = *circularBuffer->tail;
+        *u8Data++ = *circularBuffer->tail;
 
-		circularBuffer->tail++;
+        circularBuffer->tail++;
 
-		if(circularBuffer->tail == circularBuffer->bufferEnd)
-			circularBuffer->tail = circularBuffer->bufferStart;
+        if(circularBuffer->tail == circularBuffer->bufferEnd)
+            circularBuffer->tail = circularBuffer->bufferStart;
 
-		++popCnt;
+        ++popCnt;
 
-	}
+    }
 
-	return popCnt;
+    return popCnt;
 }
 
 uint32_t CB_getAvailableSpace(CircularBuffer* circularBuffer)
 {
-	if(circularBuffer->head < circularBuffer->tail)
-		return circularBuffer->tail - 1 - circularBuffer->head;
+    if(circularBuffer->head < circularBuffer->tail)
+        return circularBuffer->tail - 1 - circularBuffer->head;
 
-	return (circularBuffer->bufferEnd - circularBuffer->head)
-			+ (circularBuffer->tail - 1 - circularBuffer->bufferStart);
+    return (circularBuffer->bufferEnd - circularBuffer->head)
+            + (circularBuffer->tail - 1 - circularBuffer->bufferStart);
 }

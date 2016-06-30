@@ -12,7 +12,7 @@
 #include "wdg.h"
 #include "motionControlTask.h"
 
-#define MOTION_CONTROL_TASK_STACK_SIZE		200        // Stack size in words
+#define MOTION_CONTROL_TASK_STACK_SIZE      200        // Stack size in words
 
 #define LONG_TIME 0xffff
 
@@ -20,19 +20,19 @@ extern SemaphoreHandle_t g_timerB0TimoutSem;
 
 static void motionControlTask()
 {
-	uint8_t wdgTaskID = registerToWatchDog();
-	initInterrupts();
-	MCtrlInitialize();
+    uint8_t wdgTaskID = registerToWatchDog();
+    initInterrupts();
+    MCtrlInitialize();
 
-	while(true)
-	{
-		feedWatchDog(wdgTaskID, WDG_ASLEEP);
-		BaseType_t result = xSemaphoreTake(g_timerB0TimoutSem, LONG_TIME);
-		feedWatchDog(wdgTaskID, WDG_ALIVE);
+    while(true)
+    {
+        feedWatchDog(wdgTaskID, WDG_ASLEEP);
+        BaseType_t result = xSemaphoreTake(g_timerB0TimoutSem, LONG_TIME);
+        feedWatchDog(wdgTaskID, WDG_ALIVE);
 
-		if(result == pdTRUE)
-			MCtrlDoJob();
-	}
+        if(result == pdTRUE)
+            MCtrlDoJob();
+    }
 }
 
 bool motionControlTaskInit()

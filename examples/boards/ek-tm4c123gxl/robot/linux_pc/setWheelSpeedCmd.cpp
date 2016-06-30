@@ -12,7 +12,7 @@ SetWheelSpeedCmd::SetWheelSpeedCmd(shared_ptr<Connection> conn) : Command(conn)
 }
 
 SetWheelSpeedCmd::SetWheelSpeedCmd(shared_ptr<Connection> conn, const std::vector<std::string>& _args) :
-		Command(conn, _args)
+        Command(conn, _args)
 {
 
 }
@@ -20,49 +20,49 @@ SetWheelSpeedCmd::SetWheelSpeedCmd(shared_ptr<Connection> conn, const std::vecto
 
 void SetWheelSpeedCmd::run()
 {
-	if(args.empty())
-	{
-		cout << "Usage: setWheelSpeed <wheelId> <speed>" << endl;
-		return;
-	}
+    if(args.empty())
+    {
+        cout << "Usage: setWheelSpeed <wheelId> <speed>" << endl;
+        return;
+    }
 
-	if(args.size() != 2)
-	{
-		cout << "Incorrect number of parameters required 2" << endl;
-		return;
-	}
+    if(args.size() != 2)
+    {
+        cout << "Incorrect number of parameters required 2" << endl;
+        return;
+    }
 
-	stringstream ss;
-	int wheelId = 0;
+    stringstream ss;
+    int wheelId = 0;
 
-	ss << args[0];
-	ss >> wheelId;
+    ss << args[0];
+    ss >> wheelId;
 
-	if(!ss.good())
-	{
-		cout << "Incorrect argument: \"" << args[0] << "\"" << endl;
-		return;
-	}
+    if(!ss.good())
+    {
+        cout << "Incorrect argument: \"" << args[0] << "\"" << endl;
+        return;
+    }
 
-	ss.str("");
-	ss.clear();
-	ss << args[1];
-	float speed;
-	ss >> speed;
+    ss.str("");
+    ss.clear();
+    ss << args[1];
+    float speed;
+    ss >> speed;
 
-	if(!ss.good())
-	{
-		cout << "Incorrect argument: \"" << args[1] << "\"" << endl;
-		return;
-	}
+    if(!ss.good())
+    {
+        cout << "Incorrect argument: \"" << args[1] << "\"" << endl;
+        return;
+    }
 
 
-	shared_ptr<WheelSetSpeedTcpMsgReq> request(new WheelSetSpeedTcpMsgReq);
-	*request = INIT_WHEEL_SET_SPEED_TCP_MSG_REQ;
-	request->wheelId = wheelId;
-	request->speed = speed;
+    shared_ptr<WheelSetSpeedTcpMsgReq> request(new WheelSetSpeedTcpMsgReq);
+    *request = INIT_WHEEL_SET_SPEED_TCP_MSG_REQ;
+    request->wheelId = wheelId;
+    request->speed = speed;
 
-	connection->send(shared_ptr<BaseMessage>(new Message<WheelSetSpeedTcpMsgReq>(request)));
+    connection->send(shared_ptr<BaseMessage>(new Message<WheelSetSpeedTcpMsgReq>(request)));
 
-	cout << "Speed has been set" << endl;
+    cout << "Speed has been set" << endl;
 }

@@ -10,17 +10,17 @@
 class GetPostmortemCmd : public GetLogsCommand
 {
 public:
-	enum CtrlByte { NORMAL = 0x01, LAST = 0x02, EMPTY  = 0x04};
+    enum CtrlByte { NORMAL = 0x01, LAST = 0x02, EMPTY  = 0x04};
 
-	GetPostmortemCmd(std::shared_ptr<Connection> conn);
-	GetPostmortemCmd(std::shared_ptr<Connection> conn, const std::vector<std::string>& _args);
+    GetPostmortemCmd(std::shared_ptr<Connection> conn);
+    GetPostmortemCmd(std::shared_ptr<Connection> conn, const std::vector<std::string>& _args);
 
 protected:
-	void run();
-	bool handleResponse(const GetPostmortemMsgRsp& response);
+    void run();
+    bool handleResponse(const GetPostmortemMsgRsp& response);
 private:
 
-	static const double CONN_TIMEOUT;
+    static const double CONN_TIMEOUT;
 };
 
 #endif // GET_POSTMORTEM_CMD_H

@@ -9,22 +9,22 @@
 class GetTaskListCmd : public Command
 {
 public:
-	GetTaskListCmd(std::shared_ptr<Connection> conn);
-	GetTaskListCmd(std::shared_ptr<Connection> conn, const std::vector<std::string>& _args);
+    GetTaskListCmd(std::shared_ptr<Connection> conn);
+    GetTaskListCmd(std::shared_ptr<Connection> conn, const std::vector<std::string>& _args);
 
 protected:
-	void run();
+    void run();
 private:
 
-	struct Part
-	{
-		Part();
-		unsigned id;
-		std::string str;
-	};
+    struct Part
+    {
+        Part();
+        unsigned id;
+        std::string str;
+    };
 
-	bool handleResponse(const GetTaskListRsp& response);
-	std::vector<Part> parts;
+    bool handleResponse(const GetTaskListRsp& response);
+    std::vector<Part> parts;
 
 };
 

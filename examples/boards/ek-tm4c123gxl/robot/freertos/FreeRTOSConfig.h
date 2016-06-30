@@ -82,9 +82,9 @@
 #define configUSE_CO_ROUTINES               0
 #define configUSE_MUTEXES                   1
 #define configUSE_RECURSIVE_MUTEXES         1
-#define configUSE_TIMERS					1
+#define configUSE_TIMERS                    1
 #define configCHECK_FOR_STACK_OVERFLOW      2
-#define configUSE_MALLOC_FAILED_HOOK		1
+#define configUSE_MALLOC_FAILED_HOOK        1
 /* Software timer related definitions. */
 #define configUSE_TIMERS                        1
 #define configTIMER_TASK_PRIORITY               5
@@ -109,9 +109,9 @@ to exclude the API function. */
 #define INCLUDE_vTaskDelayUntil             1
 #define INCLUDE_vTaskDelay                  1
 #define INCLUDE_uxTaskGetStackHighWaterMark 1
-#define INCLUDE_eTaskGetState				1
-#define INCLUDE_xTaskGetCurrentTaskHandle	1
-#define INCLUDE_pcTaskGetTaskName			1
+#define INCLUDE_eTaskGetState               1
+#define INCLUDE_xTaskGetCurrentTaskHandle   1
+#define INCLUDE_pcTaskGetTaskName           1
 
 /* Be ENORMOUSLY careful if you want to modify these two values and make sure
  * you read http://www.freertos.org/a00110.html#kernel_priority first!

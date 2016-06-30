@@ -15,7 +15,7 @@ GetPostmortemCmd::GetPostmortemCmd(shared_ptr<Connection> conn) : GetLogsCommand
 }
 
 GetPostmortemCmd::GetPostmortemCmd(shared_ptr<Connection> conn, const std::vector<std::string>& _args) :
-		GetLogsCommand(conn, _args)
+        GetLogsCommand(conn, _args)
 {
 
 }
@@ -23,137 +23,137 @@ GetPostmortemCmd::GetPostmortemCmd(shared_ptr<Connection> conn, const std::vecto
 
 void GetPostmortemCmd::run()
 {
-	if(args.empty())
-	{
-		cout << "GetPostmortemCmd: master/slave parameter not specified" << endl;
-		return;
-	}
+    if(args.empty())
+    {
+        cout << "GetPostmortemCmd: master/slave parameter not specified" << endl;
+        return;
+    }
 
-	std::string argument(args.front());
+    std::string argument(args.front());
 
-	if(argument != "0" && argument != "1")
-	{
-		cout << "GetPostmortemCmd: improper master/slave parameter" << endl;
-		return;
-	}
+    if(argument != "0" && argument != "1")
+    {
+        cout << "GetPostmortemCmd: improper master/slave parameter" << endl;
+        return;
+    }
 
-	bool isMaster = (argument == "0") ? false : true;
+    bool isMaster = (argument == "0") ? false : true;
 
-	shared_ptr<GetPostmortemMsgReq> request(new GetPostmortemMsgReq);
-	*request = INIT_GET_POSTMORTEM_MSG_REQ;
-	request->isMaster = isMaster;
+    shared_ptr<GetPostmortemMsgReq> request(new GetPostmortemMsgReq);
+    *request = INIT_GET_POSTMORTEM_MSG_REQ;
+    request->isMaster = isMaster;
 
-	connection->send(shared_ptr<BaseMessage>(new Message<GetPostmortemMsgReq>(request)));
+    connection->send(shared_ptr<BaseMessage>(new Message<GetPostmortemMsgReq>(request)));
 
-	time_t startTime, currTime;
-	time(&startTime);
+    time_t startTime, currTime;
+    time(&startTime);
 
-	vector<shared_ptr<BaseMessage>> msgVec;
-//	////////////////
-//	GetLogsMsgRsp getLogsRsp = INIT_GET_LOGS_MSG_RSP;
-//	getLogsRsp.totalLineNum = 30;
-//	uint16_t lineNum = 1;
-//	/////////////
+    vector<shared_ptr<BaseMessage>> msgVec;
+//  ////////////////
+//  GetLogsMsgRsp getLogsRsp = INIT_GET_LOGS_MSG_RSP;
+//  getLogsRsp.totalLineNum = 30;
+//  uint16_t lineNum = 1;
+//  /////////////
 
-	while(connection->isConnected())
-	{
-		shared_ptr<BaseMessage> msg;
-		if(connection->receive(msg))
-		{
+    while(connection->isConnected())
+    {
+        shared_ptr<BaseMessage> msg;
+        if(connection->receive(msg))
+        {
 
-			uint8_t msgId = msg->getMsgId();
+            uint8_t msgId = msg->getMsgId();
 
-			if(msgId != GET_POSTMORTEM_MSG_RSP)
-			{
-				cout << "GetPostmortemCmd: unrecognized msg " << hex << static_cast<int>(msgId) << endl;
-				continue;
-			}
+            if(msgId != GET_POSTMORTEM_MSG_RSP)
+            {
+                cout << "GetPostmortemCmd: unrecognized msg " << hex << static_cast<int>(msgId) << endl;
+                continue;
+            }
 
-			time(&currTime);
-			double timeDiff = difftime(currTime, startTime);
+            time(&currTime);
+            double timeDiff = difftime(currTime, startTime);
 
-//			if(!handleResponse(reinterpret_cast<GetPostmortemMsgRsp*>(msg.getRawPayload()))
-//				|| timeDiff > CONN_TIMEOUT)
-			uint8_t ctrlByte = reinterpret_cast<GetPostmortemMsgRsp*>(msg->getRawPayload())->ctrlByte;
-			if(ctrlByte == EMPTY || ctrlByte == LAST || timeDiff > CONN_TIMEOUT)
-				break;
+//          if(!handleResponse(reinterpret_cast<GetPostmortemMsgRsp*>(msg.getRawPayload()))
+//              || timeDiff > CONN_TIMEOUT)
+            uint8_t ctrlByte = reinterpret_cast<GetPostmortemMsgRsp*>(msg->getRawPayload())->ctrlByte;
+            if(ctrlByte == EMPTY || ctrlByte == LAST || timeDiff > CONN_TIMEOUT)
+                break;
 
-			msgVec.push_back(msg);
+            msgVec.push_back(msg);
 
 
-//			//////////////
+//          //////////////
 //
 //
-//			GetPostmortemMsgRsp* pmResponse = reinterpret_cast<GetPostmortemMsgRsp*>(msg.getRawPayload());
+//          GetPostmortemMsgRsp* pmResponse = reinterpret_cast<GetPostmortemMsgRsp*>(msg.getRawPayload());
 //
-//			getLogsRsp.lineNum = lineNum;
-//			getLogsRsp.logLevel = pmResponse->logLevel;
-//			getLogsRsp.component = pmResponse->component;
-//			getLogsRsp.timestamp = pmResponse->timestamp;
-//			getLogsRsp.argsNum = pmResponse->argsNum;
-//			memcpy(getLogsRsp.argTypes, pmResponse->argTypes, pmResponse->argsNum);
-//			memcpy(getLogsRsp.argsBuffer, pmResponse->argsBuffer, sizeof(pmResponse->argsBuffer));
-//			memcpy(getLogsRsp.strBuffer, pmResponse->strBuffer, sizeof(pmResponse->strBuffer));
+//          getLogsRsp.lineNum = lineNum;
+//          getLogsRsp.logLevel = pmResponse->logLevel;
+//          getLogsRsp.component = pmResponse->component;
+//          getLogsRsp.timestamp = pmResponse->timestamp;
+//          getLogsRsp.argsNum = pmResponse->argsNum;
+//          memcpy(getLogsRsp.argTypes, pmResponse->argTypes, pmResponse->argsNum);
+//          memcpy(getLogsRsp.argsBuffer, pmResponse->argsBuffer, sizeof(pmResponse->argsBuffer));
+//          memcpy(getLogsRsp.strBuffer, pmResponse->strBuffer, sizeof(pmResponse->strBuffer));
 //
-//			handleGetLogsRsp(&getLogsRsp);
+//          handleGetLogsRsp(&getLogsRsp);
 //
-//			++lineNum;
+//          ++lineNum;
 //
-//			////////////////
+//          ////////////////
 
 
-		}
+        }
 
-	}
+    }
 
-	if(msgVec.empty())
-	{
-		cout << "GetPostmortemCmd: no postmortems found" << endl;
-		return;
-	}
+    if(msgVec.empty())
+    {
+        cout << "GetPostmortemCmd: no postmortems found" << endl;
+        return;
+    }
 
-	sort(msgVec.begin(), msgVec.end(),
-			[](shared_ptr<BaseMessage> msg1, shared_ptr<BaseMessage> msg2)->bool
-			{return reinterpret_cast<GetPostmortemMsgRsp*>(msg1->getRawPayload())->lineNum
-			> reinterpret_cast<GetPostmortemMsgRsp*>(msg2->getRawPayload())->lineNum;});
+    sort(msgVec.begin(), msgVec.end(),
+            [](shared_ptr<BaseMessage> msg1, shared_ptr<BaseMessage> msg2)->bool
+            {return reinterpret_cast<GetPostmortemMsgRsp*>(msg1->getRawPayload())->lineNum
+            > reinterpret_cast<GetPostmortemMsgRsp*>(msg2->getRawPayload())->lineNum;});
 
-	GetLogsMsgRsp getLogsRsp = INIT_GET_LOGS_MSG_RSP;
-	uint16_t lineNum = 1;
+    GetLogsMsgRsp getLogsRsp = INIT_GET_LOGS_MSG_RSP;
+    uint16_t lineNum = 1;
 
-	getLogsRsp.totalLineNum = msgVec.size();
+    getLogsRsp.totalLineNum = msgVec.size();
 
-	for(auto& msg : msgVec)
-	{
-		GetPostmortemMsgRsp* pmResponse = reinterpret_cast<GetPostmortemMsgRsp*>(msg->getRawPayload());
+    for(auto& msg : msgVec)
+    {
+        GetPostmortemMsgRsp* pmResponse = reinterpret_cast<GetPostmortemMsgRsp*>(msg->getRawPayload());
 
-		getLogsRsp.lineNum = lineNum;
-		getLogsRsp.logLevel = pmResponse->logLevel;
-		getLogsRsp.component = pmResponse->component;
-		getLogsRsp.timestamp = pmResponse->timestamp;
-		getLogsRsp.argsNum = pmResponse->argsNum;
-		memcpy(getLogsRsp.argTypes, pmResponse->argTypes, pmResponse->argsNum);
-		memcpy(getLogsRsp.argsBuffer, pmResponse->argsBuffer, sizeof(pmResponse->argsBuffer));
-		memcpy(getLogsRsp.strBuffer, pmResponse->strBuffer, sizeof(pmResponse->strBuffer));
+        getLogsRsp.lineNum = lineNum;
+        getLogsRsp.logLevel = pmResponse->logLevel;
+        getLogsRsp.component = pmResponse->component;
+        getLogsRsp.timestamp = pmResponse->timestamp;
+        getLogsRsp.argsNum = pmResponse->argsNum;
+        memcpy(getLogsRsp.argTypes, pmResponse->argTypes, pmResponse->argsNum);
+        memcpy(getLogsRsp.argsBuffer, pmResponse->argsBuffer, sizeof(pmResponse->argsBuffer));
+        memcpy(getLogsRsp.strBuffer, pmResponse->strBuffer, sizeof(pmResponse->strBuffer));
 
-		handleGetLogsRsp(getLogsRsp);
+        handleGetLogsRsp(getLogsRsp);
 
-		++lineNum;
-	}
+        ++lineNum;
+    }
 
-	uint8_t partition = getPartitionNum();
+    uint8_t partition = getPartitionNum();
 
-	StackEncoder stackEncoder(isMaster, partition);
+    StackEncoder stackEncoder(isMaster, partition);
 
-	for(auto& line : vecLogs)
-	{
-		if(line.empty())
-			continue;
+    for(auto& line : vecLogs)
+    {
+        if(line.empty())
+            continue;
 
-		stackEncoder.decodeStacktrace(line);
-		cout << line << endl;
-	}
+        stackEncoder.decodeStacktrace(line);
+        cout << line << endl;
+    }
 
-	vecLogs.clear();
+    vecLogs.clear();
 
 }
 

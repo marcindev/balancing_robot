@@ -6,9 +6,9 @@
 
 typedef enum
 {
-	WDG_ALIVE,
-	WDG_ASLEEP,
-	WDG_UNKNOWN
+    WDG_ALIVE,
+    WDG_ASLEEP,
+    WDG_UNKNOWN
 }WdgTaskState;
 
 void initWatchDog();

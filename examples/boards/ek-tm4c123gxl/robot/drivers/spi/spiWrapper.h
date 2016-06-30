@@ -1,5 +1,5 @@
-/*	Wrapper for SPI driver
- * 	autor: Marcin Gozdziewski
+/*  Wrapper for SPI driver
+ *  autor: Marcin Gozdziewski
  */
 #ifndef SPIWRAPPER_H
 #define SPIWRAPPER_H
@@ -20,33 +20,33 @@
 
 typedef struct
 {
-	uint32_t spiPeripheral,
-			 gpioPeripheral,
-			 sigTxGpioPeripheral,
-			 clkPinConfig,
-			 fssPinConfig,
-			 rxPinConfig,
-			 txPinConfig,
-			 gpioPortBase,
-			 sigTxPortBase,
-			 ssiBase,
-			 masterSlave,
-			 clkPin,
-			 fssPin,
-			 rxPin,
-			 txPin,
-			 sigTxPin,
-			 uDmaChannelRx,
-			 uDmaChannelTx,
-			 uDmaRxReadSize,
-			 uDmaLastTxLen,
-			 uDmaLastRxLen;
+    uint32_t spiPeripheral,
+             gpioPeripheral,
+             sigTxGpioPeripheral,
+             clkPinConfig,
+             fssPinConfig,
+             rxPinConfig,
+             txPinConfig,
+             gpioPortBase,
+             sigTxPortBase,
+             ssiBase,
+             masterSlave,
+             clkPin,
+             fssPin,
+             rxPin,
+             txPin,
+             sigTxPin,
+             uDmaChannelRx,
+             uDmaChannelTx,
+             uDmaRxReadSize,
+             uDmaLastTxLen,
+             uDmaLastRxLen;
 
-	CircularBuffer* circBufferRx, *circBufferTx;
-	bool enableInt;
-	bool initiated;
-	bool isBuffRollover;
-	uint32_t errState;
+    CircularBuffer* circBufferRx, *circBufferTx;
+    bool enableInt;
+    bool initiated;
+    bool isBuffRollover;
+    uint32_t errState;
 } SpiComInstance;
 
 void SpiComInit(SpiComInstance* i2cComInst);

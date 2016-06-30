@@ -9,14 +9,14 @@
 class ReadMpuRegCmd : public Command
 {
 public:
-	ReadMpuRegCmd(std::shared_ptr<Connection> conn);
-	ReadMpuRegCmd(std::shared_ptr<Connection> conn, const std::vector<std::string>& _args);
+    ReadMpuRegCmd(std::shared_ptr<Connection> conn);
+    ReadMpuRegCmd(std::shared_ptr<Connection> conn, const std::vector<std::string>& _args);
 
 protected:
-	void run();
+    void run();
 private:
 
-	bool handleResponse(const MpuRegReadMsgRsp& response);
+    bool handleResponse(const MpuRegReadMsgRsp& response);
 
 };
 

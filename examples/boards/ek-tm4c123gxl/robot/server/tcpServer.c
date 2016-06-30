@@ -7,7 +7,7 @@
 #include "tcpServerTask.h"
 #include "logger.h"
 
-#define PORT	5001
+#define PORT    5001
 
 extern bool g_isApConnected;
 bool g_tcpServerInitialized = false;
@@ -26,15 +26,15 @@ uint8_t initTcpServer()
     _i16          recvSize = 0;
 
 
-	if(!g_isApConnected)
-	{
-		if(!connectToAP())
-			return false;
-	}
+    if(!g_isApConnected)
+    {
+        if(!connectToAP())
+            return false;
+    }
 
-	g_localAddr.sin_family = SL_AF_INET;
-	g_localAddr.sin_port = sl_Htons((_u16)PORT);
-	g_localAddr.sin_addr.s_addr = 0;
+    g_localAddr.sin_family = SL_AF_INET;
+    g_localAddr.sin_port = sl_Htons((_u16)PORT);
+    g_localAddr.sin_addr.s_addr = 0;
 
     g_TcpServSocketId = sl_Socket(SL_AF_INET,SL_SOCK_STREAM, 0);
     if( g_TcpServSocketId < 0 )
@@ -69,12 +69,12 @@ uint8_t initTcpServer()
 
 uint8_t runTcpServer()
 {
-	if(!g_tcpServerInitialized)
-		return false;
+    if(!g_tcpServerInitialized)
+        return false;
 
-	uint16_t newSockID;
+    uint16_t newSockID;
 
-	SlSocklen_t remoteAddr;// = (SlSockAddrIn_t*) pvPortMalloc(sizeof(SlSockAddrIn_t));
+    SlSocklen_t remoteAddr;// = (SlSockAddrIn_t*) pvPortMalloc(sizeof(SlSockAddrIn_t));
 
     newSockID = sl_Accept(g_TcpServSocketId, ( struct SlSockAddr_t *) &remoteAddr,
                               (SlSocklen_t*) &remoteAddr);
@@ -90,8 +90,8 @@ uint8_t runTcpServer()
 
     if(!tcpServerHandlerTaskInit(newSockID))
     {
-    	logger(Error, Log_TcpServer, "[runTcpServer] Couldn't create task for new connection");
-    	return false;
+        logger(Error, Log_TcpServer, "[runTcpServer] Couldn't create task for new connection");
+        return false;
     }
 
 

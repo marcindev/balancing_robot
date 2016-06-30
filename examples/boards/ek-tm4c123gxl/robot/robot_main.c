@@ -11,7 +11,7 @@
 
 int main()
 {
-	runRobot();
+    runRobot();
 
-	return 0;
+    return 0;
 }

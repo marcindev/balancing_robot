@@ -11,11 +11,11 @@
 class SetTaskPriorityCmd : public Command
 {
 public:
-	SetTaskPriorityCmd(std::shared_ptr<Connection> conn);
-	SetTaskPriorityCmd(std::shared_ptr<Connection> conn, const std::vector<std::string>& _args);
+    SetTaskPriorityCmd(std::shared_ptr<Connection> conn);
+    SetTaskPriorityCmd(std::shared_ptr<Connection> conn, const std::vector<std::string>& _args);
 
 protected:
-	void run();
+    void run();
 
 
 };
