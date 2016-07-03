@@ -81,6 +81,8 @@ void GetPostmortemCmd::run()
             msgVec.push_back(msg);
 
 
+	    connection->send(shared_ptr<BaseMessage>(new Message<GetPostmortemMsgReq>(request)));
+
 //          //////////////
 //
 //

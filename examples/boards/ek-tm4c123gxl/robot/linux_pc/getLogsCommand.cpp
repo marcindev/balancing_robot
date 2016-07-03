@@ -69,7 +69,8 @@ void GetLogsCommand::run()
 
             if(!handleGetLogsRsp(*Message<GetLogsMsgRsp>(*msg).getPayload()))
                 break;
-
+	    
+	    connection->send(shared_ptr<BaseMessage>(new Message<GetLogsMsgReq>(getLogsMsgReq)));
         }
         else
         {
@@ -119,6 +120,9 @@ bool GetLogsCommand::handleGetLogsRsp(const GetLogsMsgRsp& response)
     stringstream ss;
     uint16_t totalLineNumber = response.totalLineNum;
     logNum = totalLineNumber;
+    
+    if(!response.status)
+	return false;
 
     execOnEvent(Event::log_line_received);
 

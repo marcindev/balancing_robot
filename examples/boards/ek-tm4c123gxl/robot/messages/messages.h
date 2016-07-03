@@ -453,6 +453,7 @@ typedef struct
     uint8_t argTypes[12]; // to keep alignment
     uint64_t argsBuffer[10];
     uint8_t strBuffer[128];
+    uint8_t status;
 }__attribute__((packed, aligned(1))) GetLogsMsgRsp;
 extern const GetLogsMsgRsp INIT_GET_LOGS_MSG_RSP;
 

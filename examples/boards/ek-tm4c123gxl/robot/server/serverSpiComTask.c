@@ -232,14 +232,16 @@ void handleGetLogs(void* msg)
 
     GetLogsMsgRsp response = INIT_GET_LOGS_MSG_RSP;
 
-    uint16_t lineNum = 1;
+    static uint16_t lineNum = 1;
 
-    while(getNextLogLine(&timestamp, &logLevel, &logComponent,
+    msgSetAddress(&response, msgGetAddress(msg));
+    response.isMaster = 1;
+ 
+
+    if(getNextLogLine(&timestamp, &logLevel, &logComponent,
             (void*)&strPtr, &argsNum, (void*)&argTypes, (void*)&argsBuffer, &argsBuffSize))
     {
-        msgSetAddress(&response, msgGetAddress(msg));
-        response.isMaster = 1;
-        response.lineNum = lineNum++;
+	response.lineNum = lineNum++;
         response.totalLineNum = totalLinesNum;
         response.timestamp = timestamp;
         response.logLevel = (uint8_t) logLevel;
@@ -248,14 +250,20 @@ void handleGetLogs(void* msg)
         response.argsNum = argsNum;
         memcpy(&response.argTypes[0], argTypes, argsNum);
         memcpy(&response.argsBuffer[0], argsBuffer, argsBuffSize);
-
-        portTickType ui32WakeTime;
-        ui32WakeTime = xTaskGetTickCount();
-        vTaskDelayUntil(&ui32WakeTime, pdMS_TO_TICKS(2));
-
-        sendSpiMsg(&response);
+	response.status = true;
+    }
+    else
+    {
+	response.status = false; 
+	lineNum = 1;
     }
 
+    portTickType ui32WakeTime;
+    ui32WakeTime = xTaskGetTickCount();
+    vTaskDelayUntil(&ui32WakeTime, pdMS_TO_TICKS(2));
+
+    sendSpiMsg(&response);
+ 
     vPortFree(msg);
     msg = NULL;
 }
@@ -282,10 +290,10 @@ void handleGetPostmortem(void* msg)
     argTypes = response.argTypes;
     argsBuffer = response.argsBuffer;
 
-    uint16_t lineNum = 1;
+    static uint16_t lineNum = 1;
 
 
-    while(getNextPMLine(&timestamp, &logLevel, &logComponent,
+    if(getNextPMLine(&timestamp, &logLevel, &logComponent,
             (void*)&strPtr, &argsNum, argTypes, argsBuffer, &argsBuffSize))
     {
         response.ctrlByte = NORMAL;
@@ -300,13 +308,21 @@ void handleGetPostmortem(void* msg)
         ui32WakeTime = xTaskGetTickCount();
         vTaskDelayUntil(&ui32WakeTime, pdMS_TO_TICKS(2));
 
-        sendSpiMsg(&response);
     }
-
-    if(lineNum == 1)
-        response.ctrlByte = EMPTY;
     else
-        response.ctrlByte = LAST;
+    {
+	if(lineNum == 1)
+	    response.ctrlByte = EMPTY;
+	else
+	    response.ctrlByte = LAST;
+
+
+	lineNum = 1;
+    }
+    
+    portTickType ui32WakeTime;
+    ui32WakeTime = xTaskGetTickCount();
+    vTaskDelayUntil(&ui32WakeTime, pdMS_TO_TICKS(2));
 
     sendSpiMsg(&response);
 

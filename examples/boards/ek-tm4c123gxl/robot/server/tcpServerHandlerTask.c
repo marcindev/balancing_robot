@@ -258,7 +258,7 @@ void handleGetLogs(uint16_t slot)
 
     if(msg->isMaster)
     {
-        UARTprintf("handleGetLogs(uint16_t slot): slot: %d", slot);
+        //UARTprintf("handleGetLogs(uint16_t slot): slot: %d", slot);
         GetLogsMsgReq* getLogsReq = (GetLogsMsgReq*) pvPortMalloc(sizeof(GetLogsMsgReq));
         *getLogsReq = INIT_GET_LOGS_MSG_REQ;
         getLogsReq->header.slot = slot;
@@ -280,12 +280,12 @@ void handleGetLogs(uint16_t slot)
 
     GetLogsMsgRsp response = INIT_GET_LOGS_MSG_RSP;
 
-    uint16_t lineNum = 1;
+    static uint16_t lineNum = 1;
+    response.isMaster = msg->isMaster;
 
-    while(getNextLogLine(&timestamp, &logLevel, &logComponent,
+    if(getNextLogLine(&timestamp, &logLevel, &logComponent,
             (void*)&strPtr, &argsNum, (void*)&argTypes, (void*)&argsBuffer, &argsBuffSize))
     {
-        response.isMaster = msg->isMaster;
         response.lineNum = lineNum++;
         response.totalLineNum = totalLinesNum;
         response.timestamp = timestamp;
@@ -295,9 +295,15 @@ void handleGetLogs(uint16_t slot)
         response.argsNum = argsNum;
         memcpy(&response.argTypes[0], argTypes, argsNum);
         memcpy(&response.argsBuffer[0], argsBuffer, argsBuffSize);
-        sendTcpMsg(slot, (void*) &response);
-
+	response.status = true;
     }
+    else
+    {
+	response.status = false;
+	lineNum = 1;
+    }
+
+    sendTcpMsg(slot, (void*) &response);
 }
 
 void handleGetPostmortem(uint16_t slot)
@@ -336,10 +342,10 @@ void handleGetPostmortem(uint16_t slot)
     argTypes = response.argTypes;
     argsBuffer = response.argsBuffer;
 
-    uint16_t lineNum = 1;
+    static uint16_t lineNum = 1;
 
 
-    while(getNextPMLine(&timestamp, &logLevel, &logComponent,
+    if(getNextPMLine(&timestamp, &logLevel, &logComponent,
             (void*)&strPtr, &argsNum, argTypes, argsBuffer, &argsBuffSize))
     {
         response.ctrlByte = NORMAL;
@@ -350,13 +356,16 @@ void handleGetPostmortem(uint16_t slot)
         strcpy(response.strBuffer, strPtr);
         response.argsNum = argsNum;
 
-        sendTcpMsg(slot, (void*) &response);
     }
-
-    if(lineNum == 1)
-        response.ctrlByte = EMPTY;
     else
-        response.ctrlByte = LAST;
+    {
+	if(lineNum == 1)
+	    response.ctrlByte = EMPTY;
+	else
+	    response.ctrlByte = LAST;
+
+	lineNum = 1;
+    }
 
     sendTcpMsg(slot, (void*) &response);
 }
