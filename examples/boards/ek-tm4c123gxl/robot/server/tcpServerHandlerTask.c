@@ -267,6 +267,8 @@ void handleGetLogs(uint16_t slot)
     }
 
 
+    static uint16_t lineNum = 1;
+
     uint32_t timestamp;
     LogLevel logLevel;
     LogComponent logComponent;
@@ -276,13 +278,15 @@ void handleGetLogs(uint16_t slot)
     uint8_t* argsBuffer;
     uint8_t argsBuffSize;
 
-    uint16_t totalLinesNum = getLinesNumber();
+    uint16_t totalLinesNum;
 
     GetLogsMsgRsp response = INIT_GET_LOGS_MSG_RSP;
 
-    static uint16_t lineNum = 1;
     response.isMaster = msg->isMaster;
 
+    if(lineNum == 1)
+	totalLinesNum = getLinesNumber();
+    
     if(getNextLogLine(&timestamp, &logLevel, &logComponent,
             (void*)&strPtr, &argsNum, (void*)&argTypes, (void*)&argsBuffer, &argsBuffSize))
     {

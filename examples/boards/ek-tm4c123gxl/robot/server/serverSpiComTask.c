@@ -228,7 +228,7 @@ void handleGetLogs(void* msg)
     uint8_t* argsBuffer;
     uint8_t argsBuffSize;
 
-    uint16_t totalLinesNum = getLinesNumber();
+    uint16_t totalLinesNum = 0;
 
     GetLogsMsgRsp response = INIT_GET_LOGS_MSG_RSP;
 
@@ -236,6 +236,9 @@ void handleGetLogs(void* msg)
 
     msgSetAddress(&response, msgGetAddress(msg));
     response.isMaster = 1;
+
+    if(lineNum == 1)
+	totalLinesNum = getLinesNumber();
  
 
     if(getNextLogLine(&timestamp, &logLevel, &logComponent,

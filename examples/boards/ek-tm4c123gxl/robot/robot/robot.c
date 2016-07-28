@@ -63,12 +63,19 @@ extern void _bss;
 
 //static I2cManager g_i2cManager;
 //static GpioExpander g_gpioExpander;
-
+#ifdef _ROBOT_MASTER_BOARD
 const HeapRegion_t xHeapRegions[] =
 {
     { ( uint8_t * ) 0x20003000UL, 0x05000 },
     { NULL, 0 } /* Terminates the array. */
 };
+#else
+const HeapRegion_t xHeapRegions[] =
+{
+    { ( uint8_t * ) 0x20002100UL, 0x05F00 },
+    { NULL, 0 } /* Terminates the array. */
+};
+#endif
 
 void vApplicationStackOverflowHook(xTaskHandle *pxTask, char *pcTaskName)
 {
@@ -95,6 +102,7 @@ void vApplicationStackOverflowHook(xTaskHandle *pxTask, char *pcTaskName)
 void vApplicationMallocFailedHook()
 {
     logger(Error, Log_Robot, "[vApplicationMallocFailedHook] Out of memory");
+    while(1) {}
     logStackTrace();
 }
 
@@ -192,7 +200,7 @@ void initializeRobot()
     if(!initializeEEPROM()) while(1){};
     enableInterrupts();
     initilizeFreeRTOS();
-    initWatchDog(); // must be invoked after initilizeFreeRTOS()
+    //initWatchDog(); // must be invoked after initilizeFreeRTOS()
 
 }
 
@@ -711,3 +719,12 @@ char * _sbrk( size_t x )
     return NULL;
 }
 
+void* malloc(size_t x)
+{
+    return pvPortMalloc(x);
+}
+
+void free(void* x)
+{
+    vPortFree(x);
+}

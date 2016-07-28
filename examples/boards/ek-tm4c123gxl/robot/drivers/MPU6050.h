@@ -31,6 +31,7 @@ typedef struct
 {
     float x_axis;
     float y_axis;
+    bool isDataValid;
 } AccelAngles;
 
 typedef struct

@@ -481,6 +481,9 @@ void logStackTrace()
     g_stackDepth = 0;
 
     _Unwind_Backtrace(&backtraceCallback, funcAddresses);
+
+
+
 //  do
 //  {
 //      pc = HWREG(fp - 16);
