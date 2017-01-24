@@ -15,7 +15,7 @@
 #include "driverlib/watchdog.h"
 #include "driverlib/timer.h"
 #include "interrupts.h"
-#include "spiWrapper.h"
+#include "spiCom.h"
 #include "utils.h"
 #include "wdg.h"
 
@@ -34,7 +34,6 @@
 SemaphoreHandle_t g_gpioExp1PortBIntSem  = NULL;
 SemaphoreHandle_t g_ssiRxIntSem  = NULL;
 SemaphoreHandle_t g_timerB0TimoutSem  = NULL;
-extern SpiComInstance* g_spiComInstServer;
 extern bool isWdgLedOn;
 
 void initInterrupts()
@@ -56,16 +55,6 @@ void initInterrupts()
         IntEnable(INT_GPIOE);
 
         g_gpioExp1PortBIntSem = xSemaphoreCreateBinary();
-    }
-
-    {   // SSI0
-
-        IntPrioritySet(INT_UDMAERR, 6 << 5);    // priority 5 (3 top bits)
-        IntEnable(INT_UDMAERR);
-
-        IntPrioritySet(INT_SSI0, 3 << 5);   // priority 3 (3 top bits)
-        IntEnable(INT_SSI0);
-
     }
 
     {   // TimerB0
@@ -113,9 +102,8 @@ void GPIOE_intHandler(void)
 //Interrupt for SSI0
 void SSI0_intHandler(void)
 {
-  uint32_t intStatus;
   //Get the interrrupt status.
-  intStatus = SSIIntStatus(SSI0_BASE, true);
+  uint32_t intStatus = SSIIntStatus(SSI0_BASE, true);
   // Clear the asserted interrupts.
   SSIIntClear(SSI0_BASE, intStatus);
 
@@ -125,13 +113,14 @@ void SSI0_intHandler(void)
 //
 //  if(intStatus & SSI_RXOR)
 //    UARTprintf("RX_FIFO_OVERRUN!");
+    
+  SpiCom spiCom = SpiComGetInstance(SPI_SSI0);
 
-  if(g_spiComInstServer)
+  if(spiCom)
   {
-      onDmaTransactionRxEnd(g_spiComInstServer);
-      onDmaTransactionTxEnd(g_spiComInstServer);
+      onDmaTransactionRxEnd(spiCom);
+      onDmaTransactionTxEnd(spiCom);
   }
-
 //  if(intStatus==SSI_RXFF)
 //  {
 //      static BaseType_t xHigherPriorityTaskWoken;
@@ -141,6 +130,51 @@ void SSI0_intHandler(void)
 //
 //      return;
 //  }
+}
+
+//Interrupt for SSI1
+void SSI1_intHandler(void)
+{
+  uint32_t intStatus = SSIIntStatus(SSI1_BASE, true);
+  SSIIntClear(SSI1_BASE, intStatus);
+    
+  SpiCom spiCom = SpiComGetInstance(SPI_SSI1);
+
+  if(spiCom)
+  {
+      onDmaTransactionRxEnd(spiCom);
+      onDmaTransactionTxEnd(spiCom);
+  }
+}
+
+//Interrupt for SSI2
+void SSI2_intHandler(void)
+{
+  uint32_t intStatus = SSIIntStatus(SSI2_BASE, true);
+  SSIIntClear(SSI2_BASE, intStatus);
+    
+  SpiCom spiCom = SpiComGetInstance(SPI_SSI2);
+
+  if(spiCom)
+  {
+      onDmaTransactionRxEnd(spiCom);
+      onDmaTransactionTxEnd(spiCom);
+  }
+}
+
+//Interrupt for SSI3
+void SSI3_intHandler(void)
+{
+  uint32_t intStatus = SSIIntStatus(SSI3_BASE, true);
+  SSIIntClear(SSI3_BASE, intStatus);
+    
+  SpiCom spiCom = SpiComGetInstance(SPI_SSI3);
+
+  if(spiCom)
+  {
+      onDmaTransactionRxEnd(spiCom);
+      onDmaTransactionTxEnd(spiCom);
+  }
 }
 
 void uDMAErrorHandler(void)

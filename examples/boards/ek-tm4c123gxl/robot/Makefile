@@ -52,6 +52,7 @@ VPATH+=../../../../utils/
 VPATH+=./drivers
 VPATH+=./drivers/i2c
 VPATH+=./drivers/spi
+VPATH+=./drivers/udma
 VPATH+=./utils
 VPATH+=./robot
 VPATH+=./messages
@@ -83,6 +84,7 @@ IPATH+=../../../../utils/
 IPATH+=./drivers
 IPATH+=./drivers/i2c
 IPATH+=./drivers/spi
+IPATH+=./drivers/udma
 IPATH+=./utils
 IPATH+=./messages
 IPATH+=./robot
@@ -191,9 +193,11 @@ ${COMPILER}/robot_main.axf: ${COMPILER}/robot.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/spi.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/uart.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/uartstdio.o
-${COMPILER}/robot_main.axf: ${COMPILER}/spiWrapper.o
+${COMPILER}/robot_main.axf: ${COMPILER}/spiCom.o
+${COMPILER}/robot_main.axf: ${COMPILER}/udmaWrapper.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/utils.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/heap_5.o
+${COMPILER}/robot_main.axf: ${COMPILER}/memory.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/list.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/port.o
 ${COMPILER}/robot_main.axf: ${COMPILER}/queue.o
@@ -215,7 +219,9 @@ ${COMPILER}/robot_main.axf: ${ROOT}/driverlib/${COMPILER}/libdriver.a
 ${COMPILER}/robot_main.axf: robot_main.ld
 SCATTERgcc_robot_main=robot_main.ld
 ENTRY_robot_main=ResetISR
-CFLAGSgcc=-DTARGET_IS_TM4C123_RB1  -g -O0 -funwind-tables #-fPIC
+CFLAGSgcc=-DTARGET_IS_TM4C123_RB1 -D_USE_RTOS_ALLOCATION -g -O0 -funwind-tables #-DMALLOC_PROVIDED --specs=nano.specs
+#-fPIC
+#//LDFLAGS+=-specs=nano.specs
 ifeq ($(MAKECMDGOALS),master)
 CFLAGSgcc+=-D_ROBOT_MASTER_BOARD
 endif
